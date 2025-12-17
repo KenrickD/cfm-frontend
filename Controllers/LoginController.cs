@@ -1,9 +1,12 @@
 ﻿using cfm_frontend.DTOs.Login;
 using cfm_frontend.ViewModels;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
@@ -48,33 +51,59 @@ namespace cfm_frontend.Controllers
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var authResponse = await JsonSerializer.DeserializeAsync<LoginResponse>(responseStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    var authResponse = await JsonSerializer.DeserializeAsync<LoginResponse>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
 
                     if (authResponse != null)
                     {
-                        
-                        HttpContext.Session.SetString("AccessToken", authResponse.AccessToken);
-                        HttpContext.Response.Cookies.Append("RefreshToken", authResponse.RefreshToken, new CookieOptions
+                        var claims = new List<Claim>
                         {
-                            HttpOnly = true, 
-                            Secure = true,   
-                            SameSite = SameSiteMode.Strict,
-                            Expires = DateTime.UtcNow.AddDays(7) //match with the backend token expiry time, and/or  set it to a global variable
+                            new Claim(ClaimTypes.Name, model.Username ?? "User"),
+                            new Claim("Username", model.Username ?? "User")
+                        };
+
+                        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                        var authProperties = new AuthenticationProperties
+                        {
+                            IsPersistent = true,
+                            ExpiresUtc = DateTime.UtcNow.AddDays(7) // Need to be the same as refresh token
+                        };
+
+                        authProperties.StoreTokens(new List<AuthenticationToken>
+                        {
+                            new AuthenticationToken { Name = "access_token", Value = authResponse.AccessToken },
+                            new AuthenticationToken { Name = "refresh_token", Value = authResponse.RefreshToken }
                         });
+
+                        await HttpContext.SignInAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme,
+                            new ClaimsPrincipal(claimsIdentity),
+                            authProperties
+                        );
+
                         return RedirectToAction("Index", "Dashboard");
                     }
                 }
-                ViewBag.ErrorMessage = "Invalid login credentials";
+
+                _logger.LogWarning("Login failed for {Username}. Status: {Status}", model.Username, response.StatusCode);
                 ModelState.AddModelError(string.Empty, "Invalid login credentials.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred during sign-in for user {Username}", model.Username);
-                ModelState.AddModelError(string.Empty, "An error occurred while connecting to the server.");
-                ViewBag.ErrorMessage = "An error occurred while connecting to the server.";
+                _logger.LogError(ex, "Error logging in user {Username}", model.Username);
+                ModelState.AddModelError(string.Empty, "Could not connect to server.");
             }
 
             return View("Index", model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Index", "Login");
         }
     }
 }
