@@ -1,0 +1,5 @@
+﻿
+
+@Html.Partial("~/Views/Shared/loader.cshtml")
+@Html.Partial("~/Views/Shared/SidebarModuler.cshtml")
+@Html.Partial("~/Views/Shared/Topbar.cshtml")
