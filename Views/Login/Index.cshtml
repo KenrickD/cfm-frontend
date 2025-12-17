@@ -1,5 +1,285 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model cfm_frontend.ViewModels.SignInViewModel
+
 @{
+    ViewData["Title"] = "CFM System";
+    Layout = null;
 }
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewData["Title"]</title>
+    <link href="~/Images/cfm-system-icon.ico" rel="shortcut icon" />
+    <!-- Twitter Bootstrap v2.3.2 -->
+    <link href="~/Styles/bootstrap.min.css" rel="stylesheet" media="screen" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="~/assets/styles/ApricotWhale_v2.1.7.318.css" rel="stylesheet" type="text/css" />
+    <style>
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .separator span {
+            padding: 0 10px;
+            color: #666;
+        }
+        .btn-outline-primary {
+            background-color: white;
+            color: #0d6efd;
+            border: 1px solid #0d6efd;
+        }
+        .btn-outline-primary:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <form asp-action="SignIn" asp-controller="Login" method="post" id="form1">
+        @Html.AntiForgeryToken()
+        
+        <div style="text-align: center; margin-top: 50px;">
+            <div style="display: inline-block; vertical-align: top; height: 225px; border-right: 1px solid #fafafa;" class="hidden-phone">
+                <img alt="CFM System Logo" src="~/assets/images/cfm-system-logo.png" style="height: 81px; margin: 38px 20px 0 0;" />
+            </div>
+            
+            <div style="display: inline-block; max-width: 400px; padding-left: 20px; text-align: left;">
+                @* @if (Model.IsSignUp)
+                {
+                    <!-- Sign Up View -->
+                    <label class="aspx-label">Create an account</label>
+                    <br />
+                    
+                    <div style="margin: 10px 0;">
+                        <input type="text" 
+                               asp-for="LicenseKey1" 
+                               class="form-control" 
+                               style="width: 60px; display: inline-block;" 
+                               maxlength="4" 
+                               placeholder="Key 1" 
+                               oninput="this.value = this.value.toUpperCase(); validatePassKey(1);" />
+                        <span class="aspx-label-inline">-</span>
+                        
+                        <input type="text" 
+                               asp-for="LicenseKey2" 
+                               class="form-control" 
+                               style="width: 60px; display: inline-block;" 
+                               maxlength="4" 
+                               placeholder="Key 2" 
+                               oninput="this.value = this.value.toUpperCase(); validatePassKey(2);" />
+                        <span class="aspx-label-inline">-</span>
+                        
+                        <input type="text" 
+                               asp-for="LicenseKey3" 
+                               class="form-control" 
+                               style="width: 60px; display: inline-block;" 
+                               maxlength="4" 
+                               placeholder="Key 3" 
+                               oninput="this.value = this.value.toUpperCase(); validatePassKey(3);" />
+                        <span class="aspx-label-inline">-</span>
+                        
+                        <input type="text" 
+                               asp-for="LicenseKey4" 
+                               class="form-control" 
+                               style="width: 60px; display: inline-block;" 
+                               maxlength="4" 
+                               placeholder="Key 4" 
+                               oninput="this.value = this.value.toUpperCase();" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" 
+                               asp-for="LicensePassword" 
+                               class="form-control" 
+                               style="width: 99%;" 
+                               maxlength="250" 
+                               placeholder="License Password" 
+                               required />
+                        <span asp-validation-for="LicensePassword" class="text-danger"></span>
+                    </div>
+                    
+                    <br />
+                    <button type="submit" 
+                            name="action" 
+                            value="proceed" 
+                            class="btn btn-primary" 
+                            style="margin-top: 15px;">
+                        <i class="icon-signup"></i> Proceed
+                    </button>
+                }
+                else
+                {
+                    <!-- Sign In View -->
+                    <label class="aspx-label">Hi, welcome to CFM System</label>
+                    
+                    <div class="form-group">
+                        <input type="text" 
+                               asp-for="Username" 
+                               class="form-control" 
+                               style="width: 99%;" 
+                               maxlength="50" 
+                               placeholder="Your Username" 
+                               required />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" 
+                               asp-for="Password" 
+                               class="form-control" 
+                               style="width: 99%;" 
+                               maxlength="250" 
+                               placeholder="Your Password" 
+                               required />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" asp-for="RememberMe" /> Remember Me
+                        </label>
+                    </div>
+                    
+                    <br />
+                    <a asp-action="UserVerification" asp-controller="Account" title="Forgot Password">Forgot Password</a>
+                    
+                    <!-- Container tombol -->
+                    <div class="signin-actions" style="text-align:center; margin-top:10px;">
+                        <button type="submit" 
+                                name="action" 
+                                value="signin" 
+                                class="btn btn-primary" 
+                                style="width:100%;">
+                            <i class="icon-signin"></i> Sign In
+                        </button>
+
+                        <!-- Separator dengan garis kiri & kanan -->
+                        <div class="separator" style="margin:0 0; font-size:14px;">
+                            <span>Or</span>
+                        </div>
+
+                        <button type="submit" 
+                                name="action" 
+                                value="sso" 
+                                class="btn btn-outline-primary" 
+                                formnovalidate 
+                                style="width:100%;">
+                            <i class="icon-signin"></i> Sign In with SSO
+                        </button>
+                    </div>
+                } *@
+                <!-- Sign In View -->
+                <label class="aspx-label">Hi, welcome to CFM System</label>
+
+                <div class="form-group">
+                    <input type="text"
+                           asp-for="Username"
+                           class="form-control"
+                           style="width: 99%;"
+                           maxlength="50"
+                           placeholder="Your Username"
+                           required />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <input type="password"
+                           asp-for="Password"
+                           class="form-control"
+                           style="width: 99%;"
+                           maxlength="250"
+                           placeholder="Your Password"
+                           required />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" asp-for="RememberMe" /> Remember Me
+                    </label>
+                </div>
+
+                <br />
+                <a asp-action="UserVerification" asp-controller="Account" title="Forgot Password">Forgot Password</a>
+
+                <!-- Container tombol -->
+                <div class="signin-actions" style="text-align:center; margin-top:10px;">
+                    <button type="submit"
+                            name="action"
+                            value="signin"
+                            class="btn btn-primary"
+                            style="width:100%;">
+                        <i class="icon-signin"></i> Sign In
+                    </button>
+
+                    <!-- Separator dengan garis kiri & kanan -->
+                    @* <div class="separator" style="margin:0 0; font-size:14px;">
+                        <span>Or</span>
+                    </div>
+
+                    <button type="submit"
+                            name="action"
+                            value="sso"
+                            class="btn btn-outline-primary"
+                            formnovalidate
+                            style="width:100%;">
+                        <i class="icon-signin"></i> Sign In with SSO
+                    </button> *@
+                </div>
+                @if (ViewBag.ErrorMessage != null)
+                {
+                    <div class="alert alert-danger" style="margin-top: 15px;">
+                        @ViewBag.ErrorMessage
+                    </div>
+                }
+                
+                @* <div style="text-align:center; margin-top:15px;">
+                    <div style="display:inline-block; text-align:left;">
+                        <label>
+                            <input type="radio" 
+                                   name="mode" 
+                                   value="signin" 
+                                   checked="@(!Model.IsSignUp)" 
+                                   onchange="this.form.action='@Url.Action("Index", "Account", new { mode = "signin" })'; this.form.submit();" /> 
+                            Sign In
+                        </label>
+                        &nbsp;&nbsp;
+                        <label>
+                            <input type="radio" 
+                                   name="mode" 
+                                   value="signup" 
+                                   checked="@Model.IsSignUp" 
+                                   onchange="this.form.action='@Url.Action("Index", "Account", new { mode = "signup" })'; this.form.submit();" /> 
+                            Sign Up
+                        </label>
+                    </div>
+                </div> *@
+            </div>
+        </div>
+    </form>
+    
+    @* <script src="~/Scripts/CFMSystemJavaScriptLibrary.js"></script> *@
+    <script>
+        // function validatePassKey(keyNumber) {
+        //     const currentInput = document.querySelector(`input[name="LicenseKey${keyNumber}"]`);
+        //     const nextInput = document.querySelector(`input[name="LicenseKey${keyNumber + 1}"]`);
+            
+        //     if (currentInput && currentInput.value.length >= 3 && nextInput) {
+        //         nextInput.focus();
+        //     }
+        // }
+    </script>
+    
+    @section Scripts {
+        @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    }
+</body>
+</html>
