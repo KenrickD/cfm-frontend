@@ -1,0 +1,265 @@
+.modal-body a, .modal-body a:hover{
+    box-sizing: border-box;
+    margin:0;
+    padding: 0;
+    vertical-align:middle;
+}
+
+input[type="checkbox"], .form-check label{
+    cursor: pointer;
+}
+
+@media (max-width: 767px) {
+    .padding-top-sm {
+        padding-top: 1rem;
+    }    
+}
+
+.loading{
+    position: fixed;
+    bottom: 0;
+    left:0;
+    z-index: 999999;
+    background: rgba(0,0,0,0.6);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-bottom-right-radius : 1.3rem;
+    border-top-right-radius : 1.3rem;
+    display: none;
+}
+.cv-spinner {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;  
+}
+.l-spinner {
+    width: 25px;
+    height: 25px;
+    border: 7px #ddd solid;
+    border-top: 7px #2e93e6 solid;
+    border-radius: 50%;
+    animation: sp-anime 0.8s infinite linear;
+}
+@keyframes sp-anime {
+    100% { 
+        transform: rotate(360deg); 
+    }
+}
+
+h1, h2, h3, h4 {
+    margin: 0;
+    vertical-align: middle;
+    align-items: center;
+}
+
+i {
+    vertical-align: middle;
+
+}
+
+i.fa{
+    user-select: none;
+}
+
+.eform{
+    background-color:rgba(223, 239, 249,0.75);
+    padding: 1rem;
+    padding-top: 0;
+}
+
+.eform-delete{
+    position: absolute;
+    top: -15px;
+    right: -5px;
+}
+
+.eform-top{
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+    background-color: #fff;
+    padding: 1rem !important;
+}
+
+.eform-top-name{
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+}
+
+#eformName{
+    font-size: 170%;
+    font-weight: bold;
+}
+
+.eform-top-toggle {
+    margin: 0;
+    padding: 0;
+    padding: 7px 11px;
+    border-radius: 7px;
+    background-color: rgba(var(--bs-primary-rgb),1);
+    color: #fff;
+    align-items: center;
+    cursor: pointer;
+}
+
+.eform-top-option-toggler{
+    box-shadow:  0 .5rem 1rem rgba(0,0,0,.15)!important;
+    border-radius: 7px;
+    display: none;    
+    margin: 0 !important;
+    margin-top: 1rem !important;
+    padding: 0 !important;
+}
+
+.eform-item-question-image{
+    margin-top: 1rem;
+    width: 150px;
+    min-width: 150px;
+    min-height: 150px;
+    max-width: 800px;
+    max-height: 480px;
+    background-size: contain;
+    background-position: top left;
+    background-repeat: no-repeat;
+    border:rgba(13,110,253,1) thin solid;
+    resize: both;
+}
+
+.eform input[type="text"], .eform input[type="number"], .modal input[type="text"], .modal input[type="number"]{
+    margin: 0;
+    border-top : none !important;
+    border-left : none !important;
+    border-right : none !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.eform input[type="number"]{
+    width:100px;
+    text-align: end;
+}
+
+.eform-item, .preview-eform-item{
+    background-color: #fff;
+    padding: 2em;
+    margin: 0;
+    margin-top: 1rem;
+    width: 100%;
+    border-radius: 13px;
+    position: relative;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+.eform-title-title{
+    font-size: 170%;
+    font-weight: bold;
+}
+
+.eform-tools{
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    outline: rgba(33, 37, 41,0.25) solid thin;
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,0.05) !important;
+    color: rgba(13,110,253,1);
+    bottom: 13px;
+    right: 13px;
+    z-index: 1000;
+    margin: 0;
+    padding: 7px;
+    border-radius: 7px;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 150%;
+}
+
+.delete-image{
+    position: absolute;
+    margin: 0;
+    margin-left: 0.3rem;
+    margin-top: 0.3rem;
+    border: thin solid #2e93e6;
+    border-radius: 7px; 
+}
+
+.white-outline {
+    text-shadow: 2px 2px 4px #fff;
+    border-radius: 7px; 
+    background-color: rgba(255, 255, 255, 0.5); 
+    padding: 7px;
+    cursor: pointer;
+}
+
+.ui-icon-gripsmall-diagonal-se{
+    background-color: white;
+    border-radius: 25%;
+    box-shadow: 0 0 7px rgba(0, 0, 0, 0.3);
+}
+
+.eform-item textarea {
+    resize : none;
+    overflow-y: auto;
+    max-height: 125px;
+}
+
+#formResultSettings table{
+    border: 0;
+    width: 100%;
+    border-spacing: 0 1em;
+    border-collapse: separate;
+}
+
+#formResultSettings table .gridview-row td {
+    border-bottom: 1px solid #e6e6e6;
+}
+
+#formResultSettings table .gridview-header th {
+    border-bottom: 1px solid #0093d0;
+}
+
+#formResultSettings table .gridview-row label {
+    margin:0;
+}
+
+.fit-content {
+    width: 0;
+    white-space: nowrap;
+    padding-right: 1rem;
+}
+
+.modal select{
+    margin: 0;
+}
+
+.bg-sky{
+    background-image: linear-gradient(to right, #daf3ff, #ffffff) !important;
+}
+
+.preview-eform-item * {
+    margin:0;
+    padding:0;
+}
+
+.preview-eform-item textarea {
+    padding: 7px;
+    resize : none;
+    overflow-y: auto;
+    min-height: 37px;
+    max-height: 125px;
+}
+
+.score-status{
+    border-radius: 11px;
+    background-color: rgba(172, 224, 246, 0.15);
+    border: thin solid rgba(0, 174, 255,0.5);
+}
+
+.accordion {
+    width:auto !important;
+    height:auto !important;
+}
+.eform-item-focus{
+    border-left: 7px solid rgb(13,110,253);
+}

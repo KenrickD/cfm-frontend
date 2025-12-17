@@ -1,0 +1,1312 @@
+﻿/**
+    BEGIN Eric Meyer Reset (Selected)
+    http://meyerweb.com/eric/tools/css/reset/ 
+    v2.0 | 20110126
+    License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video
+{
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+}
+
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section
+{
+    display: block;
+}
+
+body
+{
+    line-height: 1;
+}
+
+ol, ul
+{
+    list-style: none;
+}
+
+blockquote, q
+{
+    quotes: none;
+}
+
+blockquote:before, blockquote:after, q:before, q:after
+{
+    content: '';
+    content: none;
+}
+
+table
+{
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/** END OF Eric Meyer Reset (Selected) */
+
+/** BEGIN CFM System Master Page Layout ----------------------------------------------------------------------------------------------------------------- */
+
+html
+{
+    width: 100%;
+    height: 100%;
+}
+
+body
+{
+    width: 100%;
+    min-width: 1145px; /** NEED TO BE REVISED TO ADAPT TO 1024x768 RESOLUTION FOR PORTABILITY */
+    height: 100%;
+    font-family: Arial;
+    font-size: 13px;
+    background-color: #FFF;
+}
+
+a
+{
+    color: #0093D0;
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 1px solid #F0F0F0;
+}
+
+fieldset /** The built-in box surrounding an asp:Panel */
+{
+    padding: 10px;
+    margin-bottom: 20px;
+    line-height: 2.2;
+}
+
+legend /** The built-in title for an asp:Panel */
+{
+    color: #0093D0;
+    font-size: 23px;
+    padding: 0px 10px 0px 10px; /** Top Right Bottom Left */
+    margin-left: -10px; /** display: none; */ /**font-variant: small-caps;*/
+}
+
+/** HEADER */
+
+#master-header
+{
+    height: 85px;
+    background-color: #0D5794;
+}
+
+.cfm-system-logo-container
+{
+    float: left;
+    margin: 12px 0px 0px 10px; /** Top Right Bottom Left */
+}
+
+.client-logo-container
+{
+    float: right;
+    margin: 12px 10px 0px 10px; /** Top Right Bottom Left */
+}
+
+.cfm-system-logo, .client-logo
+{
+    float: right;
+}
+
+.user-info
+{
+    height: 52px;
+    float: left;
+    margin: 12px 0px 0px 10px; /** Top Right Bottom Left */
+    padding: 10px 0px 0px 0px; /** Top Right Bottom Left */ /*border-left: 1px solid #EAEAEA;*/
+    line-height: 1.5;
+    color: #FFFFFF;
+}
+
+.client-info
+{
+    float: right;
+    height: 52px;
+    margin: 12px 0px 0px 10px; /** Top Right Bottom Left */
+    padding: 10px 0px 0px 0px; /** Top Right Bottom Left */ /*border-right: 1px solid #EAEAEA;*/
+    line-height: 1.5;
+    color: #FFFFFF;
+    text-align: right;
+}
+
+.user-info-bold, .client-info-bold
+{
+    color: #6CBFE6;
+    font-weight: bold;
+    border: none;
+}
+
+/** MENU ------------------------------------------------------------------------------------------------------------------------ */
+
+.master-sidebar
+{
+    float: left; /**display: none; /** Test */
+}
+
+#master-menu
+{
+    width: 213px;
+    background-color: #FEFEFE;
+    margin: 10px;
+    box-shadow: 0px 0px 5px 2px #EEE;
+    float: left;
+}
+
+#master-contact-information
+{
+    width: 213px;
+    background-color: #FEFEFE;
+    margin: 10px;
+    box-shadow: 0px 0px 5px 2px #EEE;
+    clear: left;
+}
+
+.master-ul
+{
+    color: #0093D0;
+}
+
+.master-ul li
+{
+    padding: 7px 0px 7px 0px; /** Top Right Bottom Left */
+    margin: 0px 10px 0px 10px; /** Top Right Bottom Left */
+    border-bottom: 1px solid #FAFAFA;
+}
+
+.master-ul-title
+{
+    font-weight: bold;
+    font-size: 12px;
+    color: #AAAAAA;
+}
+
+.hide-menu-toggle
+{
+    float: right;
+    margin-top: -2px;
+}
+
+#master-menu .moduleLink
+{
+    text-decoration: none;
+    border: none;
+}
+
+#master-menu .pageLink
+{
+    text-decoration: none;
+    border: none;
+    font-weight: normal;
+    padding-left: 10px;
+}
+
+.contact-information
+{
+    padding: 5px 0px 10px 10px; /** Top Right Bottom Left */
+    line-height: 1.5;
+}
+
+/** MAIN ------------------------------------------------------------------------------------------------------------------------ */
+
+.master-main
+{
+    margin: 10px 10px 10px 0px; /** Top Right Bottom Left */
+    float: left; /**position: absolute; /** Test */ /**left: 210px; /** Test */ /**right: 10px; /** Test */
+}
+
+/** FOOTER ------------------------------------------------------------------------------------------------------------------------ */
+
+#master-footer
+{
+    clear: both;
+    padding: 10px 0px 10px 0px; /** Top Right Bottom Left */
+    background-color: #6CBFE6;
+    text-align: center;
+    color: #00467F;
+    line-height: 1.5;
+}
+
+.master-footer-bold
+{
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+#master-footer a
+{
+    color: #FFFFFF;
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 1px solid #FFFFFF;
+}
+
+/** END OF CFM System Master Page Layout */
+
+/** FORM ------------------------------------------------------------------------------------------------------------------------ */
+
+.form-left
+{
+    float: left; /*min-width: 450px;*/ /** NEED TO BE REVISED TO ADAPT TO 1024x768 RESOLUTION FOR PORTABILITY */
+    margin-right: 5px; /*border: 1px solid green;*/
+}
+
+.form-right
+{
+    float: left; /*min-width: 450px;*/ /** NEED TO BE REVISED TO ADAPT TO 1024x768 RESOLUTION FOR PORTABILITY */ /*border: 1px solid green;*/
+}
+
+.form-single
+{
+    clear: both; /**border: 1px solid red;*/
+}
+
+.form-left li, .form-right li, .form-single li
+{
+    clear: both;
+    vertical-align: middle; /*border: 1px dotted red;*/
+}
+
+.form-right-right /** CONSIDER TO DELETE THIS, DEPRECATED */
+{
+    float: right;
+}
+
+.form-single-right /** CONSIDER TO DELETE THIS, DEPRECATED */
+{
+    clear: both;
+    text-align: right; /*border: 1px solid red;*/
+}
+
+/** Form label */
+
+.form-label
+{
+    float: left;
+    width: 140px;
+    text-align: right;
+    padding: 8px 10px 0px 0px; /** Top Right Bottom Left */
+    line-height: 1.5;
+    color: #4B4B4B;
+    display: inline-block; /*border: 1px solid red;*/
+}
+
+/** Form label's tooltip */
+
+.form-label[data-tooltip]
+{
+    position: relative;
+}
+
+.form-label[data-tooltip]:before
+{
+    content: "";
+    position: absolute;
+    border-bottom: 10px solid #0090FF;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    visibility: hidden;
+    top: 30px;
+    left: 120px;
+    z-index: 999; /** On top of everything */
+}
+
+.form-label[data-tooltip]:after
+{
+    content: attr(data-tooltip);
+    position: absolute;
+    color: #4B4B4B;
+    top: 40px;
+    left: 90px;
+    background: #FAFAFA;
+    border: 4px solid #0090FF;
+    padding: 10px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    text-align: left;
+    visibility: hidden;
+    width: 300px;
+    height: auto;
+    line-height: 1.7;
+    z-index: 999; /** On top of everything */
+}
+
+.form-label[data-tooltip]:hover:before, .form-label[data-tooltip]:hover:after
+{
+    visibility: visible; /**xxx -moz-transition: visibility 0s linear 2s; xxx*/ /**xxx -webkit-transition: visibility 0s linear 2s; xxx*/ /**xxx -ms-transition: visibility 0s linear 2s; xxx*/ /**xxx -o-transition: visibility 0s linear 2s; xxx*/ /**xxx transition: visibility 0s linear 2s; xxx*/
+}
+
+/** ASP Label ------------------------------------------------------------------------------------------------------------------------ */
+.aspLabel
+{
+    color: #4B4B4B;
+    padding-top: 3px;
+    float: left;
+}
+
+.aspLabel-small
+{
+    color: #4B4B4B;
+    font-size: 10px;
+}
+
+.aspLabel-right
+{
+    color: #4B4B4B;
+    padding-top: 3px;
+    float: right;
+}
+
+/** ASP Hyperlink ------------------------------------------------------------------------------------------------------------------------ */
+.aspHyperlink /** TODO LIST: Is it still relevant? */
+{
+    padding-top: 3px;
+    float: left;
+}
+
+/** FILE UPLOAD --------------------------------------------------------------------------------------------------------------------- */
+.fileupload
+{
+    position: relative; /*text-align: right;*/
+    -moz-opacity: 0;
+    filter: alpha(opacity: 0);
+    opacity: 0; /*z-index: 2;*/
+}
+fakefileupload
+{
+    position: relative;
+}
+
+/** TEXTAREA ------------------------------------------------------------------------------------------------------------------------ */
+.textarea
+{
+    color: #00467F;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+}
+
+textarea /** Note: This is necessary because using .textbox doesn't change the textarea font */
+{
+    font-family: Arial;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/** TEXTBOX ------------------------------------------------------------------------------------------------------------------------ */
+.textbox
+{
+    color: #00467F;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+}
+
+.textbox-right /** Right-aligned textbox, such as for numbers */
+{
+    color: #00467F;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+    text-align: right;
+}
+
+.textbox-right-no-border /** For GridView footer, e.g. Total */
+{
+    color: #00467F;
+    border: 0px solid #6CBFE6;
+    padding: 4px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+    text-align: right;
+}
+
+.textbox-inside-gridview /** CONSIDER DELETION, DEPRECATED */
+{
+    color: #00467F;
+    border: solid 1px #6CBFE6;
+    font-size: 13px;
+    padding: 3px;
+    margin-top: 5px;
+}
+
+.textbox:hover, .textbox-right:hover, .textarea:hover
+{
+    border: solid 1px #FFC425;
+}
+
+.textbox:focus, .textbox-right:focus, .textarea:focus
+{
+    background-color: #FFFFDD;
+    border: solid 1px #FFC425;
+}
+
+.watermark
+{
+    color: #AAAAAA;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+}
+
+.watermark-right /** Right-aligned watermark, such as for numbers */
+{
+    color: #AAAAAA;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+    text-align: right;
+}
+
+/** DROPDOWNLIST ------------------------------------------------------------------------------------------------------------------------ */
+
+.dropdownlist
+{
+    color: #00467F;
+    border: 1px solid #6CBFE6;
+    padding: 2px; /** The only reason why .dropdownlist has to differ from .textbox is because of the padding */
+    font-family: Arial;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.dropdownlist:hover
+{
+    border: solid 1px #FFC425;
+}
+
+.dropdownlist:focus
+{
+    background-color: #FFFFDD;
+    border: solid 1px #FFC425;
+}
+
+.dropdownlist.listSearch
+{
+    display: none;
+}
+
+/** RADIO BUTTON, CHECK BOX ------------------------------------------------------------------------------------------------------------------------ */
+
+.radiobutton, .checkbox, .icon-button
+{
+    color: #00467F;
+    float: left;
+    margin-top: 3px;
+}
+
+.checkbox input
+{
+    vertical-align: middle;    
+}
+
+.checkbox label
+{
+    vertical-align: middle;    
+}
+
+/** LISTBOX ------------------------------------------------------------------------------------------------------------------------ */
+.listbox
+{
+    color: #00467F;
+    border: 1px solid #6CBFE6;
+    padding: 3px;
+    font-family: Arial;
+    font-size: 13px;
+    margin: 5px 0px 5px 0px; /** Top Right Bottom Left */
+}
+
+/** DATALIST ------------------------------------------------------------------------------------------------------------------------ */
+
+.datalist-seperator
+{
+    border-bottom: 1px solid #EAEAEA;
+}
+
+
+/** GRIDVIEW ------------------------------------------------------------------------------------------------------------------------ */
+
+.gridview
+{
+    /**margin: 10px 0px 20px 0px;*/
+    -webkit-overflow-scrolling: touch; /**border: 1px solid red;*/
+}
+
+.gridview-header
+{
+    color: #0093D0;
+    border-bottom: 1px solid #0093D0;
+}
+
+.gridview-header th
+{
+    padding: 0px 20px 0px 0px; /** Top Right Bottom Lest */
+    vertical-align: top; /**border: 1px solid red;*/
+}
+
+.gridview-header-compact
+{
+    color: #0093D0;
+    border-bottom: 1px solid #E5E0FE;
+}
+
+.gridview-header-compact th
+{
+    padding: 0px;
+    vertical-align: middle;
+}
+
+.gridview-row
+{
+    color: #4B4B4B;
+    border-bottom: 1px solid #E5E0FE;
+}
+
+.gridview-row td
+{
+    padding: 0px 20px 0px 0px; /** Top Right Bottom Lest */
+    vertical-align: top; /**border: 1px solid blue;*/
+    line-height: 25px;
+}
+
+.gridview-row-compact
+{
+    color: #4B4B4B;
+    border-bottom: 1px solid #E5E0FE;
+}
+
+.gridview-row-compact td
+{
+    padding: 0px 10px 0px 0px;
+    vertical-align: middle;
+}
+
+.gridview-footer
+{
+    color: #4B4B4B;
+    font-weight: bold;
+}
+
+.gridview-footer td
+{
+    padding: 0px 20px 0px 0px; /** Top Right Bottom Lest */
+    vertical-align: top; /**border: 1px solid red;*/
+}
+
+.gridview-footer-compact
+{
+    color: #4B4B4B;
+    font-weight: bold;
+}
+
+.gridview-footer-compact td
+{
+    padding: 0px 10px 0px 0px;
+    vertical-align: middle;
+}
+
+/** For GridView pager, true means enabled/clickable, false means disabled or is already selected */
+.pager-True
+{
+}
+
+.pager-False
+{
+    color: #FFFFFF;
+    background-color: #0093D0;
+    padding: 0px 3px 0px 3px;
+}
+
+/** Visual guides are mostly used for Work Request's Job Code/Priority Level, or Status */
+
+.visual-guide-white
+{
+    padding: 2px 5px 2px 5px; /** Top Right Bottom Left */
+    background-color: #FFFFFF;
+    font-weight: bold;
+    color: #0093D0;
+    border: 1px solid #0093D0;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.visual-guide-green
+{
+    padding: 2px 5px 2px 5px; /** Top Right Bottom Left */
+    background-color: #6FC361;
+    font-weight: bold;
+    color: #FFFFFF;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.visual-guide-yellow
+{
+    padding: 2px 5px 2px 5px; /** Top Right Bottom Left */
+    background-color: #FFC425;
+    font-weight: bold;
+    color: #FFFFFF;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.visual-guide-red
+{
+    padding: 2px 5px 2px 5px; /** Top Right Bottom Left */
+    background-color: #EE3124;
+    font-weight: bold;
+    color: #FFFFFF;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.visual-guide-grey
+{
+    padding: 2px 5px 2px 5px; /** Top Right Bottom Left */
+    background-color: #E6E6E6;
+    font-weight: bold;
+    color: #FFFFFF;
+    border-radius: 3px;
+    text-align: center;
+}
+
+/** CALENDAR (DAYPILOT) ------------------------------------------------------------------------------------------------------------------------ */
+
+.calendar-header
+{
+    font-weight: bold;
+    line-height: 1.5;
+}
+
+.calendar-cell
+{
+    line-height: 1.5;
+}
+
+.calendar-event
+{
+    line-height: 1.3;
+}
+
+.calendar-selected
+{
+    line-height: 1.5;
+}
+
+/** Update Progress ----------------------------------------------------------------------------------------------------------------------*/
+#overlay
+{
+    position: fixed;
+    z-index: 99;
+    top: 0px;
+    left: 0px;
+    background-color: #DCDCDC;
+    width: 100%;
+    height: 100%;
+    filter: Alpha(Opacity=80);
+    opacity: 0.80;
+    -moz-opacity: 0.80;
+}
+#theprogress
+{
+    background-color: #DCDCDC;
+    width: 110px;
+    height: 50px;
+    text-align: center;
+    -moz-opacity: 1;
+    color: #404040;
+}
+
+#modalprogress
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: -11px 0 0 -55px;
+    color: white;
+}
+
+/** REORDERLIST ------------------------------------------------------------------------------------------------------------------------ */
+
+.reorderlist
+{
+    /**border: 1px dotted red;*/
+}
+
+.reorderlist li
+{
+    /**border: 1px dotted blue;*/
+    margin: 0px 0px 0px 150px; /** It's to compensate form-label width: 140px AND padding-right: 10px */
+    padding: 5px 10px 5px 0px;
+    line-height: 1.2;
+    vertical-align: top;
+}
+
+.draghandle
+{
+    width: 10px;
+    height: 10px;
+    background-color: #EAEAEA;
+    cursor: move;
+    margin-right: 5px; /**border: 1px dotted blue;*/
+}
+
+/** BUTTON ------------------------------------------------------------------------------------------------------------------------ */
+
+.button
+{
+    color: #4B4B4B;
+    padding: 3px 7px;
+    position: relative;
+    display: inline-block;
+    border: solid 1px #AAAAAA;
+    -webkit-border-radius: 2px;
+    -moz-border-radius: 2px;
+    background-color: #F3F3F3;
+    text-align: left;
+    margin-top: 5px;
+}
+
+.button:hover
+{
+    color: #333; /*border-color: #999;*/
+    border: solid 1px #FFC425;
+    -moz-box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2) -webkit-box-shadow:0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.button:active
+{
+    color: #000;
+    border-color: #444;
+}
+
+/**.button.left
+{
+    -webkit-border-top-right-radius: 0;
+    -moz-border-radius-topright: 0;
+    border-top-right-radius: 0;
+    -webkit-border-bottom-right-radius: 0;
+    -moz-border-radius-bottomright: 0;
+    border-bottom-right-radius: 0;
+    margin: 0;
+}*/
+
+/**.button.middle
+{
+    border-radius: 0;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-left: solid 1px #f3f3f3;
+    margin: 0;
+    border-left: solid 1px rgba(255, 255, 255, 0);
+}*/
+
+/**.button.middle:hover, .button.right:hover
+{
+    border-left: solid 1px #999;
+}*/
+
+/**.button.right
+{
+    -webkit-border-top-left-radius: 0;
+    -moz-border-radius-topleft: 0;
+    border-top-left-radius: 0;
+    -webkit-border-bottom-left-radius: 0;
+    -moz-border-radius-bottomleft: 0;
+    border-bottom-left-radius: 0;
+    border-left: solid 1px #f3f3f3;
+    border-left: solid 1px rgba(255, 255, 255, 0);
+}*/
+
+.button.search
+{
+    background: url(../Images/magnifier.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.excel
+{
+    background: url(../Images/excelbutton.png) 0px -2px no-repeat #F5F5F5;
+    padding-left: 25px;
+}
+
+.button.save
+{
+    background: url(../Images/disk.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.cancel
+{
+    background: url(../Images/cancel.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.add
+{
+    background: url(../Images/add.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+/**.button.delete
+{
+    background: url(../Images/deletebutton.png) 2px 2px no-repeat #f3f3f3;
+    padding-left: 30px;
+}*/
+
+.button.edit
+{
+    background: url(../Images/edit.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.not-filled /** Specially used in BudgetAndExpense/ExpenseDetail.aspx */
+{
+    background: url(../Images/accept-modified.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.filled /** Specially used in BudgetAndExpense/ExpenseDetail.aspx */
+{
+    background: url(../Images/accept.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.refresh
+{
+    background: url(../Images/arrow_refresh.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.send
+{
+    background: url(../Images/email.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.calendar-day-view /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/calendar_view_day.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.calendar-week-view /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/calendar_view_week.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.calendar-month-view /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/calendar_view_month.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.calendar-52-weeks-view /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/timeline_marker.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.calendar-list-view /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/table.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.previous /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/arrow_left.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+.button.next /** Used in FacilitiesMaintenance/FacilitiesMaintenanceList.aspx */
+{
+    background: url(../Images/arrow_right.png) 6px 4px no-repeat #f3f3f3;
+    padding-left: 25px;
+    box-shadow: 0px 0px 1px 1px #EEE;
+}
+
+/** ImageButton */
+
+.image-button
+{
+    padding-top: 6px;
+}
+
+/** These .calendar series is for Calendar control, the remaining style must be put on the control itself */
+.calendar a
+{
+    text-decoration: none;
+}
+
+/** ValidationSummary */
+.validationsummary
+{
+    color: #EE3124;
+    border: 1px solid #EE3124;
+    padding: 5px 10px 5px 10px; /** Top Right Bottom Left */
+    margin: 0px 0px 10px 0px; /** Top Right Bottom Left */
+    border-radius: 7px;
+}
+
+/** RequiredFieldValidator and RegularExpressionValidator */
+.error-message
+{
+    color: #EE3124;
+    font-weight: bold;
+}
+
+/** ValidationCalloutExtender */
+.validator-callout div, .validator-callout td
+{
+    border: 1px solid #EE3124;
+    background-color: #FFF;
+}
+
+.validator-callout .ajax__validatorcallout_popup_table
+{
+    display: none;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_popup_table_row
+{
+    vertical-align: top;
+    height: 100%;
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_callout_cell
+{
+    width: 20px;
+    height: 100%;
+    text-align: right;
+    vertical-align: top;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_callout_table
+{
+    height: 100%;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_callout_table_row
+{
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_callout_arrow_cell
+{
+    padding: 8px 0px 0px 0px;
+    text-align: right;
+    vertical-align: top;
+    font-size: 1px;
+    border: none;
+    background-color: transparent;
+}
+.validator-callout .ajax__validatorcallout_callout_arrow_cell .ajax__validatorcallout_innerdiv
+{
+    font-size: 1px;
+    position: relative;
+    left: 1px;
+    border-bottom: none;
+    border-right: none;
+    border-left: none;
+    width: 15px;
+    background-color: transparent;
+    padding: 0px;
+}
+.validator-callout .ajax__validatorcallout_callout_arrow_cell .ajax__validatorcallout_innerdiv div
+{
+    height: 1px;
+    overflow: hidden;
+    border-top: none;
+    border-bottom: none;
+    border-right: none;
+    padding: 0px;
+    margin-left: auto;
+}
+
+.validator-callout .ajax__validatorcallout_error_message_cell
+{
+    font-family: Arial;
+    font-size: 12px;
+    color: #EE3124;
+    font-weight: bold;
+}
+
+.validator-callout .ajax__validatorcallout_icon_cell
+{
+    margin: 0px;
+    padding: 0px;
+}
+
+.validator-callout .ajax__validatorcallout_close_button_cell
+{
+    vertical-align: top;
+    padding-right: 5px;
+    text-align: right;
+    border-left: none;
+}
+
+.validator-callout .ajax__validatorcallout_close_button_cell .ajax__validatorcallout_innerdiv
+{
+    border: none;
+    text-align: center;
+    width: 10px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+/** For AJAX AutoCompleteExtender Toolkit */
+
+.autoCompleteExtender
+{
+    border: solid 1px #0093D0;
+    background-color: #FFFFFF;
+    list-style-type: none;
+    line-height: 150%;
+    padding: 0px;
+    margin-top: 10px;
+    cursor: pointer;
+    position: absolute;
+    vertical-align: middle;
+}
+
+.autoCompleteList
+{
+    background-color: #FFFFDD;
+    border: 1px solid #6CBFE6;
+    cursor: default;
+    font-family: Arial;
+    font-size: 13px;
+    z-index: 200000 !important;
+}
+
+.autoCompleteListItem
+{
+    color: #00467F;
+    padding: 5px 0px 5px 0px; /** Top Right Bottom Left */
+}
+
+.autoCompleteListItemHighlighted
+{
+    color: #FFFFFF;
+    background-color: #3399FF;
+    padding: 5px 0px 5px 0px; /** Top Right Bottom Left */
+}
+
+.normalText
+{
+    /**color:#666666;*/
+    color: #00467F; /** Colliers dark teal */
+    font-family: Arial;
+    font-size: 13px; /*temporarily off 31 Jan 12 02:58 line-height: 25px; */
+    font-weight: normal;
+}
+
+.imageGallery
+{
+    border: solid 1px #EAEAEA;
+    padding: 7px;
+}
+
+/** Modal Popup, for form */
+
+.modal-background
+{
+    height: 100%;
+    width: 100%;
+    background-color: #000000;
+    filter: alpha(opacity=30);
+    opacity: 0.3;
+}
+
+.modal-panel
+{
+    background-color: #FFFFFF;
+    overflow: auto; /*min-width: 10%;*/ /*IAN:PROBLEM HERE WITH POPUP WIDTH*/
+    max-width: 90%;
+    max-height: 90%;
+    border: 5px solid #EAEAEA;
+}
+
+/** ListView Tree */
+.tree-node-level1
+{
+    padding-left: 10px;
+    border-bottom: 1px solid #EAEAEA;
+    clear: both;
+    display: block;
+}
+.tree-node-level1-no-underline
+{
+    padding-left: 10px;
+    clear: both;
+    display: block;
+}
+.tree-node-level2
+{
+    padding-left: 25px;
+    border-bottom: 1px solid #EAEAEA;
+    clear: both;
+    display: block;
+}
+.tree-node-level3
+{
+    padding-left: 55px;
+    border-bottom: 1px solid #EAEAEA;
+    clear: both;
+    display: block;
+}
+.listview-node /** For ListView inside form-left, form-right, or form-single */
+{
+    border-bottom: 1px solid #EAEAEA;
+    clear: both;
+    display: block;
+}
+.listview-node-no-underline
+{
+    clear: both;
+    display: block;
+}
+
+/*Blocking page while postback is on going*/
+#overlay
+{
+    position: fixed;
+    z-index: 99;
+    top: 0px;
+    left: 0px;
+    background-color: #DCDCDC;
+    width: 100%;
+    height: 100%;
+    filter: Alpha(Opacity=80);
+    opacity: 0.80;
+    -moz-opacity: 0.80;
+}
+
+#theprogress
+{
+    background-color: #DCDCDC;
+    width: 110px;
+    height: 50px;
+    text-align: center;
+    -moz-opacity: 1;
+    color: #404040;
+}
+
+#modalprogress
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: -11px 0 0 -55px;
+    color: white;
+}
+#centerPosition
+{
+    position: absolute;
+    top: 20%;
+    left: 22%;
+}
+
+
+body > #modalprogress
+{
+    position: fixed;
+}
+/*end*/
+
+.linkbutton
+{
+    line-height: 35px;
+}
+.linkbutton:hover
+{
+    text-decoration: underline;
+}
+/*end*/
+
+/*AutoComplete flyout */
+.autocomplete_completionListElement
+{
+    margin: 0px !important;
+    background-color: inherit;
+    color: windowtext;
+    border: buttonshadow;
+    border-width: 1px;
+    border-style: solid;
+    cursor: default;
+    overflow: auto;
+    height: 200px;
+    font-family: Tahoma;
+    font-size: small;
+    text-align: left;
+    list-style-type: none;
+}
+/* AutoComplete highlighted item */
+.autocomplete_highlightedListItem
+{
+    background-color: #ffff99;
+    color: black;
+    padding: 1px;
+}
+
+/* AutoComplete item */
+.autocomplete_listItem
+{
+    background-color: window;
+    color: windowtext;
+    padding: 1px;
+}
+
+.watermarked_psw
+{
+    background-image: url(../Images/passwordWatermark.PNG);
+    background-repeat: no-repeat;
+    font-family: Arial;
+    font-size: 11px;
+    font-weight: normal;
+    border: solid 1px #0093D0;
+    padding: 3px;
+    margin: 0px;
+    text-indent: 2px;
+    vertical-align: middle;
+    text-align: right;
+}

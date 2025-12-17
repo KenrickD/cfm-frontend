@@ -1,71 +1,76 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "CFM System - Home";
+    Layout = null; // Use null for landing pages
 }
 
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-
-    <title>CFM System - Home</title>
+    <title>@ViewData["Title"]</title>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-    <meta name="team" content="">
+    <meta name="description" content="CFM System - Facilities Management in Your Hands">
+    <meta name="keywords" content="facilities management, CFM, property management">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-    <link href="../Images/cfm-system-icon.ico" rel="shortcut icon" />
-    <link rel="stylesheet" href="../Styles/bootstrap.min.css">
-    <link rel="stylesheet" href="../Styles/owl.carousel.css">
-    <link rel="stylesheet" href="../Styles/owl.theme.default.min.css">
-    <link rel="stylesheet" href="../Fonts/font-awesome.min.css">
-
-    <!-- MAIN CSS -->
-    <link rel="stylesheet" href="../Styles/landingpage.css">
+    <link href="~/assets/images/cfm-system-icon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="~/assets/styles/bootstrap.min.css">
+    <link rel="stylesheet" href="~/assets/styles/owl.carousel.css">
+    <link rel="stylesheet" href="~/assets/styles/owl.theme.default.min.css">
+    <link rel="stylesheet" href="~/assets/fonts/font-awesome.min.css">
+    <link rel="stylesheet" href="~/assets/styles/landingpage.css">
 </head>
 <body>
 
     <!-- PRE LOADER -->
     <div class="preloader">
         <div class="spinner">
-
             <span class="spinner-rotate"></span>
-
         </div>
     </div>
-
 
     <!-- MENU -->
     <div class="navbar custom-navbar navbar-expand-lg navbar-light bg-white fixed-top pt-2 pb-2">
         <div class="container">
             <a class="navbar-brand" href="#home">
-                <img src="../Images/logo.png" width="80%" title="CFM System - Home">
+                <img src="~/assets/images/logo.png" width="80%" title="CFM System - Home" alt="CFM System Logo">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent" style="font-weight: normal">
                 <ul class="navbar-nav mb-2 mb-lg-0 ms-md-auto text-nowrap">
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#what" class="nav-link smoothScroll">WHAT IS CFM SYSTEM?</a></li>
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#module" class="nav-link smoothScroll">LIST OF MODULES</a></li>
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#why" class="nav-link smoothScroll">WHY CFM SYSTEM?</a></li>
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#whereandwhen" class="nav-link smoothScroll">WHERE AND WHEN?</a></li>
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#user" class="nav-link smoothScroll">WHO CAN USE?</a></li>
-                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;"><a href="#price" class="nav-link smoothScroll">HOW MUCH?</a></li>
                     <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
-                        <asp:HyperLink ID="login" class="nav-link smoothScroll" runat="server" NavigateUrl="~/Pages/SignIn.aspx"></asp:HyperLink>
+                        <a href="#what" class="nav-link smoothScroll">WHAT IS CFM SYSTEM?</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a href="#module" class="nav-link smoothScroll">LIST OF MODULES</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a href="#why" class="nav-link smoothScroll">WHY CFM SYSTEM?</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a href="#whereandwhen" class="nav-link smoothScroll">WHERE AND WHEN?</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a href="#user" class="nav-link smoothScroll">WHO CAN USE?</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a href="#price" class="nav-link smoothScroll">HOW MUCH?</a>
+                    </li>
+                    <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
+                        <a class="nav-link smoothScroll" asp-controller="Login" asp-action="Index">LOGIN</a>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 
+    <!-- WhatsApp & Email Fixed Contact -->
     <div style="width: 70px; height: 80px; display: block; position: fixed; right: -15px; z-index: 99999; border-radius: 10px; bottom: 50px; background: white; box-shadow: 0 1px 30px rgba(0, 0, 0, 0.2);">
-        <a href="https://api.whatsapp.com/send?phone=6281296569257&text=Hi, I'd like to know more about CFM System. Could you help me?" target="_blank" style="background: none; color: #1f4394; font-size: 20pt; margin: 8px -5px 5px 19px;" class="fa fa-whatsapp"></a>
+        <a href="https://api.whatsapp.com/send?phone=6281296569257&text=Hi, I'd like to know more about CFM System. Could you help me?" target="_blank" style="background: none; color: #1f4394; font-size: 20pt; margin: 8px -5px 5px 19px;" class="fa fa-whatsapp" aria-label="Contact via WhatsApp"></a>
         <br />
-        <a href="mailto:deyla.novera@colliers.com" target="_blank" style="background: none; color: #1f4394; font-size: 20pt; margin: 5px -5px 10px 17px;" class="fa fa-envelope-o"></a>
+        <a href="mailto:deyla.novera@colliers.com" target="_blank" style="background: none; color: #1f4394; font-size: 20pt; margin: 5px -5px 10px 17px;" class="fa fa-envelope-o" aria-label="Contact via Email"></a>
     </div>
 
     <!-- HOME -->
@@ -74,7 +79,7 @@
             <div class="home-logo">
                 <div class="row justify-content-center text-center">
                     <div class="col-md-8">
-                        <img src="../Images/landing-page-images/logo-white.png" width="50%" />
+                        <img src="~/assets/images/landing-page-images/logo-white.png" width="50%" alt="CFM System Logo" />
                     </div>
                     <div class="home-text">
                         Facilities Management in Your Hands
@@ -90,29 +95,27 @@
             <div class="row">
                 <div class="col-md-8">
                     <div class="section-title">
-                        <h1>What is
+                        <h1>
+                            What is
                             <br />
-                            <b class="fw-bold">CFM System?
-                            </b>
+                            <b class="fw-bold">CFM System?</b>
                         </h1>
-                        <h4>CFM System is a cloud-based facilities management software and mobile app developed by Colliers Indonesia. The software empowers you to maintain control while overseeing the facilities of single or multiple locations worldwide.
-                        </h4>
+                        <h4>CFM System is a cloud-based facilities management software and mobile app developed by Colliers Indonesia. The software empowers you to maintain control while overseeing the facilities of single or multiple locations worldwide.</h4>
                     </div>
 
                     <div class="section-title">
-                        <iframe class="commercial-video" src="https://youtube.com/embed/i9ZAK-sLFNE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe class="commercial-video" src="https://youtube.com/embed/i9ZAK-sLFNE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="CFM System Video"></iframe>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="what-image">
-                        <img src="../Images/landing-page-images/app-mockup-1.png" class="img-fluid" alt="App Mockup 1">
+                        <img src="~/assets/images/landing-page-images/app-mockup-1.png" class="img-fluid" alt="App Mockup 1">
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 
     <!-- Module -->
     <div id="module">
@@ -126,7 +129,7 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/property-icon.png" class="img-fluid" alt="Property">
+                        <img src="~/assets/images/landing-page-images/property-icon.png" class="img-fluid" alt="Property">
                         <div class="module-info module-thumb-up">
                             <h2>Property</h2>
                             <p>Listing your buildings including all important information including lease agreement, permit, drawings.</p>
@@ -136,7 +139,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/asset-icon.png" class="img-fluid" alt="Asset">
+                        <img src="~/assets/images/landing-page-images/asset-icon.png" class="img-fluid" alt="Asset">
                         <div class="module-info module-thumb-up">
                             <h2>Asset</h2>
                             <p>Tracking asset full life cycle from purchase, operations, until disposal.</p>
@@ -146,7 +149,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/maintenance-icon.png" class="img-fluid" alt="Maintenance">
+                        <img src="~/assets/images/landing-page-images/maintenance-icon.png" class="img-fluid" alt="Maintenance">
                         <div class="module-info module-thumb-up">
                             <h2>Maintenance</h2>
                             <p>Planning and monitoring maintenance activity of all assets and equipment.</p>
@@ -156,7 +159,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/inspection-icon.png" class="img-fluid" alt="e-Inspection">
+                        <img src="~/assets/images/landing-page-images/inspection-icon.png" class="img-fluid" alt="e-Inspection">
                         <div class="module-info module-thumb-up">
                             <h2>e-Inspection</h2>
                             <p>Mobile inspector for all FM activities</p>
@@ -166,7 +169,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/helpdesk-icon.png" class="img-fluid" alt="Helpdesk">
+                        <img src="~/assets/images/landing-page-images/helpdesk-icon.png" class="img-fluid" alt="Helpdesk">
                         <div class="module-info module-thumb-up">
                             <h2>Helpdesk and Ticket Apps</h2>
                             <p>Managing corrective work.</p>
@@ -176,7 +179,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../images/landing-page-images/facilitybooking-icon.png" class="img-fluid" alt="Facility Booking">
+                        <img src="~/assets/images/landing-page-images/facilitybooking-icon.png" class="img-fluid" alt="Facility Booking">
                         <div class="module-info module-thumb-up">
                             <h2>Facility Booking</h2>
                             <p>Allowing user to book available facilities & request specific amenities.</p>
@@ -186,7 +189,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/supplychain-icon.png" class="img-fluid" alt="Supply Chain">
+                        <img src="~/assets/images/landing-page-images/supplychain-icon.png" class="img-fluid" alt="Supply Chain">
                         <div class="module-info module-thumb-up">
                             <h2>Supply Chain</h2>
                             <p>Managing third party service providers.</p>
@@ -196,7 +199,7 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/budgetandexpense-icon.png" class="img-fluid" alt="Budget and Expense">
+                        <img src="~/assets/images/landing-page-images/budgetandexpense-icon.png" class="img-fluid" alt="Budget and Expense">
                         <div class="module-info module-thumb-up">
                             <h2>Budget and Expense</h2>
                             <p>Recording and managing your facility expenses in-line with your budget.</p>
@@ -206,41 +209,16 @@
 
                 <div class="col-md-4">
                     <div class="module-thumb">
-                        <img src="../Images/landing-page-images/performance-icon.png" class="img-fluid" alt="Performance">
+                        <img src="~/assets/images/landing-page-images/performance-icon.png" class="img-fluid" alt="Performance">
                         <div class="module-info module-thumb-up">
                             <h2>Performance</h2>
                             <p>Providing report for all FM activities including team performance.</p>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
-
-
-    <!-- <!-- BRIDGE -->
-    <!-- <section id="bridge" data-stellar-background-ratio="0.5"> -->
-    <!-- <div class="container"> -->
-    <!-- <div class="row"> -->
-
-    <!-- <div class="col-md-6 col-sm-6"> -->
-    <!-- <div class="bridge-image">					 -->
-    <!-- <img src="../Images/landing-page-images/app-mockup-2.png" width="70%" class="img-fluid" alt="App Mockup 2">							 -->
-    <!-- </div> -->
-    <!-- </div> -->
-
-    <!-- <div class="col-md-6 col-sm-6"> -->
-    <!-- <div class="section-title"> -->
-    <!-- <h1>CFM System, -->
-    <!-- manage your facilities -->
-    <!-- <b>in one place</b></h1> -->
-    <!-- </div> -->
-    <!-- </div> -->
-
-    <!-- </div> -->
-    <!-- </div> -->
-    <!-- </section> -->
 
     <!-- WHY -->
     <div id="why">
@@ -256,12 +234,11 @@
             <div class="row">
                 <div class="col-md-12 position-relative">
                     <div class="why-image">
-                        <img src="../Images/landing-page-images/app-mockup-5.png" class="img-fluid" alt="App Mockup 5">
+                        <img src="~/assets/images/landing-page-images/app-mockup-5.png" class="img-fluid" alt="App Mockup 5">
                     </div>
                 </div>
 
                 <div class="col-md-12 col-sm-12">
-
                     <div class="why-checked-box left-box">
                         <div class="overlay2"></div>
                         <div class="checked-box">
@@ -271,11 +248,9 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="col-md-12 col-sm-12">
-
                     <div class="why-checked-box right-box">
                         <div class="overlay2"></div>
                         <div class="checked-box">
@@ -285,11 +260,9 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="col-md-12 col-sm-12">
-
                     <div class="why-checked-box left-box">
                         <div class="overlay2"></div>
                         <div class="checked-box">
@@ -299,11 +272,9 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="col-md-12 col-sm-12">
-
                     <div class="why-checked-box right-box">
                         <div class="overlay2"></div>
                         <div class="checked-box">
@@ -313,13 +284,10 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
-
             </div>
         </div>
     </div>
-
 
     <!-- WHERE AND WHEN -->
     <div id="whereandwhen">
@@ -337,7 +305,7 @@
                     <div class="big-circle"></div>
                     <div class="whereandwhen-image">
                         <h1>
-                            <img src="../Images/landing-page-images/app-mockup-3.png" width="90%" class="img-fluid" alt="App Mockup 3">
+                            <img src="~/assets/images/landing-page-images/app-mockup-3.png" width="90%" class="img-fluid" alt="App Mockup 3">
                         </h1>
                     </div>
                 </div>
@@ -362,7 +330,8 @@
                                 <div class="col-md-1 position-relative">
                                     <div class="checked-icon">
                                         <i>
-                                            <img src="../Images/landing-page-images/24hours-icon.png" width="80%" draggable="false" style="margin: auto; margin-left: 0.1em; margin-top: -0.5em" class="img-fluid"></i>
+                                            <img src="~/assets/images/landing-page-images/24hours-icon.png" width="80%" draggable="false" style="margin: auto; margin-left: 0.1em; margin-top: -0.5em" class="img-fluid" alt="24/7 Icon">
+                                        </i>
                                     </div>
                                 </div>
                                 <div class="col-md-3 position-relative">
@@ -380,6 +349,7 @@
     </div>
 
     <div class="clearfix"></div>
+
     <!-- USER -->
     <div id="user">
         <div class="container">
@@ -393,7 +363,7 @@
                     <div class="user-thumb">
                         <div class="teamimage">
                             <div class="overlay"></div>
-                            <img src="../Images/landing-page-images/team-image1.jpg" class="img-fluid" alt="Andrew Orange">
+                            <img src="~/assets/images/landing-page-images/team-image1.jpg" class="img-fluid" alt="Tenants and Occupants">
                         </div>
                         <div class="user-info user-thumb-up">
                             <h2>Tenants, Occupants, Employees</h2>
@@ -406,7 +376,7 @@
                     <div class="user-thumb">
                         <div class="teamimage">
                             <div class="overlay"></div>
-                            <img src="../Images/landing-page-images/team-image2.jpg" class="img-fluid" alt="Jack Wilson">
+                            <img src="~/assets/images/landing-page-images/team-image2.jpg" class="img-fluid" alt="FM Managers">
                         </div>
                         <div class="user-info user-thumb-up">
                             <h2>FM Managers</h2>
@@ -419,7 +389,7 @@
                     <div class="user-thumb">
                         <div class="teamimage">
                             <div class="overlay"></div>
-                            <img src="../Images/landing-page-images/team-image3.jpg" class="img-fluid" alt="Andrew Orange">
+                            <img src="~/assets/images/landing-page-images/team-image3.jpg" class="img-fluid" alt="Vendors">
                         </div>
                         <div class="user-info user-thumb-up">
                             <h2>Vendors</h2>
@@ -432,7 +402,7 @@
                     <div class="user-thumb">
                         <div class="teamimage">
                             <div class="overlay"></div>
-                            <img src="../Images/landing-page-images/team-image4.jpg" class="img-fluid" alt="Andrew Orange">
+                            <img src="~/assets/images/landing-page-images/team-image4.jpg" class="img-fluid" alt="FM Administrators">
                         </div>
                         <div class="user-info user-thumb-up">
                             <h2>FM Administrators</h2>
@@ -445,7 +415,7 @@
                     <div class="user-thumb">
                         <div class="teamimage">
                             <div class="overlay"></div>
-                            <img src="../Images/landing-page-images/team-image5.jpg" class="img-fluid" alt="Jack Wilson">
+                            <img src="~/assets/images/landing-page-images/team-image5.jpg" class="img-fluid" alt="C-Suites">
                         </div>
                         <div class="user-info user-thumb-up">
                             <h2>C-Suites</h2>
@@ -453,11 +423,9 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
-
 
     <!-- PRICE -->
     <div id="price">
@@ -465,21 +433,17 @@
             <div class="row">
                 <div class="col-md-8">
                     <div class="section-title">
-                        <h1>Price
-                        </h1>
-                        <h3>Starts from
-                        </h3>
+                        <h1>Price</h1>
+                        <h3>Starts from</h3>
                         <h2 class="price-amount">
                             <span>IDR 2,000,000 / month</span>
                         </h2>
                         <br />
-                        <h3 style="color: #6dbce3; font-weight: 900;">CONTACT US FOR TRIAL!
-                        </h3>
+                        <h3 style="color: #6dbce3; font-weight: 900;">CONTACT US FOR TRIAL!</h3>
                     </div>
                     <div class="section-contact">
                         <p>
-                            <b>Colliers International Indonesia
-                            </b>
+                            <b>Colliers International Indonesia</b>
                             <br />
                             Facilities Management
                             <br />
@@ -492,127 +456,65 @@
                             Indonesia
                             <br />
                             <br />
-                            <b>MAIN +6281296569257
-                            </b>
+                            <b>MAIN +6281296569257</b>
                         </p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <img src="../Images/landing-page-images/app-mockup-4.png" class="img-fluid" alt="App Mockup 4">
+                    <img src="~/assets/images/landing-page-images/app-mockup-4.png" class="img-fluid" alt="App Mockup 4">
                 </div>
             </div>
         </div>
     </div>
-
-
-
-
-    <!-- TESTIMONIAL -->
-    <%--<div id="testimonial" data-stellar-background-ratio="0.5">
-        <div class="container">
-            <div class="row">
-
-                <div class="col-md-6 col-sm-12">
-                    <div class="testimonial-image"></div>
-                </div>
-
-                <div class="col-md-6 col-sm-12">
-                    <div class="testimonial-info">
-
-                        <div class="section-title">
-                            <h1>What People Say</h1>
-                        </div>
-
-                        <div class="owl-carousel owl-theme">
-
-                            <div class="item">
-                                <h3>Mantul banget pake CFM System. Semua jadi mudah.</h3>
-                                <div class="testimonial-item">
-                                    <img src="../Images/landing-page-images/tst-image1.jpg" class="img-fluid" alt="Adi Riyadi">
-                                    <h4><b>Adi Riyadi</b><br />
-                                        Assistant Manager - CFM System</h4>
-                                </div>
-                            </div>
-
-                            <div class="item">
-                                <h3>Ready for digitalize all of the paper work. Great job team!</h3>
-                                <div class="testimonial-item">
-                                    <img src="../Images/landing-page-images/tst-image2.jpg" class="img-fluid" alt="Fajri Oen">
-                                    <h4><b>Fajri Oen</b><br />
-                                        Assistant Manager - CFM System</h4>
-                                </div>
-                            </div>
-
-                            <div class="item">
-                                <h3>Inspeksi jadi lebih mudah. Keren!</h3>
-                                <div class="testimonial-item">
-                                    <img src="../Images/landing-page-images/tst-image3.jpg" class="img-fluid" alt="Arif Dharmawan">
-                                    <h4><b>Arif Dharmawan</b><br />
-                                        Manager - CFM System</h4>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>--%>
-
-
-
 
     <!-- FOOTER -->
     <footer id="footer" data-stellar-background-ratio="0.5">
         <div class="container">
             <div class="d-flex">
                 <div class="footer-logo">
-                    <img src="../Images/cfm-system-logo.png" width="90px" class="img-fluid">
+                    <img src="~/assets/images/cfm-system-logo.png" width="90px" class="img-fluid" alt="CFM System Logo">
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-9">
                     <ul class="footer-icon">
                         <li>
-                            <p class=" text-nowrap">PRIVACY POLICY (<a href="../PrivacyPolicy/eng">ENG</a> | <a href="../PrivacyPolicy/ind">IND</a>)</p>
+                            <p class="text-nowrap">PRIVACY POLICY (<a href="~/PrivacyPolicy/eng">ENG</a> | <a href="~/PrivacyPolicy/ind">IND</a>)</p>
                         </li>
                         <li>
-                            <p class=" text-nowrap">TERMS OF USE (<a href="../TermsOfUse/eng">ENG</a> | <a href="../TermsOfUse/ind">IND</a>)</p>
+                            <p class="text-nowrap">TERMS OF USE (<a href="~/TermsOfUse/eng">ENG</a> | <a href="~/TermsOfUse/ind">IND</a>)</p>
                         </li>
                         <li>
-                            <p class=" text-nowrap">COPYRIGHT &copy; <asp:Label ID="lblYear" runat="server"></asp:Label> PT. COLLIERS INTERNATIONAL INDONESIA</p>
+                            <p class="text-nowrap">COPYRIGHT &copy; @DateTime.Now.Year PT. COLLIERS INTERNATIONAL INDONESIA</p>
                         </li>
                     </ul>
                 </div>
 
                 <div class="col-md-3 text-nowrap">
                     <ul class="social-icon">
-                        <li><a href="https://www.linkedin.com/company/colliers-international" target="_blank" class="fa fa-linkedin"></a></li>
-                        <li><a href="https://www.facebook.com/ColliersIndonesia/" target="_blank" class="fa fa-facebook-square" attr="facebook icon"></a></li>
-                        <li><a href="https://twitter.com/ColliersIDN" target="_blank" class="fa fa-twitter"></a></li>
-                        <li><a href="https://www.instagram.com/colliersindonesia/" target="_blank" class="fa fa-instagram"></a></li>
-                        <li><a href="https://www.youtube.com/channel/UCyMwd6nUSLx9KgHIXVys1Tw" target="_blank" class="fa fa-youtube-play"></a></li>
+                        <li><a href="https://www.linkedin.com/company/colliers-international" target="_blank" class="fa fa-linkedin" aria-label="LinkedIn"></a></li>
+                        <li><a href="https://www.facebook.com/ColliersIndonesia/" target="_blank" class="fa fa-facebook-square" aria-label="Facebook"></a></li>
+                        <li><a href="https://twitter.com/ColliersIDN" target="_blank" class="fa fa-twitter" aria-label="Twitter"></a></li>
+                        <li><a href="https://www.instagram.com/colliersindonesia/" target="_blank" class="fa fa-instagram" aria-label="Instagram"></a></li>
+                        <li><a href="https://www.youtube.com/channel/UCyMwd6nUSLx9KgHIXVys1Tw" target="_blank" class="fa fa-youtube-play" aria-label="YouTube"></a></li>
                     </ul>
                 </div>
             </div>
         </div>
     </footer>
 
-
     <!-- SCRIPTS -->
-    <script src="../js/jquery.min.js"></script>
-    <script src="../js/bootstrap.min.js"></script>
-    <script src="../js/popper.min.js"></script>
-    <script src="../js/owl.carousel.min.js"></script>
-    <script src="../js/smoothscroll.js"></script>
-    <script src="../js/landingpage.js"></script>
+    <script src="~/js/jquery.min.js"></script>
+    <script src="~/js/bootstrap.min.js"></script>
+    <script src="~/js/popper.min.js"></script>
+    <script src="~/js/owl.carousel.min.js"></script>
+    <script src="~/js/smoothscroll.js"></script>
+    <script src="~/js/landingpage.js"></script>
 
     <script>
-        // Mengambil elemen-elemen HTML yang diperlukan
+        // Parallax effect
         const parallaxBg = document.getElementById('parallax');
 
-        // Menerapkan efek parallax dengan kecepatan 50%
         window.addEventListener('scroll', function() {
             const scrollPosition = window.scrollY;
             parallaxBg.style.backgroundPosition = `center ${scrollPosition * 0.5}px`;

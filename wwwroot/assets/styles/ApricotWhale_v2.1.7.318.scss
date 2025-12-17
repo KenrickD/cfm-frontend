@@ -1,0 +1,401 @@
+// Note: This css is programmed using SASS, see http://sass-lang.com/ for reference
+// Compile this ApricotWhale_v2.1.7.318.scss file into css using 'http://sasstocss.appspot.com/' or 'http://sass-lang.com/try.html' (easier than installing local ruby-gem sass compiler) and save the result manually to ApricotWhale_v2.1.7.318.css
+// Place the ApricotWhale_v2.1.7.318.css in "~/Styles" folder
+
+// Colors
+$darkblue: #00467f;
+$lightblue: #0093d0;
+$yellow: #ffc425;
+$red: #ee3124;
+$gray80: #4b4b4b;
+$gray40: #aaaaaa;
+$gray10: #e6e6e6;
+$gray02: #fefefe;
+$foundationgray: #4d4d4d;
+$extralightblue: #6cbfe6;
+$paleblue: #dfeff9;
+$paleblue20: #f2f8fc;
+$darkred: #b32317;
+$lightred: #f4837b;
+$white: #ffffff;
+$black: #000000;
+$focusedInputBackground: #ffff66;
+$focusedInputBorder: #999999;
+
+@import url(https://fonts.googleapis.com/css?family=Lato:300);
+@import url(https://fonts.googleapis.com/css?family=Average);
+
+html { font-size: 100%; }
+body { @extend html; background: $white; font-size: 0.875em; }
+fieldset { border: 0; }
+fieldset legend {
+	font-family: Lato;
+	font-size: 170%;
+	font-weight: 100;
+	text-align: center;
+	padding: 1.2em 0 0.8em 0;
+	margin: 0 0 1.0em 15%;
+	color: $lightblue;
+	width: 75%;
+	border-bottom: 1px solid $gray10;
+}
+/** For the big i icon on the right */
+.user-guide {
+	position: absolute;
+	right: 18px;
+	top: 123px;
+	font-size: 2em;
+}
+
+/** For mandatory field sign */
+.icon-asterisk {
+	font-size: 0.9em;
+	color: $red;
+}
+
+@mixin common-text {
+	font-family: Arial, sans-serif;
+	font-weight: 500;
+	line-height: 1.3;
+	cursor: default;
+	margin: 0 0 0.6em 0;
+}
+
+/** Form label */
+label { @include common-text; clear: both; font-weight: bold; color: $lightblue; display: block; }
+.aspx-label { @include common-text; color: $gray80; display: inline-block; margin: 0 0 1.6em 0; }
+.aspx-label-compact { @include common-text; color: $gray80; display: inline-block; } /** Margin is minimized */
+.aspx-label-spacious { @include common-text; color: $gray80; display: inline-block; margin: 1.6em 0 1.6em 0; } /** Margin is maximized */
+.aspx-label-inline { @include common-text; color: $gray80; display: inline-block; margin: 0.5em 0 1.6em 0; vertical-align: top; } /** In-line with form field */
+
+/** Hyperlink */
+a, a:hover, a:focus {
+	@include common-text;
+	color: $lightblue;
+	text-decoration: none;
+	cursor: pointer;
+	display: inline-block;
+}
+.a-in-view-form, .a-in-view-form:hover, .a-in-view-form:focus { margin-bottom: 1.6em; }
+.a-compact, .a-compact:hover, .a-compact:focus { margin: 0; }
+.a-inline, .a-inline:hover, .a-inline:focus { margin: 0.5em 0 0 0; } /** In-line with form field */
+
+/** TextBox and TextArea */
+input[type="text"] {
+	background-color: $gray02;
+	font-family: inherit;
+	border: 1px solid $extralightblue;
+	display: inline-block;
+	margin: 0 0 1em 0;
+	padding: 0.5em;
+	transition: box-shadow 0.45s, border-color 0.45s ease-in-out;
+	border-radius: 0.3em;
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+}
+input[type="text"]:focus {
+	box-shadow: 0 0 5px $focusedInputBorder;
+	border-color: $focusedInputBorder;
+	background: $focusedInputBackground;
+	border-color: $focusedInputBorder;
+	outline: none;
+}
+input[type="password"], input[type="date"], input[type="datetime"], input[type="datetime-local"], input[type="month"], input[type="week"], input[type="email"],
+input[type="number"], input[type="search"], input[type="tel"], input[type="time"], input[type="url"], textarea, input[type="file"] {
+	@extend input[type="text"];
+}
+.watermark { color: $gray40; }
+.watermark-right-aligned { @extend .watermark; text-align: right; }
+.right-aligned { text-align: right; }
+
+/** For AJAX AutoCompleteExtender Toolkit */
+.autoCompleteList {
+	@extend input[type="text"];
+	background-color: $focusedInputBackground;
+	border: 1px solid $focusedInputBorder;
+	list-style-type: none;
+	cursor: pointer;
+	z-index: 200000 !important;
+	color: #00467F;
+}
+.autoCompleteListItemHighlighted {
+	color: $white;
+	background-color: #3399ff;
+}
+.selected-item {
+	background-color: $paleblue20;
+	border: 1px solid $extralightblue;
+	border-radius: 0.3em;
+	padding: 0.4em 0.6em 0 0.6em;
+	margin-bottom: 0.6em;
+	display: inline-block;
+}
+.photo-staticFrame {
+    border: 1px solid #6cbfe6;
+    border-radius: 0.3em;
+    padding: 0.1em 0.1em 0.1em 0.1em;
+    margin-bottom: 0.6em;
+    width: 30%;
+    height: 30%;
+    display: inline-block;
+}
+.photo-DynamicFrame {
+    border: 1px solid #6cbfe6;
+    border-radius: 0.3em;
+    padding: 0.1em 0.1em 0.1em 0.1em;
+    margin-bottom: 0.6em;
+    max-width: 100%;
+    max-height: 100%;
+    display: inline-block;
+}
+
+/** DropDownList */
+select {
+	@extend input[type="text"];
+	padding: 0.44em;
+}
+
+/** RadioButtonGroup and CheckBoxGroup */
+.radiobutton, .checkbox {
+	margin: 0 0 0.6em 0; display: inline-block;
+	input { float: left; margin: 0.25em 0.4em 0 0; display: inline-block; }
+	label { clear: none; margin: 0 0.6em 0 0; cursor: pointer; font-weight: 100; color: $gray80; display: inline-block; }
+}
+.checkbox label { margin: 0 0.6em 0 0; } /** Somehow checkbox label behavior is different that radiobutton */
+.radiobutton-inline {
+	input { margin: 0.25em 0 0 0; vertical-align: top; }
+	label { display: inline; font-weight: 100; color: #4b4b4b; padding-left: 0.2em; }
+}
+
+/** GridView */
+table, tr, th, td { border: 0; }
+.gridview { -webkit-overflow-scrolling: touch; margin: 0 0 1em 0; }
+.gridview-header {
+	color: #0093D0; border-bottom: 1px solid $lightblue;
+	th { @include common-text; padding: 0.8em 1.2em 0.8em 0; vertical-align: middle; font-weight: bold; }
+}
+.gridview-row {
+	border-bottom: 1px solid $gray10;
+	td { padding: 0.8em 1.2em 0.8em 0; vertical-align: top; }
+}
+.gridview-row-compact {
+	border-bottom: 1px solid $gray10;
+	td { padding: 0.3em 1.2em 0.3em 0; vertical-align: top; }
+}
+.gridview-footer {
+	color: #0093D0;
+	td { padding: 0.8em 1.2em 0.8em 0; vertical-align: top; font-weight: bold; }
+}
+
+/** ListView */
+.listview-node {
+	float: left; width: 100%;
+	.controls { float: right; }
+}
+
+
+/** Button */
+.button {
+	@include common-text;
+	padding: 1em 1.2em 1em 1.2em;
+	color: $white;
+	border-radius: 0.3em;
+	cursor: pointer;
+	margin: 2em 0 2em 0;
+	vertical-align: bottom;
+}
+
+.button-blue { @extend .button; background-color: $lightblue; }
+.button-blue-calendar { @extend .button-blue; padding: 0.2em 0.3em 0.2em 0.3em; margin: 0 0 1em 0; vertical-align:top; background-color: $lightblue; }
+.button-blue:hover, .button-blue:focus { @extend .button; background-color: $extralightblue; }
+.button-blue-calendar:hover, .button-blue-calendar:focus { @extend .button; padding: 0.2em 0.3em 0.2em 0.3em; margin: 0 0 1em 0; vertical-align:top; background-color: $extralightblue; }
+.button-blue-smaller { @extend .button-blue; padding: 0.5em 0.6em 0.5em 0.6em; margin: 0 0 1em 0; }
+.button-blue-smaller:hover, .button-blue-smaller:focus { padding: 0.5em 0.6em 0.5em 0.6em; margin: 0 0 1em 0; }
+.button-blue-smaller-compact { @extend .button-blue-smaller; margin: 0; }
+.button-blue-smaller-compact:hover, .button-blue-smaller-compact:focus { margin: 0; }
+.button-red { @extend .button; background-color: $red; }
+.button-red-calendar { @extend .button-red; padding: 0.2em 0.3em 0.2em 0.3em; margin: 0 0 1em 0; vertical-align:top; background-color: $red;}
+.button-red:hover, .button-red:focus { @extend .button; background-color: $lightred; }
+.button-red-calendar:hover, .button-red-calendar:focus { @extend .button-red-calendar; padding: 0.2em 0.3em 0.2em 0.3em; margin: 0 0 1em 0; vertical-align:top; background-color: $lightred; }
+.button-red-smaller { @extend .button-red; padding: 0.5em 0.6em 0.5em 0.6em; margin: 0 0 1em 0; }
+.button-red-smaller:hover, .button-red-smaller:focus { padding: 0.5em 0.6em 0.5em 0.6em; margin: 0 0 1em 0; }
+.button-red-smaller-compact { @extend .button-red-smaller; margin: 0; }
+.button-red-smaller-compact:hover, .button-red-smaller-compact:focus { margin: 0; }
+
+/** Main and Header Section */
+#screen-wrapper { overflow-x: hidden; width: 100%;}
+#upper-header { background-color: $lightblue; }
+#upper-header #menuToggle {
+	color: $white;
+	font-size: 2.5em;
+	cursor: pointer;
+	display: inline-block;
+	padding: 0.45em 0.4em 0.425em 0.4em;
+	position: absolute;
+	left: 0;
+}
+#upper-header img { margin: 0.8em; }
+.header-text {
+	font-family: Lato;
+	color: $white;
+	font-size: 170%;
+	font-weight: 100;
+	margin: 0.5em 0 0.5em 0;
+    vertical-align: middle;
+}
+#upper-header span {
+	@extend .header-text;
+}
+#upper-header a {
+	@extend .header-text;
+	margin: 0;
+	padding: 0.8em 0 0.725em 0;
+}
+#lower-header {
+	background-color: #dfeff9;
+	text-align: center;
+}
+#lower-header #lblUserName {
+	@include common-text; color: $gray80; display: inline-block;
+}
+#lower-header #sitemap-span {
+	@include common-text; color: $gray80; display: inline-block;
+	padding: 0 1.2em 0 1.2em;
+	margin: 0.6em 1em 0.6em 1em;
+	border-left: 1px solid $extralightblue;
+	border-right: 1px solid $extralightblue;
+}
+#lower-header a {
+	@extend .a-text-middle-aligned;
+	margin: 0;
+	padding: 0;
+}
+#lower-header #lblDateTimeNow {
+	@include common-text; color: $gray80; display: inline-block;
+}
+#lower-header #btnTimeZone {
+	margin-top: 0.6em;
+}
+#lower-info-header {
+	background-color: $yellow;
+	text-align: center;
+	padding: 0.6em 1em 0.6em 1em;
+}
+
+/** Menu (Left Sidebar) Section */
+.main-content {
+	overflow-x: hidden;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	box-shadow: -10px 0 10px -12px $black;
+	-webkit-box-shadow: -10px 0 10px -15px $black;
+}
+#menu-left-bar {
+	position: absolute;
+	width: 240px;
+}
+.menu-is-hidden { left: -240px; }
+.menu-is-opened { left: 0px; }
+.main-content-is-pushed-to-right { left: 240px; }
+#menu-left-bar, .main-content { transition: all 0.3s ease-in-out; }
+#menu-left-bar ul, #menu-left-bar li {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+#menu-left-bar h2 {
+	@extend .header-text;
+	background-color: $lightblue;
+	margin: 0;
+	padding: 1em 0 0.975em 0.6em;
+}
+#menu-left-bar .module-li {
+	background-color: $paleblue;
+	padding: 0.5em 0 0 1.1em;
+}
+#menu-left-bar .module-li a {
+	color: $gray80;
+	cursor: default;
+}
+#menu-left-bar .page-li {
+	background-color: $white;
+	padding: 0.45em 0 0.05em 2.1em;
+	color: $lightblue;
+}
+#menu-left-bar .contact-info-li {
+	@extend .page-li;
+	padding: 0.45em 0 0.05em 1em;
+	color: $gray80;
+}
+#menu-left-bar .contact-info-li h3 {
+	font-weight: bold;
+	color: #0093d0;
+	font-size: 100%;
+	margin: 0.6em 0 0.6em 0;
+}
+
+/** Footer Section */
+#footer { @include common-text; text-align: center; margin-top: 2.0em; padding: 2em 0 2em 0; color: $gray40; }
+#footer a, #footer a:hover { color: $extralightblue; text-decoration: none; }
+
+/** Validation Summary */
+.validation-summary { color: $white; background-color: $red; padding: 0.6em; margin: 0 0 1.6em 0; border-radius: 0.3em; }
+.validation-summary ul { margin: 0; padding: 0 0 0 1.6em; }
+
+/** Visual guides are mostly used for Work Request's Job Code/Priority Level, or Status */
+.visual-cue { padding: 0.2em 0.4em 0.2em 0.4em; border-radius: 0.25em; text-align: center; }
+.visual-cue-White { @extend .visual-cue; background-color: $white; color: $lightblue; border: 1px solid $lightblue; }
+.visual-cue-Green { @extend .visual-cue; background-color: #6fc361; color: $white; }
+.visual-cue-Yellow { @extend .visual-cue; background-color: $yellow; color: $white; }
+.visual-cue-Red { @extend .visual-cue; background-color: $red; color: $white; }
+.visual-cue-Grey { @extend .visual-cue; background-color: $gray10; color: $white; }
+.visual-cue-ExtraLightBlue { @extend .visual-cue; background-color: $extralightblue; color: $white; }
+.visual-cue-PaleBlue { @extend .visual-cue; background-color: $paleblue; color: $lightblue; }
+
+/** For GridView pager, true means enabled/clickable, false means disabled or is already selected */
+.pager-True { display: inline-block; padding: 0.6em; }
+.pager-False, .pager-False:hover { @extend .pager-True; color: $white; background-color: $lightblue; padding: 0.3em 0.6em 0.3em 0.6em; }
+
+/** Search filter, as in Work Request Management */
+.search-filter { @extend .selected-item; display: block; }
+
+/** Modal Popup */
+.modal-background { height: 100%; width: 100%; background-color: $black; filter: alpha(opacity=30); opacity: 0.3; }
+.modal-panel { background-color: $white; overflow: auto; max-width: 90%; max-height: 90%; border-radius: 0.6em; border: solid 1px $extralightblue; }
+
+.report-viewer {
+	input[type="text"] { margin-top: 0.8em; }
+	select { margin-top: 0.6em; }
+}
+
+/** ListView Tree */
+.tree-node-level1 {
+    /** border-bottom: 1px solid #EAEAEA; */
+    clear: both;
+    display: block;
+    width: 50%;
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
+
+.tree-node-level2 {
+    padding-left: 50px;
+    /** border-bottom: 1px solid #EAEAEA; */
+    clear: both;
+    display: block;
+    width: 50%;
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
+
+.tree-node-level3 {
+    padding-left: 100px;
+    border-bottom: 1px solid #EAEAEA;
+    clear: both;
+    display: block;
+    width: 50%;
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
