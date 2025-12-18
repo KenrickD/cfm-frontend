@@ -2,7 +2,7 @@
 {
     public class WorkRequestBodyModel {
         public int idClient { get; set; }
-        public int idActor { get; set; }
+        public int? idActor { get; set; }
         public int idEmployee { get; set; }
         public int idStatus { get; set; }
         public string fromDate { get; set; } = string.Empty;

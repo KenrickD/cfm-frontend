@@ -82,8 +82,9 @@ namespace cfm_frontend.Controllers
                             new ClaimsPrincipal(claimsIdentity),
                             authProperties
                         );
+                        //get user info
 
-                        return RedirectToAction("Index", "Dashboard");
+                        return RedirectToAction("Index", "Helpdesk");
                     }
                 }
 

@@ -98,7 +98,7 @@ namespace Mvc.Controllers
             return View();
         }
         //Work Request Management List page
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(int page = 0, int pageSize = 50)
         {
             var viewmodel = new WorkRequestViewModel();
 
@@ -225,7 +225,6 @@ namespace Mvc.Controllers
                 var requestBody = new WorkRequestBodyModel
                 {
                     idClient = idClient,
-                    idActor = idActor,
                     idEmployee = idEmployee,
                     idStatus = 0,
                     fromDate = string.Empty,

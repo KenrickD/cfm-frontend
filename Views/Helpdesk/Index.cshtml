@@ -96,6 +96,51 @@
                 border-color: #dae0e5;
                 color: #545b62;
             }
+
+        /* Pagination Styling */
+        .pagination-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .pagination {
+            margin: 0;
+        }
+
+            .pagination .page-link {
+                border-radius: 6px;
+                margin: 0 3px;
+                border: 1px solid #dee2e6;
+                color: #495057;
+                min-width: 40px;
+                text-align: center;
+            }
+
+            .pagination .page-item.active .page-link {
+                background-color: #04a9f5;
+                border-color: #04a9f5;
+                color: white;
+            }
+
+            .pagination .page-item.disabled .page-link {
+                background-color: #f8f9fa;
+                border-color: #dee2e6;
+                color: #6c757d;
+            }
+
+            .pagination .page-link:hover:not(.active) {
+                background-color: #e9ecef;
+                border-color: #dee2e6;
+                color: #495057;
+            }
+
+            .pagination .page-ellipsis {
+                padding: 0.375rem 0.75rem;
+                margin: 0 3px;
+                color: #6c757d;
+            }
     </style>
 }
 
@@ -118,11 +163,10 @@
                                     data-bs-content="Search" data-bs-trigger="hover" id="searchButton">
                                 <i class="ti ti-search"></i>
                             </button>
-                            <!-- NEW: Single Filter Button -->
+                            <!-- Filter Button - Opens Modal -->
                             <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
                                     data-bs-toggle="modal" data-bs-target="#filterModal"
-                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
-                                    data-bs-content="Advanced Filters" data-bs-trigger="hover">
+                                    data-bs-container="body" data-bs-original-title="Advanced Filters">
                                 <i class="ti ti-filter"></i>
                             </button>
                             <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
@@ -166,7 +210,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (Model?.WorkRequest != null)
+                            @if (Model?.WorkRequest != null && Model.WorkRequest.Any())
                             {
                                 @foreach (var workRequest in Model.WorkRequest)
                                 {
@@ -183,7 +227,7 @@
                                             statusClass = "bg-light-secondary";
                                             break;
                                         default:
-                                            statusClass = "bg-light"; // Fallback class if status doesn't match
+                                            statusClass = "bg-light";
                                             break;
                                     }
                                     <tr>
@@ -212,11 +256,8 @@
                                                         <div class="col-md-12">
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Name</label>
-                                                                <div>
-                                                                    Bayu Wilanda
-                                                                </div>
+                                                                <div>Bayu Wilanda</div>
                                                             </div>
-
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Phone</label>
                                                                 <div>
@@ -228,7 +269,6 @@
                                                                     </a>
                                                                 </div>
                                                             </div>
-
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Email</label>
                                                                 <div>
@@ -248,25 +288,17 @@
                                                                     </a>
                                                                 </div>
                                                             </div>
-
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Department</label>
-                                                                <div>
-                                                                    IT Software Development
-                                                                </div>
+                                                                <div>IT Software Development</div>
                                                             </div>
-
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Role</label>
-                                                                <div>
-                                                                    Tukang
-                                                                </div>
+                                                                <div>Tukang</div>
                                                             </div>
                                                             <div class="mb-3 col-md-12">
                                                                 <label class="form-label fw-semibold">Notes</label>
-                                                                <div>
-                                                                    -
-                                                                </div>
+                                                                <div>-</div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -304,44 +336,103 @@
                                     </tr>
                                 }
                             }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="ti ti-inbox" style="font-size: 48px;"></i>
+                                            <p class="mt-2">No work requests found</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
 
-                <nav aria-label="Pagination" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item">
-                            <a class="page-link" href="#" aria-label="Previous">
-                                <span aria-hidden="true">
-                                    <i class="ti ti-chevron-left"></i>
-                                    Previous
-                                </span>
-                            </a>
-                        </li>
-                        <li class="page-item"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item active"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
-                        <li class="page-item"><a class="page-link" href="#">56</a></li>
-                        <li class="page-item"><a class="page-link" href="#">57</a></li>
-                        <li class="page-item"><a class="page-link" href="#">58</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#" aria-label="Next">
-                                <span aria-hidden="true">
-                                    Next
-                                    <i class="ti ti-chevron-right"></i>
-                                </span>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
+                @* Dynamic Pagination *@
+                @if (Model?.Paging != null && Model.Paging.TotalPages > 0)
+                {
+                    <div class="pagination-info">
+                        Showing @((Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1)
+                        to @(Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalRecords))
+                        of @Model.Paging.TotalRecords work requests
+                    </div>
+
+                    <nav aria-label="Pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            @* Previous Button *@
+                            <li class="page-item @(!Model.Paging.HasPreviousPage ? "disabled" : "")">
+                                @if (Model.Paging.HasPreviousPage)
+                                {
+                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage - 1)" aria-label="Previous">
+                                        <span aria-hidden="true">
+                                            <i class="ti ti-chevron-left"></i>
+                                            Previous
+                                        </span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="page-link">
+                                        <span aria-hidden="true">
+                                            <i class="ti ti-chevron-left"></i>
+                                            Previous
+                                        </span>
+                                    </span>
+                                }
+                            </li>
+
+                            @* Page Numbers *@
+                            @foreach (var pageNumber in Model.Paging.GetPageNumbers())
+                            {
+                                if (pageNumber == -1)
+                                {
+                                    @* Ellipsis *@
+                                    <li class="page-item disabled">
+                                        <span class="page-ellipsis">...</span>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(pageNumber == Model.Paging.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="?page=@pageNumber">@pageNumber</a>
+                                    </li>
+                                }
+                            }
+
+                            @* Next Button *@
+                            <li class="page-item @(!Model.Paging.HasNextPage ? "disabled" : "")">
+                                @if (Model.Paging.HasNextPage)
+                                {
+                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage + 1)" aria-label="Next">
+                                        <span aria-hidden="true">
+                                            Next
+                                            <i class="ti ti-chevron-right"></i>
+                                        </span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="page-link">
+                                        <span aria-hidden="true">
+                                            Next
+                                            <i class="ti ti-chevron-right"></i>
+                                        </span>
+                                    </span>
+                                }
+                            </li>
+                        </ul>
+                    </nav>
+                }
             </div>
         </div>
     </div>
     <!-- [ sample-page ] end -->
 </div>
 
-<!-- NEW: Filter Modal -->
+<!-- Filter Modal - DATA IS LOADED FROM SERVER (Model) -->
 <div class="modal fade filter-modal" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -356,10 +447,10 @@
                     <div class="row">
                         <!-- Left Column -->
                         <div class="col-md-6">
-                            <!-- Property Group -->
+                            <!-- Property Group - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Property Group</label>
-                                <select class="form-select" id="filterPropertyGroup">
+                                <select class="form-select" id="filterPropertyGroup" name="propertyGroup">
                                     <option value="">All</option>
                                     @if (Model?.PropertyGroups != null)
                                     {
@@ -371,119 +462,149 @@
                                 </select>
                             </div>
 
-                            <!-- Location (from API) -->
+                            <!-- Location - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Location</label>
-                                <div class="filter-checkbox-group" id="locationCheckboxes">
-                                    <!-- Will be populated from API -->
-                                    <div class="text-center text-muted py-3">
-                                        <div class="spinner-border spinner-border-sm me-2" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.Locations != null && Model.Locations.Any())
+                                    {
+                                        @foreach (var location in Model.Locations)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@location.id" id="loc_@location.id" name="locations">
+                                                <label class="form-check-label" for="loc_@location.id">
+                                                    @location.name
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No locations available</small>
                                         </div>
-                                        Loading locations...
-                                    </div>
+                                    }
                                 </div>
                             </div>
 
-                            <!-- Service Provider (from API) -->
+                            <!-- Service Provider - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Service Provider</label>
-                                <div class="filter-checkbox-group" id="serviceProviderCheckboxes">
-                                    <!-- Will be populated from API -->
-                                    <div class="text-center text-muted py-3">
-                                        <div class="spinner-border spinner-border-sm me-2" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
+                                    {
+                                        @foreach (var provider in Model.ServiceProviders)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@provider.id" id="sp_@provider.id" name="serviceProviders">
+                                                <label class="form-check-label" for="sp_@provider.id">
+                                                    @provider.name
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No service providers available</small>
                                         </div>
-                                        Loading service providers...
-                                    </div>
+                                    }
                                 </div>
                             </div>
 
                             <!-- Room Zone -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Room Zone</label>
-                                <select class="form-select" id="filterRoomZone">
+                                <select class="form-select" id="filterRoomZone" name="roomZone">
                                     <option value="">All</option>
-                                    <!-- Will be populated dynamically or add static options -->
+                                    <!-- Room zones can be added here if available in model -->
                                 </select>
                             </div>
                         </div>
 
                         <!-- Right Column -->
                         <div class="col-md-6">
-                            <!-- Work Category (from API) -->
+                            <!-- Work Category - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Work Category</label>
-                                <div class="filter-checkbox-group" id="workCategoryCheckboxes">
-                                    <!-- Will be populated from API -->
-                                    <div class="text-center text-muted py-3">
-                                        <div class="spinner-border spinner-border-sm me-2" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                                    {
+                                        @foreach (var category in Model.WorkCategories)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@category.id" id="wc_@category.id" name="workCategories">
+                                                <label class="form-check-label" for="wc_@category.id">
+                                                    @category.name
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No work categories available</small>
                                         </div>
-                                        Loading work categories...
-                                    </div>
+                                    }
                                 </div>
                             </div>
 
-                            <!-- Other Category (from API) -->
+                            <!-- Other Category - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Other Category</label>
-                                <div class="filter-checkbox-group" id="otherCategoryCheckboxes">
-                                    <!-- Will be populated from API -->
-                                    <div class="text-center text-muted py-3">
-                                        <div class="spinner-border spinner-border-sm me-2" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
+                                    {
+                                        @foreach (var category in Model.OtherCategories)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@category.id" id="oc_@category.id" name="otherCategories">
+                                                <label class="form-check-label" for="oc_@category.id">
+                                                    @category.name
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No other categories available</small>
                                         </div>
-                                        Loading other categories...
-                                    </div>
+                                    }
                                 </div>
                             </div>
 
-                            <!-- Priority Level -->
+                            <!-- Priority Level - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Priority Level</label>
                                 <div class="filter-checkbox-group">
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="high" id="priorityHigh">
-                                        <label class="form-check-label" for="priorityHigh">
-                                            High
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="high" id="priorityHigh" name="priorities">
+                                        <label class="form-check-label" for="priorityHigh">High</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="high_with_cost" id="priorityHighCost">
-                                        <label class="form-check-label" for="priorityHighCost">
-                                            High With Cost
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="high_with_cost" id="priorityHighCost" name="priorities">
+                                        <label class="form-check-label" for="priorityHighCost">High With Cost</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="low" id="priorityLow">
-                                        <label class="form-check-label" for="priorityLow">
-                                            Low
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="low" id="priorityLow" name="priorities">
+                                        <label class="form-check-label" for="priorityLow">Low</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium" id="priorityMedium">
-                                        <label class="form-check-label" for="priorityMedium">
-                                            Medium
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="medium" id="priorityMedium" name="priorities">
+                                        <label class="form-check-label" for="priorityMedium">Medium</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium_with_cost" id="priorityMediumCost">
-                                        <label class="form-check-label" for="priorityMediumCost">
-                                            Medium With Cost
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="medium_with_cost" id="priorityMediumCost" name="priorities">
+                                        <label class="form-check-label" for="priorityMediumCost">Medium With Cost</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium_with_cost_ready" id="priorityMediumCostReady">
-                                        <label class="form-check-label" for="priorityMediumCostReady">
-                                            Medium With Cost - Ready Stock - Ready Stoc assa8l4
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="medium_with_cost_ready" id="priorityMediumCostReady" name="priorities">
+                                        <label class="form-check-label" for="priorityMediumCostReady">Medium With Cost - Ready Stock - Ready Stoc assa8l4</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="test_priority" id="priorityTest">
-                                        <label class="form-check-label" for="priorityTest">
-                                            test priority
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="test_priority" id="priorityTest" name="priorities">
+                                        <label class="form-check-label" for="priorityTest">test priority</label>
                                     </div>
                                 </div>
                             </div>
@@ -493,33 +614,25 @@
                     <!-- Full Width Sections -->
                     <div class="row mt-3">
                         <div class="col-12">
-                            <!-- Status -->
+                            <!-- Status - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Status</label>
                                 <div class="filter-checkbox-group">
-                                    <div>
-                                        <input class="form-check-input" type="checkbox" value="New" id="statusNew">
-                                        <label class="form-check-label" for="statusNew">
-                                            New
-                                        </label>
+                                    <div class="filter-checkbox-item form-check">
+                                        <input class="form-check-input" type="checkbox" value="new" id="statusNew" name="status">
+                                        <label class="form-check-label" for="statusNew">New</label>
                                     </div>
-                                    <div>
-                                        <input class="form-check-input" type="checkbox" value="New" id="statusInProgress">
-                                        <label class="form-check-label" for="statusInProgress">
-                                            In Progress
-                                        </label>
+                                    <div class="filter-checkbox-item form-check">
+                                        <input class="form-check-input" type="checkbox" value="ongoing" id="statusOngoing" name="status">
+                                        <label class="form-check-label" for="statusOngoing">Ongoing</label>
                                     </div>
-                                    <div>
-                                        <input class="form-check-input" type="checkbox" value="New" id="statusCancelled">
-                                        <label class="form-check-label" for="statusCancelled">
-                                            Cancelled
-                                        </label>
+                                    <div class="filter-checkbox-item form-check">
+                                        <input class="form-check-input" type="checkbox" value="cancelled" id="statusCancelled" name="status">
+                                        <label class="form-check-label" for="statusCancelled">Cancelled</label>
                                     </div>
-                                    <div>
-                                        <input class="form-check-input" type="checkbox" value="New" id="statusComplete">
-                                        <label class="form-check-label" for="statusComplete">
-                                            Complete
-                                        </label>
+                                    <div class="filter-checkbox-item form-check">
+                                        <input class="form-check-input" type="checkbox" value="complete" id="statusComplete" name="status">
+                                        <label class="form-check-label" for="statusComplete">Complete</label>
                                     </div>
                                 </div>
                             </div>
@@ -531,13 +644,13 @@
                                     <div class="col-md-6">
                                         <div class="filter-date-group">
                                             <label class="form-label">From:</label>
-                                            <input type="date" class="form-control" id="requestDateFrom">
+                                            <input type="date" class="form-control" id="requestDateFrom" name="requestDateFrom">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="filter-date-group">
                                             <label class="form-label">To:</label>
-                                            <input type="date" class="form-control" id="requestDateTo">
+                                            <input type="date" class="form-control" id="requestDateTo" name="requestDateTo">
                                         </div>
                                     </div>
                                 </div>
@@ -550,120 +663,94 @@
                                     <div class="col-md-6">
                                         <div class="filter-date-group">
                                             <label class="form-label">From:</label>
-                                            <input type="date" class="form-control" id="workCompletionDateFrom">
+                                            <input type="date" class="form-control" id="workCompletionDateFrom" name="workCompletionDateFrom">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="filter-date-group">
                                             <label class="form-label">To:</label>
-                                            <input type="date" class="form-control" id="workCompletionDateTo">
+                                            <input type="date" class="form-control" id="workCompletionDateTo" name="workCompletionDateTo">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Important Checklist -->
+                            <!-- Important Checklist - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Important Checklist</label>
                                 <div class="filter-checkbox-group">
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="permit_approved" id="checkPermit">
-                                        <label class="form-check-label" for="checkPermit">
-                                            Is Permit to Work approved?
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="permit_approved" id="checkPermit" name="checklist">
+                                        <label class="form-check-label" for="checkPermit">Is Permit to Work approved?</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="hazardous_material" id="checkHazardous">
-                                        <label class="form-check-label" for="checkHazardous">
-                                            Hazardous material
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="hazardous_material" id="checkHazardous" name="checklist">
+                                        <label class="form-check-label" for="checkHazardous">Hazardous material</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="isolation" id="checkIsolation">
-                                        <label class="form-check-label" for="checkIsolation">
-                                            Isolation
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="isolation" id="checkIsolation" name="checklist">
+                                        <label class="form-check-label" for="checkIsolation">Isolation</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="work_at_height" id="checkHeight">
-                                        <label class="form-check-label" for="checkHeight">
-                                            Work at height
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="work_at_height" id="checkHeight" name="checklist">
+                                        <label class="form-check-label" for="checkHeight">Work at height</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="lifting_operations" id="checkLifting">
-                                        <label class="form-check-label" for="checkLifting">
-                                            Lifting operations
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="lifting_operations" id="checkLifting" name="checklist">
+                                        <label class="form-check-label" for="checkLifting">Lifting operations</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="equipment_safeguarding" id="checkEquipment">
-                                        <label class="form-check-label" for="checkEquipment">
-                                            Equipment safeguarding
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="equipment_safeguarding" id="checkEquipment" name="checklist">
+                                        <label class="form-check-label" for="checkEquipment">Equipment safeguarding</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="jsa_required" id="checkJSA">
-                                        <label class="form-check-label" for="checkJSA">
-                                            Is JSA required?
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="jsa_required" id="checkJSA" name="checklist">
+                                        <label class="form-check-label" for="checkJSA">Is JSA required?</label>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Feedback Type -->
+                            <!-- Feedback Type - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Feedback Type</label>
                                 <div class="filter-checkbox-group">
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="no_feedback" id="feedbackNone">
-                                        <label class="form-check-label" for="feedbackNone">
-                                            No Feedback
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="no_feedback" id="feedbackNone" name="feedback">
+                                        <label class="form-check-label" for="feedbackNone">No Feedback</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="good" id="feedbackGood">
-                                        <label class="form-check-label" for="feedbackGood">
-                                            Good
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="good" id="feedbackGood" name="feedback">
+                                        <label class="form-check-label" for="feedbackGood">Good</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="need_improvement" id="feedbackImprovement">
-                                        <label class="form-check-label" for="feedbackImprovement">
-                                            Need Improvement
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="need_improvement" id="feedbackImprovement" name="feedback">
+                                        <label class="form-check-label" for="feedbackImprovement">Need Improvement</label>
                                     </div>
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="excellent" id="feedbackExcellent">
-                                        <label class="form-check-label" for="feedbackExcellent">
-                                            Excellent
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="excellent" id="feedbackExcellent" name="feedback">
+                                        <label class="form-check-label" for="feedbackExcellent">Excellent</label>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Has Sent Email -->
+                            <!-- Has Sent Email - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Has Sent Email</label>
                                 <div class="filter-checkbox-group">
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="yes" id="emailYes">
-                                        <label class="form-check-label" for="emailYes">
-                                            Yes
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="yes" id="emailYes" name="hasSentEmail">
+                                        <label class="form-check-label" for="emailYes">Yes</label>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Show Deleted Data -->
+                            <!-- Show Deleted Data - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Show Deleted Data</label>
                                 <div class="filter-checkbox-group">
                                     <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="yes" id="showDeleted">
-                                        <label class="form-check-label" for="showDeleted">
-                                            Yes
-                                        </label>
+                                        <input class="form-check-input" type="checkbox" value="yes" id="showDeleted" name="showDeleted">
+                                        <label class="form-check-label" for="showDeleted">Yes</label>
                                     </div>
                                 </div>
                             </div>
@@ -696,19 +783,28 @@
             </div>
             <div class="modal-body">
                 <h5>You are about to delete Work Request &mdash; WR-1234567</h5>
-                <p>Are you sure you want to delete this Work Request?</p>
+                <p>Are you sure you want to delete this Work Request? This action cannot be undone.</p>
             </div>
-            <div class="modal-footer no-divider">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger">Yes, Delete</button>
+            <div class="modal-footer no-divider bg-gray-100">
+                <div class="container-fluid">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <button type="button" class="btn btn-outline-secondary rounded-3 w-100 d-flex justify-content-center align-items-center" data-bs-dismiss="modal">
+                            <i class="ti ti-x m-r-10"></i>
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger rounded-3 w-100 d-flex justify-content-center align-items-center">
+                            <i class="ti ti-trash m-r-10"></i>
+                            Delete
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @section scripts {
-    <script src="~/assets/js/plugins/clipboard.min.js"></script>
-    <script src="~/assets/js/pages/ac-clipboard.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <script>
         $(document).ready(function () {
@@ -724,7 +820,6 @@
             deleteModal.on('show.bs.modal', function (event) {
                 var button = $(event.relatedTarget);
                 var recipient = button.data('pc-animate');
-                var modalTitle = deleteModal.find('.modal-title');
                 deleteModal.addClass('anim-' + recipient);
                 if (recipient == 'let-me-in' || recipient == 'make-way' || recipient == 'slip-from-top') {
                     $('body').addClass('anim-' + recipient);
@@ -742,89 +837,6 @@
                 });
             }
 
-            // Filter Modal - Load API data when modal opens
-            $('#filterModal').on('show.bs.modal', function () {
-                // TODO: Load locations from API
-                loadLocations();
-
-                // TODO: Load service providers from API
-                loadServiceProviders();
-
-                // TODO: Load work categories from API
-                loadWorkCategories();
-
-                // TODO: Load other categories from API
-                loadOtherCategories();
-            });
-
-            // Placeholder functions for API calls (to be implemented with actual API endpoints)
-            function loadLocations() {
-                // TODO: Replace with actual API call
-                setTimeout(function() {
-                    var html = '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="1" id="loc1">' +
-                        '<label class="form-check-label" for="loc1">Central Petroleum Tower II</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="2" id="loc2">' +
-                        '<label class="form-check-label" for="loc2">Graha Antariksa</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="3" id="loc3">' +
-                        '<label class="form-check-label" for="loc3">Great Eastern House</label>' +
-                        '</div>';
-                    $('#locationCheckboxes').html(html);
-                }, 500);
-            }
-
-            function loadServiceProviders() {
-                // TODO: Replace with actual API call
-                setTimeout(function() {
-                    var html = '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="1" id="sp1">' +
-                        '<label class="form-check-label" for="sp1">Johnson Controls (Singapore) Pte Ltd</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="2" id="sp2">' +
-                        '<label class="form-check-label" for="sp2">Kerr Pte Ltd</label>' +
-                        '</div>';
-                    $('#serviceProviderCheckboxes').html(html);
-                }, 500);
-            }
-
-            function loadWorkCategories() {
-                // TODO: Replace with actual API call
-                setTimeout(function() {
-                    var html = '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="1" id="wc1">' +
-                        '<label class="form-check-label" for="wc1">Access Control</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="2" id="wc2">' +
-                        '<label class="form-check-label" for="wc2">Air Freshener and Toiletries</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="3" id="wc3">' +
-                        '<label class="form-check-label" for="wc3">Asset Management</label>' +
-                        '</div>';
-                    $('#workCategoryCheckboxes').html(html);
-                }, 500);
-            }
-
-            function loadOtherCategories() {
-                // TODO: Replace with actual API call
-                setTimeout(function() {
-                    var html = '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="1" id="oc1">' +
-                        '<label class="form-check-label" for="oc1">Ad Hoc Maintenance</label>' +
-                        '</div>' +
-                        '<div class="filter-checkbox-item form-check">' +
-                        '<input class="form-check-input" type="checkbox" value="2" id="oc2">' +
-                        '<label class="form-check-label" for="oc2">Building Defect</label>' +
-                        '</div>';
-                    $('#otherCategoryCheckboxes').html(html);
-                }, 500);
-            }
 
             // Clear all filters
             $('#clearFiltersBtn').on('click', function() {
@@ -834,15 +846,32 @@
                 $('#filterRoomZone').val('');
             });
 
-            // Apply filters (TODO: Implement actual filter logic)
+            // Apply filters
             $('#applyFiltersBtn').on('click', function() {
-                // TODO: Collect all filter values and apply to table
-                console.log('Applying filters...');
+                // Collect all filter values
+                var filters = {
+                    propertyGroup: $('#filterPropertyGroup').val(),
+                    roomZone: $('#filterRoomZone').val(),
+                    locations: $('input[name="locations"]:checked').map(function() { return this.value; }).get(),
+                    serviceProviders: $('input[name="serviceProviders"]:checked').map(function() { return this.value; }).get(),
+                    workCategories: $('input[name="workCategories"]:checked').map(function() { return this.value; }).get(),
+                    otherCategories: $('input[name="otherCategories"]:checked').map(function() { return this.value; }).get(),
+                    priorities: $('input[name="priorities"]:checked').map(function() { return this.value; }).get(),
+                    statuses: $('input[name="statuses"]:checked').map(function() { return this.value; }).get(),
+                    requestDateFrom: $('#requestDateFrom').val(),
+                    requestDateTo: $('#requestDateTo').val(),
+                    workCompletionDateFrom: $('#workCompletionDateFrom').val(),
+                    workCompletionDateTo: $('#workCompletionDateTo').val(),
+                    checklist: $('input[name="checklist"]:checked').map(function() { return this.value; }).get(),
+                    feedback: $('input[name="feedback"]:checked').map(function() { return this.value; }).get(),
+                    hasSentEmail: $('#emailYes').is(':checked'),
+                    showDeleted: $('#showDeleted').is(':checked')
+                };
 
-                // Close modal
+                console.log('Applying filters:', filters);
+
+                // TODO: Build query string and redirect OR make AJAX call to refresh table
                 $('#filterModal').modal('hide');
-
-                // TODO: Trigger data refresh with filters
             });
 
             // Main search button
@@ -856,7 +885,7 @@
             $('#clearSearchButton').on('click', function() {
                 $('#mainSearchInput').val('');
                 console.log('Clearing search...');
-                // TODO: Implement clear search logic
+                // TODO: Implement clear search logic - reload page without filters
             });
         });
     </script>
