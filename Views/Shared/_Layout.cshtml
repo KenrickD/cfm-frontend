@@ -14,12 +14,12 @@
 @* <body data-pc-preset="@layout.PcPreset" data-pc-sidebar-theme="@layout.PcSidebarTheme" data-pc-sidebar-caption="@layout.PcSidebarCaption" data-pc-direction="@layout.PcDirection" data-pc-theme="@layout.PcTheme"> *@
 <body data-pc-preset="@layout.PcPreset" data-pc-sidebar-theme="@layout.PcSidebarTheme" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">
 
-    @* @Html.Partial("~/Views/Shared/LayoutVertical.cshtml") *@
+    @Html.Partial("~/Views/Shared/LayoutVertical.cshtml")
 
     <div class="pc-container">
         <div class="pc-content">
 
-            @* @Html.Partial("~/Views/Shared/Breadcrumb.cshtml") *@
+            @Html.Partial("~/Views/Shared/Breadcrumb.cshtml")
 
             @RenderBody()
 

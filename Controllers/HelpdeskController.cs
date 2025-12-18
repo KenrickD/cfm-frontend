@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using cfm_frontend.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Mvc.Controllers
 {
@@ -80,6 +82,19 @@ namespace Mvc.Controllers
         public IActionResult HelpdeskTicket()
         {
             return View();
+        }
+        //Work Request Management List page
+        public IActionResult Index()
+        {
+            //API call to backend for the data
+
+            //attach response payload to viewmodel
+            var viewmodel = new WorkRequestViewModel();
+
+            //populate the paging
+
+            //return the view
+            return View(viewmodel);
         }
         public IActionResult InvoiceCreate()
         {
