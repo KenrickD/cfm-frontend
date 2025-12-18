@@ -3,8 +3,10 @@ using cfm_frontend.Models;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using static cfm_frontend.Models.WorkRequestFilterModel;
 namespace Mvc.Controllers
 {
     public class HelpdeskController : Controller
@@ -96,43 +98,73 @@ namespace Mvc.Controllers
             return View();
         }
         //Work Request Management List page
-        public async Task<IActionResult> Index(int page = 1,int pagesize = 20)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-            var viewModel = new WorkRequestViewModel
+            var viewmodel = new WorkRequestViewModel();
+
+            try
             {
-                CurrentPage = page,
-                PageSize = pagesize,
-                WorkRequest = new List<WorkRequestResponseModel>(),
-                PropertyGroups = new List<PropertyGroupModel>(),
-                Status = new List<WRStatusModel>()
-            };
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
 
-            //var baseUrl = _configuration["BackendBaseUrl"];
-            //var client = _httpClientFactory.CreateClient();
+                // TODO: Get these from session/authentication
+                var idClient = 1;
+                var idActor = 1;
+                var idEmployee = 1;
 
-            //// 1. Fetch Dropdown Data (PropertyGroups & Status) - assuming separate endpoints or previously cached
-            //// await LoadFilters(client, baseUrl, viewModel); 
+                // Load all data in parallel for better performance
+                var workRequestTask = GetWorkRequestsAsync(client, backendUrl, page, pageSize, idClient, idActor, idEmployee);
+                var propertyGroupsTask = GetPropertyGroupsAsync(client, backendUrl, idClient);
+                var statusesTask = GetStatusesAsync(client, backendUrl);
+                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
+                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
+                var workCategoriesTask = GetWorkCategoriesAsync(client, backendUrl);
+                var otherCategoriesTask = GetOtherCategoriesAsync(client, backendUrl);
 
-            //// 2. Fetch Paged Data
-            //// We pass ?page=x&pageSize=y to the backend
-            //var response = await client.GetAsync($"{baseUrl}/api/helpdesk/workrequests?page={page}&pageSize={pagesize}");
+                // Wait for all tasks to complete
+                await Task.WhenAll(
+                    workRequestTask,
+                    propertyGroupsTask,
+                    statusesTask,
+                    locationsTask,
+                    serviceProvidersTask,
+                    workCategoriesTask,
+                    otherCategoriesTask
+                );
 
-            //if (response.IsSuccessStatusCode)
-            //{
-            //    var jsonString = await response.Content.ReadAsStringAsync();
+                // Populate ViewModel with results
+                var workRequestResponse = await workRequestTask;
+                if (workRequestResponse != null)
+                {
+                    viewmodel.WorkRequest = workRequestResponse.data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = workRequestResponse.currentPage,
+                        TotalPages = workRequestResponse.totalPages,
+                        PageSize = workRequestResponse.pageSize,
+                        TotalRecords = workRequestResponse.totalRecords
+                    };
+                }
 
-            //    // Assuming Backend returns a structure like: { "data": [...], "totalCount": 100 }
-            //    // We deserialized into a temporary helper class or dynamic object
-            //    var apiResult = JsonConvert.DeserializeObject<PagedResult<WorkRequestResponseModel>>(jsonString);
+                viewmodel.PropertyGroups = await propertyGroupsTask;
+                viewmodel.Status = await statusesTask;
+                viewmodel.Locations = await locationsTask;
+                viewmodel.ServiceProviders = await serviceProvidersTask;
+                viewmodel.WorkCategories = await workCategoriesTask;
+                viewmodel.OtherCategories = await otherCategoriesTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work request index page");
+                viewmodel.PropertyGroups = new List<PropertyGroupModel>();
+                viewmodel.Status = new List<WRStatusModel>();
+                viewmodel.Locations = new List<LocationModel>();
+                viewmodel.ServiceProviders = new List<ServiceProviderModel>();
+                viewmodel.WorkCategories = new List<WorkCategoryModel>();
+                viewmodel.OtherCategories = new List<OtherCategoryModel>();
+            }
 
-            //    if (apiResult != null)
-            //    {
-            //        viewModel.WorkRequest = apiResult.Data;
-            //        viewModel.TotalItems = apiResult.TotalCount; // Essential for calculating 'TotalPages'
-            //    }
-            //}
-
-            return View(viewModel);
+            return View(viewmodel);
         }
 
         public class PagedResult<T>
@@ -176,5 +208,221 @@ namespace Mvc.Controllers
         {
             return View();
         }
+
+
+        #region helper function
+        private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(
+            HttpClient client,
+            string backendUrl,
+            int page,
+            int pageSize,
+            int idClient,
+            int idActor,
+            int idEmployee)
+        {
+            try
+            {
+                var requestBody = new WorkRequestBodyModel
+                {
+                    idClient = idClient,
+                    idActor = idActor,
+                    idEmployee = idEmployee,
+                    idStatus = 0,
+                    fromDate = string.Empty,
+                    toDate = string.Empty,
+                    filterWorkCategory = string.Empty,
+                    filterLocation = string.Empty,
+                    filterStatus = 0
+                };
+
+                var jsonPayload = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync(
+                    $"{backendUrl}/api/workrequest/list?page={page}&pageSize={pageSize}",
+                    content
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    return await JsonSerializer.DeserializeAsync<WorkRequestListApiResponse>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                }
+
+                _logger.LogWarning("Work Request API returned status: {StatusCode}", response.StatusCode);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work requests");
+                return null;
+            }
+        }
+
+        private async Task<List<PropertyGroupModel>> GetPropertyGroupsAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/propertygroup/list?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<PropertyGroupModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<PropertyGroupModel>();
+                }
+
+                _logger.LogWarning("Property Groups API returned status: {StatusCode}", response.StatusCode);
+                return new List<PropertyGroupModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching property groups");
+                return new List<PropertyGroupModel>();
+            }
+        }
+
+        private async Task<List<WRStatusModel>> GetStatusesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/workrequest/statuses");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<WRStatusModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<WRStatusModel>();
+                }
+
+                _logger.LogWarning("Statuses API returned status: {StatusCode}", response.StatusCode);
+                return new List<WRStatusModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching statuses");
+                return new List<WRStatusModel>();
+            }
+        }
+
+        private async Task<List<LocationModel>> GetLocationsAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/location/list?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<LocationModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<LocationModel>();
+                }
+
+                _logger.LogWarning("Locations API returned status: {StatusCode}", response.StatusCode);
+                return new List<LocationModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching locations");
+                return new List<LocationModel>();
+            }
+        }
+
+        private async Task<List<ServiceProviderModel>> GetServiceProvidersAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/serviceprovider/list?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<ServiceProviderModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<ServiceProviderModel>();
+                }
+
+                _logger.LogWarning("Service Providers API returned status: {StatusCode}", response.StatusCode);
+                return new List<ServiceProviderModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching service providers");
+                return new List<ServiceProviderModel>();
+            }
+        }
+
+        private async Task<List<WorkCategoryModel>> GetWorkCategoriesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/workcategory/list");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<WorkCategoryModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<WorkCategoryModel>();
+                }
+
+                _logger.LogWarning("Work Categories API returned status: {StatusCode}", response.StatusCode);
+                return new List<WorkCategoryModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work categories");
+                return new List<WorkCategoryModel>();
+            }
+        }
+
+        private async Task<List<OtherCategoryModel>> GetOtherCategoriesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                // Adjust endpoint 
+                var response = await client.GetAsync($"{backendUrl}/api/othercategory/list");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<OtherCategoryModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return result ?? new List<OtherCategoryModel>();
+                }
+
+                _logger.LogWarning("Other Categories API returned status: {StatusCode}", response.StatusCode);
+                return new List<OtherCategoryModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching other categories");
+                return new List<OtherCategoryModel>();
+            }
+        }
+        #endregion
     }
 }

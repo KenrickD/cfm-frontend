@@ -37,4 +37,12 @@
         public string plm { get; set; }
         public string plmColor { get; set; }
     }
+    public class WorkRequestListApiResponse
+    {
+        public List<WorkRequestResponseModel> data { get; set; }
+        public int currentPage { get; set; }
+        public int totalPages { get; set; }
+        public int pageSize { get; set; }
+        public int totalRecords { get; set; }
+    }
 }
