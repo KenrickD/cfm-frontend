@@ -98,19 +98,20 @@ namespace Mvc.Controllers
             return View();
         }
         //Work Request Management List page
+        //[Authorize]
         public async Task<IActionResult> Index(int page = 0, int pageSize = 50)
         {
             var viewmodel = new WorkRequestViewModel();
 
             try
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var client = _httpClientFactory.CreateClient("BackendAPI"); 
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 // TODO: Get these from session/authentication
-                var idClient = 1;
-                var idActor = 1;
-                var idEmployee = 1;
+                var idClient = 1; //get from sessioninfo
+                var idActor = 1; //currently unused
+                var idEmployee = 1; // get from sessioninfo
 
                 // Load all data in parallel for better performance
                 var workRequestTask = GetWorkRequestsAsync(client, backendUrl, page, pageSize, idClient, idActor, idEmployee);
@@ -164,14 +165,9 @@ namespace Mvc.Controllers
                 viewmodel.OtherCategories = new List<OtherCategoryModel>();
             }
 
-            return View(viewmodel);
+            return View("~/Views/Helpdesk/WorkRequest/Index.cshtml",viewmodel);
         }
 
-        public class PagedResult<T>
-        {
-            public List<T> Data { get; set; }
-            public int TotalCount { get; set; }
-        }
         public IActionResult InvoiceCreate()
         {
             return View();

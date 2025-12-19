@@ -1,0 +1,235 @@
+﻿﻿@{
+ViewBag.Title = "Work Request Management";
+ViewBag.pTitle = "Helpdesk";
+ViewBag.cTitle = "Edit Work Request";
+Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
+    <link rel="stylesheet" href="~/assets/css/uikit.css">
+}
+
+<div class="row">
+    <form>
+
+        <!-- [ sample-page ] start -->
+        <div class="col-sm-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="fw-semibold">Requestor Detail</h4>
+                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label fw-semibold" for="inputEmail4">Requestor Name</label>
+                            <input type="text" class="form-control form-control-sm" id="inputEmail4"
+                                   placeholder="Requestor name">
+                        </div>
+                    </div>
+
+
+                    <div class="row">
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Location</label>
+                            <select class="form-select form-select-sm" id="select-location" data-placeholder="Location">
+                                <option class="text-sm">Reactive</option>
+                                <option class="text-sm">Solution</option>
+                                <option class="text-sm">Conglomeration</option>
+                                <option class="text-sm">Algoritm</option>
+                                <option class="text-sm">Holistic</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Floor</label>
+                            <select class="form-select form-select-sm" id="select-floor" data-placeholder="Floor">
+                                <option class="text-sm">Reactive</option>
+                                <option class="text-sm">Solution</option>
+                                <option class="text-sm">Conglomeration</option>
+                                <option class="text-sm">Algoritm</option>
+                                <option class="text-sm">Holistic</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Room/Area/Zone</label>
+                            <select class="form-select form-select-sm" id="select-room"
+                                    data-placeholder="Room/Area/Zone">
+                                <option class="text-sm">Reactive</option>
+                                <option class="text-sm">Solution</option>
+                                <option class="text-sm">Conglomeration</option>
+                                <option class="text-sm">Algoritm</option>
+                                <option class="text-sm">Holistic</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label fw-semibold" for="inputEmail4">Requestor method</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios1"
+                                       value="option1" checked>
+                                <label class="form-check-label" for="gridRadios1"> First radio </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios2"
+                                       value="option2">
+                                <label class="form-check-label" for="gridRadios2"> Second radio </label>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="fw-semibold">Work Request Detail</h4>
+                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Request Date</label>
+                            <input type="text" class="form-control form-control-sm" id="requestDate"
+                                   placeholder="Request date">
+                        </div>
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Priority Level</label>
+                            <select class="form-select form-select-sm" data-placeholder="Priority">
+                                <option class="text-sm">High</option>
+                                <option class="text-sm">Medium</option>
+                                <option class="text-sm">Low</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Status</label>
+                            <select class="form-select form-select-sm" data-placeholder="Priority">
+                                <option class="text-sm">New</option>
+                                <option class="text-sm">In Progress</option>
+                                <option class="text-sm">Cancelled</option>
+                                <option class="text-sm">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label  fw-semibold" for="inputEmail4">Work Title</label>
+                            <input type="text" class="form-control form-control-sm" id="inputEmail4"
+                                   placeholder="Work title">
+                        </div>
+                        <div class="mb-3 col-md-6">
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="basedOnPM" />
+                                <label class="form-check-label" for="basedOnPM">
+                                    This WR is based on PM Finding. (nanti input bawahnya hide/show)
+                                </label>
+                            </div>
+                            <input type="text" class="form-control form-control-sm hide" id="inputEmail4"
+                                   placeholder="Search by PM Code or Work Title to find the PM">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="mb-3 col-md-6">
+                            <label for="requestDetail" class="form-label fw-semibold">
+                                Request
+                                Detail
+                            </label>
+                            <textarea class="form-control form-control-sm" id="requestDetail"
+                                      placeholder="Explain the user's request, issue, or question in detail"></textarea>
+                        </div>
+
+                        <div class="mb-3 col-md-6">
+                            <label for="requestDetail" class="form-label fw-semibold">Solution</label>
+                            <textarea class="form-control form-control-sm" id="requestDetail"
+                                      placeholder="Detail the steps or solutions provided to resolve the request"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="mb-3 col-md-4">
+                            <label class="form-label fw-semibold" for="inputEmail4">Important Checklist</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="" id="checkbox1">
+                                <label class="form-check-label text-sm" for="checkbox1">
+                                    Check 1
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="" id="checkbox2">
+                                <label class="form-check-label text-sm" for="checkbox2">
+                                    Check 2
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3 col-md-4">
+                        </div>
+                        <div class="mb-3 col-md-4">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="fw-semibold">Person in Charge and Worker</h4>
+                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label fw-semibold" for="inputEmail4">Person in Charge</label>
+                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                                <option class="text-sm">Sabarudin</option>
+                                <option class="text-sm">Sarifudin</option>
+                                <option class="text-sm">Safiudin</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label fw-semibold" for="inputEmail4">Service Provider</label>
+                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                                <option class="text-sm">Provider 1</option>
+                                <option class="text-sm">Provider 2</option>
+                                <option class="text-sm">Provider 3</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label fw-semibold" for="inputEmail4">Worker from Company</label>
+                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                                <option class="text-sm">Worker 1</option>
+                                <option class="text-sm">Worker 2</option>
+                                <option class="text-sm">Worker 3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ sample-page ] end -->
+    </form>
+
+</div>
+
+@section scripts {
+    <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
+    <script src="~/assets/js/pages/ac-datepicker.js"></script>
+    <script>
+        $('#select-location, #select-floor, #select-room, #select-requestor, #select-request-method').select2({});
+        $(document).ready(function () {
+            const requestDate = new Datepicker($('#requestDate')[0], {
+                buttonClass: 'btn',
+                autohide: true
+            });
+        });
+    </script>
+}

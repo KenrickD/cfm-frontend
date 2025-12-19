@@ -1,0 +1,424 @@
+﻿﻿@{
+ViewBag.Title = "Contacts Detail";
+ViewBag.pTitle = "Work Request Management";
+ViewBag.cTitle = "Contact Detail";
+Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .rotate-90 {
+            transform: rotate(90deg);
+            transition: transform 0.3s ease;
+        }
+
+        .table-bordered {
+            border-radius: 15px
+        }
+    </style>
+}
+<div class="row">
+    <div class="col-sm-12 col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <span class="d-flex justify-content-between">
+                    <h5>Work Request Detail WR-XXXXXXX</h5>
+                    <div class="d-flex flex-row gap-2">
+                        <a href="/helpdesk/work-requests/edit/1234567" class="btn btn-light btn-sm" style="border-color: #DBE0E5;"
+                           data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                           data-bs-content="Edit this Work Request" data-bs-trigger="hover">
+                            <i class="ti ti-edit"></i>
+                            <span class="ml-1 text-sm">Edit</span>
+                        </a>
+                        <a href="/helpdesk/work-requests/print" class="btn btn-light btn-sm" style="border-color: #DBE0E5;"
+                           data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                           data-bs-content="Print Work Request" data-bs-trigger="hover">
+                            <i class="ti ti-printer"></i>
+                            <span class="ml-1 text-sm">Print</span>
+                        </a>
+                    </div>
+                </span>
+                <span class="d-block m-t-5">apa ya descriptionnya</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+
+                    <div class="col-md-4 col-sm-12">
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Work Request Code</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Location</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Floor, Area/Room/Zone</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Requestor Name</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Work Title</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Request Detail</label>
+                            <p>WR-xxxx</p>
+                        </div>
+
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Solution</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Request Method</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Transaction Channel</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Status</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Work Category</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Other Category</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">This WR is based on PM Finding</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Person in Charge</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Service Provider</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Worker from Company</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Worker from Service Provider</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Important Checklist</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Priority Level</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Request Date</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Helpdesk Response</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Initial Follow Up</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Quotation Submission</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Cost Approval Date</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Work Completion</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">After Work Follow Up</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">After Work Follow Up Summary</label>
+                            <p>WR-xxxx</p>
+                        </div>
+                        <div class="mb-3 col-sm-12">
+                            <label class="form-label fw-semibold">Feedback from Requestor</label>
+                            <p>WR-xxxx</p>
+                        </div>
+
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Change History</h5>
+                <span class="d-block m-t-5">apa ya descriptionnya</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="simpletable" class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="text-capitalize">Version</th>
+                                <th class="text-capitalize">Updated On</th>
+                                <th class="text-capitalize">Updated By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr role="button" data-bs-toggle="collapse" data-bs-target="#collapseVersion11" aria-expanded="false" aria-controls="collapseVersion11" id="clickToExpandPopover">
+                                <td>
+                                    <div class="d-flex flex-row align-items-center gap-2">
+                                        <i class="ti ti-chevron-right text-primary text-lg chevron-icon"></i>
+                                        11
+                                    </div>
+                                </td>
+                                <td>17 Sep 2024 06:33 AM</td>
+                                <td>Bayu Wilanda</td>
+                            </tr>
+                            <tr id="collapseVersion11" class="collapse m-2 bg-body">
+                                <td colspan="4">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-capitalize">No.</th>
+                                                <th class="text-capitalize">Changed Information</th>
+                                                <th class="text-capitalize">From</th>
+                                                <th class="text-capitalize">To</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>1</td>
+                                                <td>Cost Estimation</td>
+                                                <td>-</td>
+                                                <td>IDR 50,000.00 </td>
+                                            </tr>
+                                            <tr>
+                                                <td>2</td>
+                                                <td>Job Code</td>
+                                                <td>-</td>
+                                                <td>Kertas A4 IDR 50,000.00 x 1</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="col-sm-12 col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Related Documents</h5>
+                <span class="d-block m-t-5">apa ya descriptionnya</span>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+
+                    <button type="button" class="btn btn-light d-block" style="border-color: #DBE0E5;"
+                            data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                            data-bs-content="Click to Download" data-bs-trigger="hover">
+
+                        <div class="d-flex flex-row gap-2 justify-content-start">
+                            <i class="ti ti-file text-6xl"></i>
+                            <div class="text-start">
+                                <span>Photos Before (Photo-10500545)</span>
+                                <br />
+                                <span class="text-sm">16 Aug 2024 04:36 PM</span>
+                            </div>
+                        </div>
+                    </button>
+                    <button type="button" class="btn btn-light d-block" style="border-color: #DBE0E5;"
+                            data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                            data-bs-content="Click to Download" data-bs-trigger="hover">
+
+                        <div class="d-flex flex-row gap-2 justify-content-start">
+                            <i class="ti ti-file text-6xl"></i>
+                            <div class="text-start">
+                                <span>Photos After (Photo-10500572)</span>
+                                <br />
+                                <span class="text-sm">16 Aug 2024 04:39 PM</span>
+                            </div>
+                        </div>
+                    </button>
+                    <button type="button" class="btn btn-light d-block" style="border-color: #DBE0E5;"
+                            data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                            data-bs-content="Click to Download" data-bs-trigger="hover">
+
+                        <div class="d-flex flex-row gap-2 justify-content-start">
+                            <i class="ti ti-file text-6xl"></i>
+                            <div class="text-start">
+                                <span>Signature (WR-Signature-10500576)</span>
+                                <br />
+                                <span class="text-sm">16 Aug 2024 04:39 PM</span>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Related Assets</h5>
+                <span class="d-block m-t-5">apa ya descriptionnya</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="simpletable" class="table nowrap">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th class="text-capitalize">Asset Label</th>
+                                <th class="text-capitalize">Asset Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>
+                                    <a href="#!">
+                                        KNM-00044
+                                        <i class="ti ti-external-link"></i>
+                                    </a>
+                                </td>
+                                <td>Sapu</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>
+                                    <a href="#!">
+                                        KNM-00045
+                                        <i class="ti ti-external-link"></i>
+                                    </a>
+                                </td>
+                                <td>Tempat Sampah</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Work Request Update Email List</h5>
+                <span class="d-block m-t-5">apa ya descriptionnya</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="simpletable" class="table nowrap">
+                        <thead>
+                            <tr>
+                                <th class="text-capitalize">Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="d-flex flex-row align-items-center justify-content-start">
+                                        <i class="ti ti-mail-forward text-xl"></i>
+                                        <a data-bs-toggle="collapse" href="#collapseExample" aria-expanded="false" aria-controls="collapseExample" class="m-1">
+                                            Barton and Goldsmith - Bayu Wilanda - Feedback Request
+                                        </a>
+                                    </div>
+                                    <div class="collapse" id="collapseExample">
+                                        <table>
+                                            <tr>
+                                                <td>Code</td>
+                                                <td>
+                                                    <span class="flex-row">
+                                                        <a href="#!">
+                                                            EM-510083
+                                                            <i class="ti ti-external-link"></i>
+                                                        </a>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Subject</td>
+                                                <td>Barton and Goldsmith - Bayu Wilanda - Feedback Request</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Subject Category</td>
+                                                <td>2 Days Follow Up</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Date</td>
+                                                <td>20 Aug 2024 06:30 PM</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            $('#clickToExpandPopover').popover({
+                container: 'body',
+                placement: 'left',
+                content: 'Click to Expand',
+                trigger: 'hover'
+            });
+
+            $("[data-bs-toggle='collapse']").on("click", function () {
+                var target = $(this).data("bs-target");
+                var chevronIcon = $(this).find(".chevron-icon");
+
+                $(target).on('shown.bs.collapse', function () {
+                    chevronIcon.addClass("rotate-90");
+                });
+
+                $(target).on('hidden.bs.collapse', function () {
+                    chevronIcon.removeClass("rotate-90");
+                });
+
+                // Trigger the collapse manually to ensure the classes change
+                if ($(target).hasClass('show')) {
+                    $(target).collapse('hide');
+                    chevronIcon.removeClass("rotate-90");
+                } else {
+                    $(target).collapse('show');
+                    chevronIcon.addClass("rotate-90");
+                }
+            });
+        });
+    </script>
+}
