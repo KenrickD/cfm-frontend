@@ -1,4 +1,4 @@
-﻿namespace cfm_frontend.Models
+﻿namespace cfm_frontend.Models.WorkRequest
 {
     public class WorkRequestBodyModel {
         public int idClient { get; set; }

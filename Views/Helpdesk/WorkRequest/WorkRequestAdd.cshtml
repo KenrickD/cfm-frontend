@@ -1,239 +1,862 @@
-﻿﻿﻿@{
-ViewBag.Title = "Add New Work Request";
-ViewBag.pTitle = "Helpdesk";
-ViewBag.cTitle = "Add New Work Request";
-Layout = "~/Views/Shared/_Layout.cshtml";
+﻿@model cfm_frontend.ViewModels.WorkRequestViewModel
+
+@{
+    ViewBag.Title = "Add New Work Request";
+    ViewBag.pTitle = "Helpdesk";
+    ViewBag.cTitle = "Add New Work Request";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 @section styles {
     <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
-    <link rel="stylesheet" href="~/assets/css/uikit.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+    <style>
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: calc(1.5em + 0.5rem + 2px);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-control-sm, .form-select-sm {
+            font-size: 0.875rem;
+        }
+
+        .target-time-display {
+            background-color: #e7f3ff;
+            border: 1px solid #04a9f5;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .target-time-display:hover {
+                background-color: #d0ebff;
+            }
+
+        .target-change-form {
+            display: none;
+            margin-top: 0.5rem;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .datetime-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+            .datetime-group input[type="date"],
+            .datetime-group input[type="time"] {
+                flex: 1;
+            }
+
+        .location-search-wrapper {
+            position: relative;
+        }
+
+        .typeahead-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+            .typeahead-dropdown.show {
+                display: block;
+            }
+
+        .typeahead-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+            .typeahead-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .typeahead-item:last-child {
+                border-bottom: none;
+            }
+
+        .labor-material-table {
+            margin-top: 1rem;
+        }
+
+        .btn-add-labor {
+            background-color: #04a9f5;
+            color: white;
+            border: none;
+        }
+
+            .btn-add-labor:hover {
+                background-color: #0396de;
+                color: white;
+            }
+    </style>
 }
 
 <div class="row">
-    <form>
-
-        <!-- [ sample-page ] start -->
-        <div class="col-sm-12">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="fw-semibold">Requestor Detail</h4>
-                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10">@ViewBag.cTitle</h5>
+                    <p class="m-b-0 text-muted">Fill in the details to create a new work request</p>
                 </div>
-                <div class="card-body d-flex justify-content-center align-items-center flex-column">
-                    <div class="col-md-6 row-gap-3">
-                        <div class="row">
-                            <div class="mb-3 col-md-12">
-                                <label class="form-label fw-semibold" for="inputEmail4">Requestor Name</label>
-                                <input type="text" class="form-control form-control-sm" id="inputEmail4"
-                                       placeholder="Requestor name">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Location</label>
-                                <select class="form-select form-select-sm" id="select-location" data-placeholder="Location">
-                                    <option class="text-sm">Reactive</option>
-                                    <option class="text-sm">Solution</option>
-                                    <option class="text-sm">Conglomeration</option>
-                                    <option class="text-sm">Algoritm</option>
-                                    <option class="text-sm">Holistic</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Floor</label>
-                                <select class="form-select form-select-sm" id="select-floor" data-placeholder="Floor">
-                                    <option class="text-sm">Reactive</option>
-                                    <option class="text-sm">Solution</option>
-                                    <option class="text-sm">Conglomeration</option>
-                                    <option class="text-sm">Algoritm</option>
-                                    <option class="text-sm">Holistic</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Room/Area/Zone</label>
-                                <select class="form-select form-select-sm" id="select-room"
-                                        data-placeholder="Room/Area/Zone">
-                                    <option class="text-sm">Reactive</option>
-                                    <option class="text-sm">Solution</option>
-                                    <option class="text-sm">Conglomeration</option>
-                                    <option class="text-sm">Algoritm</option>
-                                    <option class="text-sm">Holistic</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="mb-3 col-md-12">
-                                <label class="form-label fw-semibold" for="inputEmail4">Requestor method</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios1"
-                                           value="option1" checked>
-                                    <label class="form-check-label" for="gridRadios1"> First radio </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios2"
-                                           value="option2">
-                                    <label class="form-check-label" for="gridRadios2"> Second radio </label>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="fw-semibold">Work Request Detail</h4>
-                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                </div>
-                <div class="card-body d-flex justify-content-center align-items-center flex-column">
-                    <div class="col-md-6 row-gap-3">
-                        <div class="row">
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Request Date</label>
-                                <input type="text" class="form-control form-control-sm" id="requestDate"
-                                       placeholder="Request date">
-                            </div>
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Priority Level</label>
-                                <select class="form-select form-select-sm" data-placeholder="Priority">
-                                    <option class="text-sm">High</option>
-                                    <option class="text-sm">Medium</option>
-                                    <option class="text-sm">Low</option>
-                                </select>
-                            </div>
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Status</label>
-                                <select class="form-select form-select-sm" data-placeholder="Priority">
-                                    <option class="text-sm">New</option>
-                                    <option class="text-sm">In Progress</option>
-                                    <option class="text-sm">Cancelled</option>
-                                    <option class="text-sm">Completed</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="mb-3 col-md-6">
-                                <label class="form-label  fw-semibold" for="inputEmail4">Work Title</label>
-                                <input type="text" class="form-control form-control-sm" id="inputEmail4"
-                                       placeholder="Work title">
-                            </div>
-                            <div class="mb-3 col-md-6">
-                                <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="basedOnPM" />
-                                    <label class="form-check-label" for="basedOnPM">
-                                        This WR is based on PM Finding. (nanti input bawahnya hide/show)
-                                    </label>
-                                </div>
-                                <input type="text" class="form-control form-control-sm hide" id="inputEmail4"
-                                       placeholder="Search by PM Code or Work Title to find the PM">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="mb-3 col-md-6">
-                                <label for="requestDetail" class="form-label fw-semibold">
-                                    Request
-                                    Detail
-                                </label>
-                                <textarea class="form-control form-control-sm" id="requestDetail"
-                                          placeholder="Explain the user's request, issue, or question in detail"></textarea>
-                            </div>
-
-                            <div class="mb-3 col-md-6">
-                                <label for="requestDetail" class="form-label fw-semibold">Solution</label>
-                                <textarea class="form-control form-control-sm" id="requestDetail"
-                                          placeholder="Detail the steps or solutions provided to resolve the request"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="mb-3 col-md-4">
-                                <label class="form-label fw-semibold" for="inputEmail4">Important Checklist</label>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" value="" id="checkbox1">
-                                    <label class="form-check-label text-sm" for="checkbox1">
-                                        Check 1
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" value="" id="checkbox2">
-                                    <label class="form-check-label text-sm" for="checkbox2">
-                                        Check 2
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3 col-md-4">
-                            </div>
-                            <div class="mb-3 col-md-4">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="fw-semibold">Person in Charge and Worker</h4>
-                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                </div>
-                <div class="card-body d-flex justify-content-center align-items-center flex-column">
-                    <div class="col-md-6 row-gap-3">
-                        <div class="row">
-                            <div class="mb-3 col-md-12">
-                                <label class="form-label fw-semibold" for="inputEmail4">Person in Charge</label>
-                                <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
-                                    <option class="text-sm">Sabarudin</option>
-                                    <option class="text-sm">Sarifudin</option>
-                                    <option class="text-sm">Safiudin</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="mb-3 col-md-12">
-                                <label class="form-label fw-semibold" for="inputEmail4">Service Provider</label>
-                                <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
-                                    <option class="text-sm">Provider 1</option>
-                                    <option class="text-sm">Provider 2</option>
-                                    <option class="text-sm">Provider 3</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="mb-3 col-md-12">
-                                <label class="form-label fw-semibold" for="inputEmail4">Worker from Company</label>
-                                <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
-                                    <option class="text-sm">Worker 1</option>
-                                    <option class="text-sm">Worker 2</option>
-                                    <option class="text-sm">Worker 3</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <div>
+                    <a href="/Helpdesk/Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
                 </div>
             </div>
         </div>
-        <!-- [ sample-page ] end -->
-    </form>
 
+        <form id="workRequestForm" method="post" action="/Helpdesk/WorkRequestAdd">
+            @Html.AntiForgeryToken()
+
+            <!-- Work Request Code (Auto-generated) -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Work Request Code</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-0">
+                        <i class="ti ti-info-circle me-2"></i>
+                        Work Request Code will be created after you save this request
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Location Details</h5>
+                    <p class="text-muted mb-0 small">Specify where the work needs to be done</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Location Search and Dropdown -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Location</label>
+                            <div class="location-search-wrapper">
+                                <input type="text"
+                                       class="form-control form-control-sm mb-2"
+                                       id="locationSearch"
+                                       placeholder="Search location...">
+                                <select class="form-select form-select-sm"
+                                        id="locationSelect"
+                                        name="IdLocation"
+                                        required>
+                                    <option value="">Select Location</option>
+                                    @if (Model?.Locations != null && Model.Locations.Any())
+                                    {
+                                        foreach (var location in Model.Locations)
+                                        {
+                                            <option value="@location.id" data-property-group="@location.propertyGroupId">
+                                                @location.name
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Floor -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Floor</label>
+                            <select class="form-select form-select-sm"
+                                    id="floorSelect"
+                                    name="IdFloor"
+                                    required
+                                    disabled>
+                                <option value="">Select Floor</option>
+                            </select>
+                        </div>
+
+                        <!-- Room/Area/Zone -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Room/Area/Zone</label>
+                            <select class="form-select form-select-sm"
+                                    id="roomSelect"
+                                    name="IdRoom"
+                                    required
+                                    disabled>
+                                <option value="">Select Room/Area/Zone</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requestor and Work Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Requestor and Work Details</h5>
+                    <p class="text-muted mb-0 small">Provide details about who requested and what work is needed</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Requestor Name -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold required-field">Requestor Name</label>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   id="requestorSearch"
+                                   name="RequestorName"
+                                   placeholder="Type to search requestor..."
+                                   autocomplete="off"
+                                   required>
+                            <div id="requestorDropdown" class="typeahead-dropdown"></div>
+                            <input type="hidden" id="requestorId" name="IdRequestor">
+                        </div>
+
+                        <!-- Work Title -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold required-field">Work Title</label>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   id="workTitle"
+                                   name="WorkTitle"
+                                   placeholder="Brief description of the work"
+                                   required
+                                   maxlength="200">
+                        </div>
+
+                        <!-- Request Detail -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Request Detail</label>
+                            <textarea class="form-control form-control-sm"
+                                      id="requestDetail"
+                                      name="RequestDetail"
+                                      rows="5"
+                                      placeholder="Explain the user's request, issue, or question in detail"
+                                      required></textarea>
+                        </div>
+
+                        <!-- Solution -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Solution</label>
+                            <textarea class="form-control form-control-sm"
+                                      id="solution"
+                                      name="Solution"
+                                      rows="5"
+                                      placeholder="Detail the steps or solutions provided to resolve the request"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Request Method and Status -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Request Method and Status</h5>
+                    <p class="text-muted mb-0 small">How was this request received</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Request Method -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Request Method</label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodEmail" value="Email" required>
+                                    <label class="form-check-label" for="methodEmail">Email</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodPhone" value="Phone">
+                                    <label class="form-check-label" for="methodPhone">Phone</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodVerbal" value="Verbal">
+                                    <label class="form-check-label" for="methodVerbal">Verbal</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodLetter" value="Letter/Memo">
+                                    <label class="form-check-label" for="methodLetter">Letter/Memo</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodWeb" value="Web">
+                                    <label class="form-check-label" for="methodWeb">Web</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodFax" value="Fax">
+                                    <label class="form-check-label" for="methodFax">Fax</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodPaper" value="Paper Form">
+                                    <label class="form-check-label" for="methodPaper">Paper Form</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodDigital" value="Digital Form">
+                                    <label class="form-check-label" for="methodDigital">Digital Form</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodIM" value="Instant Messenger">
+                                    <label class="form-check-label" for="methodIM">Instant Messenger</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Status</label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="Status" id="statusNew" value="New" checked required>
+                                    <label class="form-check-label" for="statusNew">New</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="Status" id="statusProgress" value="In Progress">
+                                    <label class="form-check-label" for="statusProgress">In Progress</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="Status" id="statusCancelled" value="Cancelled">
+                                    <label class="form-check-label" for="statusCancelled">Cancelled</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="Status" id="statusCompleted" value="Completed">
+                                    <label class="form-check-label" for="statusCompleted">Completed</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Work Categories -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Work Categories</h5>
+                    <p class="text-muted mb-0 small">Categorize this work request</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Work Category -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Work Category</label>
+                            <select class="form-select form-select-sm" id="workCategorySelect" name="IdWorkCategory" required>
+                                <option value="">Select Work Category</option>
+                                @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                                {
+                                    foreach (var category in Model.WorkCategories)
+                                    {
+                                        <option value="@category.id">@category.name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Other Category -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Other Category</label>
+                            <select class="form-select form-select-sm" id="otherCategorySelect" name="IdOtherCategory">
+                                <option value="">Select Other Category</option>
+                                @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
+                                {
+                                    foreach (var category in Model.OtherCategories)
+                                    {
+                                        <option value="@category.id">@category.name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Other Category 2 -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Other Category 2</label>
+                            <select class="form-select form-select-sm" id="otherCategory2Select" name="IdOtherCategory2">
+                                <option value="">Select Other Category 2</option>
+                                @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
+                                {
+                                    foreach (var category in Model.OtherCategories)
+                                    {
+                                        <option value="@category.id">@category.name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- PM Finding Checkbox -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">This WR is based on PM Finding</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="pmFindingCheck" name="IsPMFinding" value="true">
+                                <label class="form-check-label" for="pmFindingCheck">
+                                    Yes, this work request is based on Preventive Maintenance finding
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Person in Charge and Worker -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Person in Charge and Worker</h5>
+                    <p class="text-muted mb-0 small">Assign responsible persons</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Person in Charge -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Person in Charge</label>
+                            <select class="form-select form-select-sm" id="personInChargeSelect" name="IdPersonInCharge" required>
+                                <option value="">Select Person in Charge</option>
+                            </select>
+                        </div>
+
+                        <!-- Service Provider -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Service Provider</label>
+                            <select class="form-select form-select-sm" id="serviceProviderSelect" name="IdServiceProvider">
+                                <option value="">Select Service Provider</option>
+                                @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
+                                {
+                                    foreach (var provider in Model.ServiceProviders)
+                                    {
+                                        <option value="@provider.id">@provider.name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Worker from Company -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Worker from Company</label>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   id="workerSearch"
+                                   name="WorkerName"
+                                   placeholder="Type to search worker..."
+                                   autocomplete="off">
+                            <div id="workerDropdown" class="typeahead-dropdown"></div>
+                            <input type="hidden" id="workerId" name="IdWorker">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Important Checklist -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Important Checklist</h5>
+                    <p class="text-muted mb-0 small">Safety and operational requirements</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkPermit" name="IsPermitRequired" value="true">
+                                <label class="form-check-label" for="checkPermit">
+                                    Is Permit to Work approved?
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkHazardous" name="HasHazardousMaterial" value="true">
+                                <label class="form-check-label" for="checkHazardous">
+                                    Hazardous material
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkIsolation" name="RequiresIsolation" value="true">
+                                <label class="form-check-label" for="checkIsolation">
+                                    Isolation
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkHeight" name="WorkAtHeight" value="true">
+                                <label class="form-check-label" for="checkHeight">
+                                    Work at height
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkLifting" name="RequiresLifting" value="true">
+                                <label class="form-check-label" for="checkLifting">
+                                    Lifting operations
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkSafeguarding" name="RequiresSafeguarding" value="true">
+                                <label class="form-check-label" for="checkSafeguarding">
+                                    Equipment safeguarding
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="checkJSA" name="RequiresJSA" value="true">
+                                <label class="form-check-label" for="checkJSA">
+                                    Is JSA required?
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Labor/Material -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">Labor/Material</h5>
+                            <p class="text-muted mb-0 small">Add labor and material costs</p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-add-labor" id="addLaborMaterialBtn">
+                            <i class="ti ti-plus me-1"></i>
+                            Add Labor/Material
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive labor-material-table">
+                        <table class="table table-bordered table-sm" id="laborMaterialTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th width="15%">Qty</th>
+                                    <th width="20%">Unit Price</th>
+                                    <th width="5%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        <em>No Labor/Material added yet</em>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Estimation -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Cost Estimation</h5>
+                    <p class="text-muted mb-0 small">Estimated cost in local currency</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Cost Estimation (IDR)</label>
+                            <input type="number"
+                                   class="form-control form-control-sm"
+                                   id="costEstimation"
+                                   name="CostEstimation"
+                                   placeholder="0"
+                                   min="0"
+                                   step="1000">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline and Dates -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Timeline and Dates</h5>
+                    <p class="text-muted mb-0 small">Schedule and target dates for this work request</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Priority Level -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Priority Level</label>
+                            <select class="form-select form-select-sm" id="priorityLevelSelect" name="PriorityLevel" required>
+                                <option value="">Select Priority Level</option>
+                                <option value="Low">Low - Within 7 days</option>
+                                <option value="Medium">Medium - Within 3 days</option>
+                                <option value="High">High - Same day</option>
+                                <option value="Critical">Critical - Immediate</option>
+                            </select>
+                        </div>
+
+                        <!-- Request Date -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Request Date</label>
+                            <div class="datetime-group">
+                                <input type="date"
+                                       class="form-control form-control-sm"
+                                       id="requestDate"
+                                       name="RequestDate"
+                                       required>
+                                <input type="time"
+                                       class="form-control form-control-sm"
+                                       id="requestTime"
+                                       name="RequestTime"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder for alignment -->
+                        </div>
+
+                        <!-- Helpdesk Response -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Helpdesk Response</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="helpdeskResponseDate" name="HelpdeskResponseDate">
+                                <input type="time" class="form-control form-control-sm" id="helpdeskResponseTime" name="HelpdeskResponseTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">New Target</label>
+                            <div id="helpdeskTarget" class="target-time-display" data-target-type="helpdesk">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="helpdeskTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="helpdeskNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="helpdeskRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('helpdesk')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('helpdesk')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Remark</label>
+                            <input type="text" class="form-control form-control-sm" id="helpdeskRemarkDisplay" readonly>
+                        </div>
+
+                        <!-- Initial Follow Up -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Initial Follow Up</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="initialFollowUpDate" name="InitialFollowUpDate">
+                                <input type="time" class="form-control form-control-sm" id="initialFollowUpTime" name="InitialFollowUpTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="initialFollowUpTarget" class="target-time-display" data-target-type="initialFollowUp">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="initialFollowUpTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="initialFollowUpNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="initialFollowUpRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('initialFollowUp')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('initialFollowUp')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Quotation Submission -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Quotation Submission</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="quotationSubmissionDate" name="QuotationSubmissionDate">
+                                <input type="time" class="form-control form-control-sm" id="quotationSubmissionTime" name="QuotationSubmissionTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="quotationTarget" class="target-time-display" data-target-type="quotation">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="quotationTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="quotationNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="quotationRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('quotation')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('quotation')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Cost Approval -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Cost Approval</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="costApprovalDate" name="CostApprovalDate">
+                                <input type="time" class="form-control form-control-sm" id="costApprovalTime" name="CostApprovalTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="costApprovalTarget" class="target-time-display" data-target-type="costApproval">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="costApprovalTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="costApprovalNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="costApprovalRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('costApproval')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('costApproval')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Work Completion -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Work Completion</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="workCompletionDate" name="WorkCompletionDate">
+                                <input type="time" class="form-control form-control-sm" id="workCompletionTime" name="WorkCompletionTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="workCompletionTarget" class="target-time-display" data-target-type="workCompletion">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="workCompletionTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="workCompletionNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="workCompletionRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('workCompletion')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('workCompletion')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- After Work Follow Up -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">After Work Follow Up</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="afterWorkFollowUpDate" name="AfterWorkFollowUpDate">
+                                <input type="time" class="form-control form-control-sm" id="afterWorkFollowUpTime" name="AfterWorkFollowUpTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="afterWorkTarget" class="target-time-display" data-target-type="afterWork">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="afterWorkTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="afterWorkNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="afterWorkRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('afterWork')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('afterWork')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- After Work Follow Up Summary -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">After Work Follow Up Summary</h5>
+                    <p class="text-muted mb-0 small">Summary after work completion</p>
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control form-control-sm"
+                              id="followUpSummary"
+                              name="FollowUpSummary"
+                              rows="4"
+                              placeholder="Write the follow up summary here..."></textarea>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Feedback</h5>
+                    <p class="text-muted mb-0 small">Customer or requestor feedback</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Feedback Status</label>
+                        <select class="form-select form-select-sm" id="feedbackStatus" name="FeedbackStatus">
+                            <option value="">No Feedback</option>
+                            <option value="Satisfied">Satisfied</option>
+                            <option value="Neutral">Neutral</option>
+                            <option value="Unsatisfied">Unsatisfied</option>
+                        </select>
+                    </div>
+                    <textarea class="form-control form-control-sm"
+                              id="feedbackSummary"
+                              name="FeedbackSummary"
+                              rows="4"
+                              placeholder="Write the feedback summary here..."></textarea>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="/Helpdesk/Index" class="btn btn-outline-secondary">
+                            <i class="ti ti-x me-1"></i>
+                            Cancel
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="saveDraftBtn">
+                                <i class="ti ti-device-floppy me-1"></i>
+                                Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ti ti-check me-1"></i>
+                                Submit Work Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 
 @section scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
-    <script src="~/assets/js/pages/ac-datepicker.js"></script>
-    <script>
-        $('#select-location, #select-floor, #select-room, #select-requestor, #select-request-method').select2({});
-        $(document).ready(function () {
-            const requestDate = new Datepicker($('#requestDate')[0], {
-                buttonClass: 'btn',
-                autohide: true
-            });
-        });
-    </script>
+    <script src="~/assets/js/pages/workrequest/work-request-add.js"></script>
 }

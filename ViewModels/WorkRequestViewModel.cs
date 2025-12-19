@@ -1,5 +1,6 @@
 ﻿using cfm_frontend.Models;
-using static cfm_frontend.Models.WorkRequestFilterModel;
+using cfm_frontend.Models.WorkRequest;
+using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
 
 namespace cfm_frontend.ViewModels
 {
