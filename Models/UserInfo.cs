@@ -1,6 +1,6 @@
-﻿namespace cfm_frontend.DTOs.UserInfo
+﻿namespace cfm_frontend.Models
 {
-    public class UserInfoResponse
+    public class UserInfo
     {
         public int UserId { get; set; }
         public string Username { get; set; } = string.Empty;
@@ -10,5 +10,6 @@
         public string Department { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
+        public DateTime LoginTime { get; set; }
     }
 }
