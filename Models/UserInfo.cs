@@ -10,6 +10,8 @@
         public string Department { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
+        public int PreferredClientId { get; set; }
+        public int IdCompany { get; set; }
         public DateTime LoginTime { get; set; }
     }
 }

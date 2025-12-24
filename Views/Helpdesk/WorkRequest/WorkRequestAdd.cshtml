@@ -172,15 +172,7 @@
                                         name="IdLocation"
                                         required>
                                     <option value="">Select Location</option>
-                                    @if (Model?.Locations != null && Model.Locations.Any())
-                                    {
-                                        foreach (var location in Model.Locations)
-                                        {
-                                            <option value="@location.id" data-property-group="@location.propertyGroupId">
-                                                @location.name
-                                            </option>
-                                        }
-                                    }
+                                    <!-- Options loaded dynamically via JavaScript -->
                                 </select>
                             </div>
                         </div>
@@ -282,65 +274,15 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold required-field">Request Method</label>
                             <div class="mt-2">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodEmail" value="Email" required>
-                                    <label class="form-check-label" for="methodEmail">Email</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodPhone" value="Phone">
-                                    <label class="form-check-label" for="methodPhone">Phone</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodVerbal" value="Verbal">
-                                    <label class="form-check-label" for="methodVerbal">Verbal</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodLetter" value="Letter/Memo">
-                                    <label class="form-check-label" for="methodLetter">Letter/Memo</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodWeb" value="Web">
-                                    <label class="form-check-label" for="methodWeb">Web</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodFax" value="Fax">
-                                    <label class="form-check-label" for="methodFax">Fax</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodPaper" value="Paper Form">
-                                    <label class="form-check-label" for="methodPaper">Paper Form</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodDigital" value="Digital Form">
-                                    <label class="form-check-label" for="methodDigital">Digital Form</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="RequestMethod" id="methodIM" value="Instant Messenger">
-                                    <label class="form-check-label" for="methodIM">Instant Messenger</label>
-                                </div>
+                                <!-- Radio buttons loaded dynamically via JavaScript -->
                             </div>
                         </div>
 
-                        <!-- Status -->
+                        <!-- Status -->`
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold required-field">Status</label>
                             <div class="mt-2">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="Status" id="statusNew" value="New" checked required>
-                                    <label class="form-check-label" for="statusNew">New</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="Status" id="statusProgress" value="In Progress">
-                                    <label class="form-check-label" for="statusProgress">In Progress</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="Status" id="statusCancelled" value="Cancelled">
-                                    <label class="form-check-label" for="statusCancelled">Cancelled</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="Status" id="statusCompleted" value="Completed">
-                                    <label class="form-check-label" for="statusCompleted">Completed</label>
-                                </div>
+                                <!-- Radio buttons loaded dynamically via JavaScript -->
                             </div>
                         </div>
                     </div>
@@ -360,13 +302,7 @@
                             <label class="form-label fw-semibold required-field">Work Category</label>
                             <select class="form-select form-select-sm" id="workCategorySelect" name="IdWorkCategory" required>
                                 <option value="">Select Work Category</option>
-                                @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
-                                {
-                                    foreach (var category in Model.WorkCategories)
-                                    {
-                                        <option value="@category.id">@category.name</option>
-                                    }
-                                }
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 
@@ -375,13 +311,7 @@
                             <label class="form-label fw-semibold">Other Category</label>
                             <select class="form-select form-select-sm" id="otherCategorySelect" name="IdOtherCategory">
                                 <option value="">Select Other Category</option>
-                                @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
-                                {
-                                    foreach (var category in Model.OtherCategories)
-                                    {
-                                        <option value="@category.id">@category.name</option>
-                                    }
-                                }
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 
@@ -390,13 +320,7 @@
                             <label class="form-label fw-semibold">Other Category 2</label>
                             <select class="form-select form-select-sm" id="otherCategory2Select" name="IdOtherCategory2">
                                 <option value="">Select Other Category 2</option>
-                                @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
-                                {
-                                    foreach (var category in Model.OtherCategories)
-                                    {
-                                        <option value="@category.id">@category.name</option>
-                                    }
-                                }
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 
@@ -435,13 +359,7 @@
                             <label class="form-label fw-semibold">Service Provider</label>
                             <select class="form-select form-select-sm" id="serviceProviderSelect" name="IdServiceProvider">
                                 <option value="">Select Service Provider</option>
-                                @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
-                                {
-                                    foreach (var provider in Model.ServiceProviders)
-                                    {
-                                        <option value="@provider.id">@provider.name</option>
-                                    }
-                                }
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 
@@ -469,62 +387,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkPermit" name="IsPermitRequired" value="true">
-                                <label class="form-check-label" for="checkPermit">
-                                    Is Permit to Work approved?
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkHazardous" name="HasHazardousMaterial" value="true">
-                                <label class="form-check-label" for="checkHazardous">
-                                    Hazardous material
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkIsolation" name="RequiresIsolation" value="true">
-                                <label class="form-check-label" for="checkIsolation">
-                                    Isolation
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkHeight" name="WorkAtHeight" value="true">
-                                <label class="form-check-label" for="checkHeight">
-                                    Work at height
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkLifting" name="RequiresLifting" value="true">
-                                <label class="form-check-label" for="checkLifting">
-                                    Lifting operations
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkSafeguarding" name="RequiresSafeguarding" value="true">
-                                <label class="form-check-label" for="checkSafeguarding">
-                                    Equipment safeguarding
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="checkJSA" name="RequiresJSA" value="true">
-                                <label class="form-check-label" for="checkJSA">
-                                    Is JSA required?
-                                </label>
-                            </div>
-                        </div>
+                        <!-- Checklist items loaded dynamically via JavaScript -->
                     </div>
                 </div>
             </div>
@@ -601,10 +464,7 @@
                             <label class="form-label fw-semibold required-field">Priority Level</label>
                             <select class="form-select form-select-sm" id="priorityLevelSelect" name="PriorityLevel" required>
                                 <option value="">Select Priority Level</option>
-                                <option value="Low">Low - Within 7 days</option>
-                                <option value="Medium">Medium - Within 3 days</option>
-                                <option value="High">High - Same day</option>
-                                <option value="Critical">Critical - Immediate</option>
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 
@@ -817,9 +677,7 @@
                         <label class="form-label fw-semibold">Feedback Status</label>
                         <select class="form-select form-select-sm" id="feedbackStatus" name="FeedbackStatus">
                             <option value="">No Feedback</option>
-                            <option value="Satisfied">Satisfied</option>
-                            <option value="Neutral">Neutral</option>
-                            <option value="Unsatisfied">Unsatisfied</option>
+                            <!-- Options loaded dynamically via JavaScript -->
                         </select>
                     </div>
                     <textarea class="form-control form-control-sm"

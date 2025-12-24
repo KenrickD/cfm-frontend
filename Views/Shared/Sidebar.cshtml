@@ -1,12 +1,31 @@
-﻿<!-- [ Sidebar Menu ] start -->
+﻿@using System.Text.Json
+@using cfm_frontend.Models
+
+@{
+    var userSessionJson = Context.Session.GetString("UserSession");
+    var userInfo = !string.IsNullOrEmpty(userSessionJson)
+        ? JsonSerializer.Deserialize<UserInfo>(userSessionJson)
+        : null;
+    var currentClientId = userInfo?.PreferredClientId ?? 1;
+    var currentLogoPath = $"/assets/images/clients/client-{currentClientId}.png";
+}
+
+<!-- [ Sidebar Menu ] start -->
 <nav class="pc-sidebar">
     <div class="navbar-wrapper">
         <div class="m-header">
-            <a href="/dashboard" class="b-brand text-primary">
-                <!-- ========   Change your logo from here   ============ -->
-                <img src="~/assets/images/logo-dark.svg" alt="logo image" class="logo-lg" />
-                <span class="badge bg-brand-color-2 rounded-pill ms-2 theme-version">v1.0</span>
-            </a>
+            <div class="dropdown w-100">
+                <a href="#" class="b-brand text-primary d-flex align-items-center dropdown-toggle"
+                   id="clientDropdown"
+                   data-bs-toggle="dropdown"
+                   aria-expanded="false">
+                    <img src="@currentLogoPath" alt="client logo" class="logo-lg" id="sidebarLogo" />
+                    <i class="ph-duotone ph-caret-down ms-2"></i>
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="clientDropdown" id="clientDropdownMenu">
+                    <li><a class="dropdown-item text-center" href="#"><small class="text-muted">Loading clients...</small></a></li>
+                </ul>
+            </div>
         </div>
         <div class="navbar-content">
             <ul class="pc-navbar">
@@ -31,8 +50,8 @@
                             <a href="#" class="arrow-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="0,20">
                                 <div class="d-flex align-items-center">
                                     <div class="flex-grow-1 me-2">
-                                        <h6 class="mb-0">Jonh Smith</h6>
-                                        <small>Administrator</small>
+                                        <h6 class="mb-0">@(userInfo?.FullName ?? "User")</h6>
+                                        <small>@(userInfo?.Role ?? "Role")</small>
                                     </div>
                                     <div class="flex-shrink-0">
                                         <div class="btn btn-icon btn-link-secondary avtar">
@@ -44,28 +63,24 @@
                             <div class="dropdown-menu">
                                 <ul>
                                     <li>
-                                        <a class="pc-user-links">
+                                        <a class="pc-user-links" href="/Profile">
                                             <i class="ph-duotone ph-user"></i>
                                             <span>My Account</span>
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="pc-user-links">
+                                        <a class="pc-user-links" href="/Settings">
                                             <i class="ph-duotone ph-gear"></i>
                                             <span>Settings</span>
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="pc-user-links">
-                                            <i class="ph-duotone ph-lock-key"></i>
-                                            <span>Lock Screen</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="pc-user-links">
-                                            <i class="ph-duotone ph-power"></i>
-                                            <span>Logout</span>
-                                        </a>
+                                        <form asp-controller="Login" asp-action="Logout" method="post">
+                                            <button type="submit" class="pc-user-links w-100 text-start border-0 bg-transparent">
+                                                <i class="ph-duotone ph-sign-out"></i>
+                                                <span>Logout</span>
+                                            </button>
+                                        </form>
                                     </li>
                                 </ul>
                             </div>
@@ -77,3 +92,77 @@
     </div>
 </nav>
 <!-- [ Sidebar Menu ] end -->
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadClientList();
+    });
+
+    function loadClientList() {
+        fetch('/Client/GetClients', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.clients && data.clients.length > 0) {
+                populateClientDropdown(data.clients);
+            } else {
+                document.getElementById('clientDropdownMenu').innerHTML =
+                    '<li><a class="dropdown-item text-center" href="#"><small class="text-muted">No clients available</small></a></li>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading clients:', error);
+            document.getElementById('clientDropdownMenu').innerHTML =
+                '<li><a class="dropdown-item text-center text-danger" href="#"><small>Error loading clients</small></a></li>';
+        });
+    }
+
+    function populateClientDropdown(clients) {
+        const dropdownMenu = document.getElementById('clientDropdownMenu');
+        dropdownMenu.innerHTML = '';
+
+        clients.forEach(client => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'dropdown-item';
+            a.href = '#';
+            a.textContent = client.clientName;
+            a.onclick = function(e) {
+                e.preventDefault();
+                switchClient(client.clientId, client.clientName);
+            };
+            li.appendChild(a);
+            dropdownMenu.appendChild(li);
+        });
+    }
+
+    function switchClient(clientId, clientName) {
+        fetch('/Client/SwitchClient', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ clientId: clientId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const logoPath = `/assets/images/clients/client-${clientId}.png`;
+                const logoImg = document.getElementById('sidebarLogo');
+                logoImg.src = logoPath;
+
+                location.reload();
+            } else {
+                alert('Failed to switch client: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error switching client:', error);
+            alert('Error switching client. Please try again.');
+        });
+    }
+</script>

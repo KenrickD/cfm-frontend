@@ -10,5 +10,7 @@
         public string Department { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
+        public int PreferredClientId { get; set; } = int.MaxValue;
+        public int IdCompany { get; set; }
     }
 }

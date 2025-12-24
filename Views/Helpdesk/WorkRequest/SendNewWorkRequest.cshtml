@@ -1,0 +1,204 @@
+@model cfm_frontend.ViewModels.WorkRequestViewModel
+
+@{
+    ViewBag.Title = "Send New Work Request";
+    ViewBag.pTitle = "Helpdesk";
+    ViewBag.cTitle = "Send New Work Request";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+
+        .form-control-sm, .form-select-sm {
+            font-size: 0.875rem;
+        }
+
+        .location-search-wrapper {
+            position: relative;
+        }
+
+        .typeahead-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+            .typeahead-dropdown.show {
+                display: block;
+            }
+
+        .typeahead-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+            .typeahead-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .typeahead-item:last-child {
+                border-bottom: none;
+            }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10" style="color: #04a9f5;">@ViewBag.cTitle</h5>
+                </div>
+            </div>
+        </div>
+
+        <form id="sendWorkRequestForm" method="post" action="/Helpdesk/SendNewWorkRequest" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div class="row">
+                <!-- Location -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Location</label>
+                    <select class="form-select form-select-sm"
+                            id="locationSelect"
+                            name="IdLocation"
+                            required>
+                        <option value="">Select Location</option>
+                        @if (Model?.Locations != null && Model.Locations.Any())
+                        {
+                            foreach (var location in Model.Locations)
+                            {
+                                <option value="@location.id">@location.name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Floor -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Floor</label>
+                    <select class="form-select form-select-sm"
+                            id="floorSelect"
+                            name="IdFloor"
+                            required
+                            disabled>
+                        <option value="">Select Floor</option>
+                    </select>
+                </div>
+
+                <!-- Room/Area/Zone -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Room/Area/Zone</label>
+                    <select class="form-select form-select-sm"
+                            id="roomSelect"
+                            name="IdRoom"
+                            required
+                            disabled>
+                        <option value="">Select Room/Area/Zone</option>
+                    </select>
+                </div>
+
+                <!-- For Whom -->
+                <div class="col-md-12 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">For Whom</label>
+                    <div class="mt-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="ForWhom" id="forMyself" value="Myself" checked required>
+                            <label class="form-check-label" for="forMyself">Myself</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="ForWhom" id="forOther" value="OnBehalfOfOther">
+                            <label class="form-check-label" for="forOther">On behalf of other person</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Category -->
+                <div class="col-md-12 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Work Category</label>
+                    <select class="form-select form-select-sm" id="workCategorySelect" name="IdWorkCategory" required>
+                        <option value="">-</option>
+                        @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                        {
+                            foreach (var category in Model.WorkCategories)
+                            {
+                                <option value="@category.id">@category.name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Request -->
+                <div class="col-md-12 mb-3">
+                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Request</label>
+                    <textarea class="form-control form-control-sm"
+                              id="requestDetail"
+                              name="RequestDetail"
+                              rows="5"
+                              placeholder="Write your problem or request here. Within maximum of 15 minutes, our Helpdesk will contact you to confirm this request and ask for additional information as necessary"
+                              required></textarea>
+                </div>
+
+                <!-- Related Photos -->
+                <div class="col-md-12 mb-3">
+                    <label class="form-label fw-semibold" style="color: #04a9f5;">Related Photos</label>
+                    <input type="file"
+                           class="form-control form-control-sm"
+                           id="relatedPhotos"
+                           name="RelatedPhotos"
+                           accept="image/*"
+                           multiple>
+                    <div class="form-text">
+                        <i class="ti ti-arrow-right me-1"></i>Search or drag & drop your file to <strong>Browse</strong> or <strong>Choose File</strong> box above, it will be added to <strong>Uploaded File</strong> table below
+                    </div>
+                </div>
+
+                <!-- Uploaded File Table -->
+                <div class="col-md-12 mb-4">
+                    <label class="form-label fw-semibold" style="color: #04a9f5;">Uploaded File</label>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="uploadedFilesTable">
+                            <tbody>
+                                <tr>
+                                    <td class="text-center text-muted">
+                                        <em>No file yet</em>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-center">
+                        <button type="submit" class="btn btn-primary" style="background-color: #04a9f5; border-color: #04a9f5; min-width: 200px;">
+                            <i class="ti ti-send me-1"></i>
+                            Send Work Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/assets/js/pages/workrequest/send-work-request.js"></script>
+}

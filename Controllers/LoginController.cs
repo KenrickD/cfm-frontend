@@ -75,6 +75,8 @@ namespace cfm_frontend.Controllers
                                 Department = userInfoResponse.Department,
                                 PhoneNumber = userInfoResponse.PhoneNumber,
                                 ProfilePicture = userInfoResponse.ProfilePicture,
+                                PreferredClientId = userInfoResponse.PreferredClientId,
+                                IdCompany = userInfoResponse.IdCompany,
                                 LoginTime = DateTime.UtcNow
                             };
 

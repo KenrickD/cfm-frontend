@@ -1,0 +1,185 @@
+/* Settings Inline Editor - Shared Styles */
+
+.page-header-custom {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.category-table {
+    background: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.category-table-header {
+    background-color: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.category-table-body {
+    padding: 0;
+}
+
+.category-row {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.category-row:hover {
+    background-color: #f8f9fa;
+}
+
+.category-row.editing {
+    background-color: #e7f3ff;
+}
+
+.category-row.adding {
+    background-color: #fff3cd;
+}
+
+.category-description {
+    flex: 1;
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+.category-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.category-input {
+    flex: 1;
+    margin-right: 1rem;
+}
+
+.btn-action {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+}
+
+.btn-edit {
+    background-color: #04a9f5;
+    border-color: #04a9f5;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #0396de;
+    border-color: #0396de;
+    color: white;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+}
+
+.btn-save {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.btn-save:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    color: white;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+    color: white;
+}
+
+.add-new-section {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.stats-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.total-count {
+    font-size: 0.95rem;
+    color: #6c757d;
+}
+
+.total-count strong {
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.search-box {
+    max-width: 300px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.invalid-feedback {
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.breadcrumb-custom {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-custom .breadcrumb-item {
+    font-size: 0.875rem;
+}
+
+.breadcrumb-custom .breadcrumb-item a {
+    color: #04a9f5;
+    text-decoration: none;
+}
+
+.breadcrumb-custom .breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-custom .breadcrumb-item.active {
+    color: #6c757d;
+}

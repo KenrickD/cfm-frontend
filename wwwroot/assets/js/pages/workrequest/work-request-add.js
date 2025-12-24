@@ -12,11 +12,28 @@
         debounceDelay: 300,
         minSearchLength: 2,
         apiEndpoints: {
+            // Location cascade
+            locations: '/Helpdesk/GetLocationsByClient',
             floors: '/Helpdesk/GetFloorsByLocation',
             rooms: '/Helpdesk/GetRoomsByFloor',
-            searchEmployees: '/Helpdesk/SearchEmployees',
-            personsInCharge: '/Helpdesk/GetPersonsInCharge',
-            searchWorkers: '/Helpdesk/SearchWorkers'
+
+            // Dropdowns
+            workCategories: '/Helpdesk/GetWorkCategoriesByClient',
+            otherCategories: '/Helpdesk/GetOtherCategoriesByClient',
+            serviceProviders: '/Helpdesk/GetServiceProvidersByClient',
+            priorityLevels: '/Helpdesk/GetPriorityLevels',
+            feedbackTypes: '/Helpdesk/GetFeedbackTypes',
+            importantChecklist: '/Helpdesk/GetImportantChecklist',
+
+            // Radio buttons
+            requestMethods: '/Helpdesk/GetWorkRequestMethods',
+            statuses: '/Helpdesk/GetWorkRequestStatuses',
+
+            // Search/autocomplete
+            searchRequestors: '/Helpdesk/SearchRequestors',
+            searchWorkersByCompany: '/Helpdesk/SearchWorkersByCompany',
+            searchWorkersByServiceProvider: '/Helpdesk/SearchWorkersByServiceProvider',
+            personsInCharge: '/Helpdesk/GetPersonsInChargeByFilters'
         },
         priorityLevels: {
             'Critical': {
@@ -70,11 +87,25 @@
      */
     function init() {
         initializeDateTimePickers();
+
+        // Load all dropdown data from API
+        loadLocations();
+        loadWorkCategories();
+        loadOtherCategories();
+        loadServiceProviders();
+        loadPriorityLevels();
+        loadFeedbackTypes();
+        loadRequestMethods();
+        loadStatuses();
+        loadImportantChecklist();
+
+        // Initialize interactive features
         initializeLocationSearch();
         initializeLocationCascade();
         initializeRequestorSearch();
         initializeWorkerSearch();
         initializePersonInCharge();
+        initializeServiceProviderChange();
         initializePriorityLevel();
         initializeTargetOverrides();
         initializeLaborMaterial();
@@ -108,6 +139,293 @@
 
         $('#requestDate').val(dateStr);
         $('#requestTime').val(timeStr);
+    }
+
+    /**
+     * Load locations from API (replaces server-side rendering)
+     */
+    function loadLocations() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.locations,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#locationSelect');
+                    $select.empty().append('<option value="">Select Location</option>');
+                    $.each(response.data, function(index, location) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(location.id)
+                                .text(location.name)
+                                .attr('data-property-group', location.propertyGroupId || '')
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading locations:', error);
+                showNotification('Error loading locations', 'error');
+            }
+        });
+    }
+
+    /**
+     * Load work categories from API
+     */
+    function loadWorkCategories() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.workCategories,
+            method: 'GET',
+            data: { categoryType: 'workCategory' },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#workCategorySelect');
+                    $select.empty().append('<option value="">Select Work Category</option>');
+                    $.each(response.data, function(index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.id)
+                                .text(category.name)
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading work categories:', error);
+            }
+        });
+    }
+
+    /**
+     * Load other categories from API
+     */
+    function loadOtherCategories() {
+        // Load Other Category 1
+        $.ajax({
+            url: CONFIG.apiEndpoints.otherCategories,
+            method: 'GET',
+            data: { categoryType: 'workRequestCustomCategory' },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#otherCategorySelect');
+                    $select.empty().append('<option value="">Select Other Category</option>');
+                    $.each(response.data, function(index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.id)
+                                .text(category.name)
+                        );
+                    });
+                }
+            }
+        });
+
+        // Load Other Category 2
+        $.ajax({
+            url: CONFIG.apiEndpoints.otherCategories,
+            method: 'GET',
+            data: { categoryType: 'workRequestCustomCategory2' },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#otherCategory2Select');
+                    $select.empty().append('<option value="">Select Other Category 2</option>');
+                    $.each(response.data, function(index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.id)
+                                .text(category.name)
+                        );
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * Load service providers from API
+     */
+    function loadServiceProviders() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.serviceProviders,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#serviceProviderSelect');
+                    $select.empty()
+                        .append('<option value="-1">Not Specified</option>')
+                        .append('<option value="-2">Self-Performed</option>');
+                    $.each(response.data, function(index, provider) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(provider.id)
+                                .text(provider.name)
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading service providers:', error);
+            }
+        });
+    }
+
+    /**
+     * Load priority levels from API
+     */
+    function loadPriorityLevels() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.priorityLevels,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#priorityLevelSelect');
+                    $select.empty().append('<option value="">Select Priority Level</option>');
+                    $.each(response.data, function(index, priority) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(priority.value || priority.name)
+                                .text(priority.label || priority.name)
+                                .attr('data-description', priority.description || '')
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading priority levels:', error);
+                showNotification('Error loading priority levels', 'error');
+            }
+        });
+    }
+
+    /**
+     * Load feedback types from API
+     */
+    function loadFeedbackTypes() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.feedbackTypes,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#feedbackStatus');
+                    $select.empty().append('<option value="">No Feedback</option>');
+                    $.each(response.data, function(index, type) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(type.value || type.name)
+                                .text(type.label || type.name)
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading feedback types:', error);
+            }
+        });
+    }
+
+    /**
+     * Load request methods from API (replaces hardcoded radio buttons)
+     */
+    function loadRequestMethods() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.requestMethods,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $container = $('[name="RequestMethod"]').first().closest('.mt-2');
+                    $container.empty();
+                    $.each(response.data, function(index, method) {
+                        const radioId = 'method' + (method.id || index);
+                        const isFirst = index === 0;
+                        $container.append(`
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio"
+                                       name="RequestMethod"
+                                       id="${radioId}"
+                                       value="${method.value || method.name}"
+                                       ${isFirst ? 'required' : ''}>
+                                <label class="form-check-label" for="${radioId}">
+                                    ${method.label || method.name}
+                                </label>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading request methods:', error);
+            }
+        });
+    }
+
+    /**
+     * Load statuses from API (replaces hardcoded radio buttons)
+     */
+    function loadStatuses() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.statuses,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $container = $('[name="Status"]').first().closest('.mt-2');
+                    $container.empty();
+                    $.each(response.data, function(index, status) {
+                        const radioId = 'status' + (status.id || index);
+                        const isNew = (status.value || status.name) === 'New';
+                        $container.append(`
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio"
+                                       name="Status"
+                                       id="${radioId}"
+                                       value="${status.value || status.name}"
+                                       ${isNew ? 'checked' : ''}
+                                       ${index === 0 ? 'required' : ''}>
+                                <label class="form-check-label" for="${radioId}">
+                                    ${status.label || status.name}
+                                </label>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading statuses:', error);
+            }
+        });
+    }
+
+    /**
+     * Load important checklist from API
+     */
+    function loadImportantChecklist() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.importantChecklist,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $container = $('#checkPermit').closest('.row');
+                    $container.empty();
+                    $.each(response.data, function(index, item) {
+                        $container.append(`
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="check${item.id || index}"
+                                           name="${item.name || ('checklist_' + index)}"
+                                           value="true">
+                                    <label class="form-check-label" for="check${item.id || index}">
+                                        ${item.label || item.name}
+                                    </label>
+                                </div>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading important checklist:', error);
+            }
+        });
     }
 
     /**
@@ -343,18 +661,13 @@
     }
 
     /**
-     * Search employees via API
+     * Search requestors via API (updated endpoint)
      */
     function searchEmployees(term, $dropdown, onSelectCallback) {
-        const idClient = 1; // TODO: Get from session
-
         $.ajax({
-            url: CONFIG.apiEndpoints.searchEmployees,
+            url: CONFIG.apiEndpoints.searchRequestors,
             method: 'GET',
-            data: {
-                term: term,
-                idClient: idClient
-            },
+            data: { term: term },
             success: function (response) {
                 $dropdown.empty();
 
@@ -363,11 +676,14 @@
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${employee.name}</strong>
-                                ${employee.position ? `<br><small class="text-muted">${employee.position}</small>` : ''}
+                                <strong>${employee.fullName || employee.name}</strong>
+                                ${employee.department ? `<br><small class="text-muted">${employee.department}</small>` : ''}
                             `)
                             .on('click', function () {
-                                onSelectCallback(employee);
+                                onSelectCallback({
+                                    id: employee.id,
+                                    name: employee.fullName || employee.name
+                                });
                             });
                         $dropdown.append($item);
                     });
@@ -376,28 +692,35 @@
                     $dropdown.append(
                         $('<div></div>')
                             .addClass('typeahead-item text-muted')
-                            .text('No employees found')
+                            .text('No requestors found')
                     );
                     $dropdown.addClass('show');
                 }
             },
             error: function (xhr, status, error) {
-                console.error('Error searching employees:', error);
-                showNotification('Error searching employees. Please try again.', 'error');
+                console.error('Error searching requestors:', error);
+                showNotification('Error searching requestors. Please try again.', 'error');
             }
         });
     }
 
     /**
-     * Search workers via API
+     * Search workers from company via API
      */
     function searchWorkers(term, serviceProviderId, $dropdown, onSelectCallback) {
+        const idLocation = state.selectedLocation;
+
+        if (!idLocation) {
+            showNotification('Please select a location first', 'warning');
+            return;
+        }
+
         $.ajax({
-            url: CONFIG.apiEndpoints.searchWorkers,
+            url: CONFIG.apiEndpoints.searchWorkersByCompany,
             method: 'GET',
             data: {
                 term: term,
-                idServiceProvider: serviceProviderId || null
+                idLocation: idLocation
             },
             success: function (response) {
                 $dropdown.empty();
@@ -407,11 +730,14 @@
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${worker.name}</strong>
+                                <strong>${worker.fullName || worker.name}</strong>
                                 ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}
                             `)
                             .on('click', function () {
-                                onSelectCallback(worker);
+                                onSelectCallback({
+                                    id: worker.id,
+                                    name: worker.fullName || worker.name
+                                });
                             });
                         $dropdown.append($item);
                     });
@@ -433,32 +759,164 @@
     }
 
     /**
-     * Initialize Person in Charge dropdown
+     * Initialize Person in Charge dropdown with dynamic loading
      */
     function initializePersonInCharge() {
-        const $personInChargeSelect = $('#personInChargeSelect');
-        const idClient = 1; // TODO: Get from session
+        // Load PIC when work category or location changes
+        $('#workCategorySelect, #locationSelect').on('change', function() {
+            const idWorkCategory = $('#workCategorySelect').val();
+            const idLocation = $('#locationSelect').val();
 
-        // Load persons in charge on page load
+            if (idWorkCategory || idLocation) {
+                loadPersonsInCharge(idWorkCategory, idLocation);
+            }
+        });
+    }
+
+    /**
+     * Load persons in charge with filters
+     */
+    function loadPersonsInCharge(idWorkCategory, idLocation) {
+        const $select = $('#personInChargeSelect');
+
+        const params = {};
+        if (idWorkCategory) params.idWorkCategory = idWorkCategory;
+        if (idLocation) params.idLocation = idLocation;
+
         $.ajax({
             url: CONFIG.apiEndpoints.personsInCharge,
             method: 'GET',
-            data: { idClient: idClient },
-            success: function (response) {
+            data: params,
+            success: function(response) {
+                $select.empty().append('<option value="">Select Person in Charge</option>');
                 if (response.success && response.data && response.data.length > 0) {
-                    $.each(response.data, function (index, person) {
-                        $personInChargeSelect.append(
+                    $.each(response.data, function(index, person) {
+                        $select.append(
                             $('<option></option>')
                                 .val(person.id)
-                                .text(person.name + (person.position ? ' - ' + person.position : ''))
+                                .text((person.fullName || person.name) + (person.position ? ' - ' + person.position : ''))
                         );
                     });
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('Error loading persons in charge:', error);
             }
         });
+    }
+
+    /**
+     * Initialize service provider change to show/hide worker from service provider
+     */
+    function initializeServiceProviderChange() {
+        $('#serviceProviderSelect').on('change', function() {
+            const value = $(this).val();
+            const idLocation = state.selectedLocation;
+
+            // Show worker from service provider if not "Not Specified" or "Self-Performed"
+            if (value && value !== '-1' && value !== '-2') {
+                showWorkerFromServiceProvider(value, idLocation);
+            } else {
+                hideWorkerFromServiceProvider();
+            }
+        });
+    }
+
+    /**
+     * Show worker from service provider searchbox
+     */
+    function showWorkerFromServiceProvider(idServiceProvider, idLocation) {
+        if ($('#workerServiceProviderSearch').length === 0) {
+            const html = `
+                <div class="col-md-12 mb-3" id="workerServiceProviderContainer">
+                    <label class="form-label fw-semibold">Worker from Service Provider</label>
+                    <input type="text" class="form-control form-control-sm"
+                           id="workerServiceProviderSearch"
+                           placeholder="Type to search worker from service provider..."
+                           autocomplete="off">
+                    <div id="workerServiceProviderDropdown" class="typeahead-dropdown"></div>
+                    <input type="hidden" id="workerServiceProviderId" name="IdWorkerServiceProvider">
+                </div>
+            `;
+            $('#workerSearch').closest('.col-md-12').after(html);
+
+            // Setup autocomplete
+            let timeout;
+            $('#workerServiceProviderSearch').on('keyup', function() {
+                clearTimeout(timeout);
+                const term = $(this).val().trim();
+
+                if (term.length < CONFIG.minSearchLength) {
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                    return;
+                }
+
+                if (!idLocation) {
+                    showNotification('Please select a location first', 'warning');
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                    return;
+                }
+
+                timeout = setTimeout(function() {
+                    $.ajax({
+                        url: CONFIG.apiEndpoints.searchWorkersByServiceProvider,
+                        method: 'GET',
+                        data: {
+                            term: term,
+                            idLocation: idLocation,
+                            idServiceProvider: idServiceProvider
+                        },
+                        success: function(response) {
+                            const $dropdown = $('#workerServiceProviderDropdown');
+                            $dropdown.empty();
+
+                            if (response.success && response.data && response.data.length > 0) {
+                                $.each(response.data, function(index, worker) {
+                                    const $item = $('<div></div>')
+                                        .addClass('typeahead-item')
+                                        .html(`
+                                            <strong>${worker.fullName || worker.name}</strong>
+                                            ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}
+                                        `)
+                                        .on('click', function() {
+                                            $('#workerServiceProviderSearch').val(worker.fullName || worker.name);
+                                            $('#workerServiceProviderId').val(worker.id);
+                                            $dropdown.removeClass('show').empty();
+                                        });
+                                    $dropdown.append($item);
+                                });
+                                $dropdown.addClass('show');
+                            } else {
+                                $dropdown.append(
+                                    $('<div></div>')
+                                        .addClass('typeahead-item text-muted')
+                                        .text('No workers found')
+                                );
+                                $dropdown.addClass('show');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error searching workers from service provider:', error);
+                            showNotification('Error searching workers. Please try again.', 'error');
+                        }
+                    });
+                }, CONFIG.debounceDelay);
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#workerServiceProviderSearch, #workerServiceProviderDropdown').length) {
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                }
+            });
+        }
+    }
+
+    /**
+     * Hide worker from service provider searchbox
+     */
+    function hideWorkerFromServiceProvider() {
+        $('#workerServiceProviderContainer').remove();
     }
 
     /**
