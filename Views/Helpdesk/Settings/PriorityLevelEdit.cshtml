@@ -1,0 +1,619 @@
+@{
+    ViewBag.Title = "Edit Priority Level";
+    ViewBag.pTitle = "Settings";
+    ViewBag.cTitle = "Edit Priority Level";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .page-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .breadcrumb-custom {
+            background-color: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        .form-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .target-input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-start;
+        }
+
+        .target-input {
+            flex: 1;
+        }
+
+        .target-input label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+
+        .target-input input {
+            text-align: center;
+        }
+
+        .checkbox-group {
+            margin-top: 1rem;
+        }
+
+        .form-check {
+            margin-bottom: 0.5rem;
+        }
+
+        .form-check-label {
+            font-size: 0.875rem;
+            color: #495057;
+        }
+
+        .required-field::after {
+            content: "*";
+            color: #dc3545;
+            margin-left: 0.25rem;
+        }
+
+        .compliance-duration-group {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+        }
+
+        .reference-select {
+            margin-bottom: 1rem;
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        .btn-save-priority {
+            min-width: 150px;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb breadcrumb-custom">
+                <li class="breadcrumb-item"><a href="/Helpdesk/Settings">Settings</a></li>
+                <li class="breadcrumb-item"><a href="/Helpdesk/PriorityLevel">Priority Level</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit This Priority Level</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header-custom">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="ti ti-edit me-2"></i>
+                        Edit This Priority Level
+                    </h4>
+                    <p class="mb-0 opacity-75">Update priority level configuration and response time targets</p>
+                </div>
+                <div>
+                    <a href="/Helpdesk/PriorityLevel" class="btn btn-light btn-sm">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Level Form -->
+        <form id="priorityLevelForm">
+            <!-- Basic Information -->
+            <div class="form-section">
+                <h5 class="form-section-title">Basic Information</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="name" class="form-label required-field">Name</label>
+                            <input type="text" class="form-control" id="name" placeholder="e.g. High, Medium, Low Priority" required>
+                            <div class="invalid-feedback">Priority level name is required</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="visualColor" class="form-label">Visual Color</label>
+                            <div class="d-flex align-items-center">
+                                <select class="form-select" id="visualColor">
+                                    <option value="">Select color...</option>
+                                </select>
+                                <span id="colorPreview" class="color-preview"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Helpdesk Response Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">Helpdesk Response Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="helpdeskResponseTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="helpdeskResponseTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="helpdeskResponseTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetWithinOfficeHours">
+                            <label class="form-check-label" for="helpdeskResponseTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="helpdeskResponseTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetRequiredToFill">
+                        <label class="form-check-label" for="helpdeskResponseTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetActivateCompliance">
+                        <label class="form-check-label" for="helpdeskResponseTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="compliance-duration-group" id="helpdeskComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetAcknowledgeActual">
+                        <label class="form-check-label" for="helpdeskResponseTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="helpdeskResponseTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="helpdeskResponseTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="helpdeskResponseTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Initial Follow Up Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">Initial Follow Up Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="initialFollowUpTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="initialFollowUpTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="initialFollowUpTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="initialFollowUpTargetWithinOfficeHours">
+                            <label class="form-check-label" for="initialFollowUpTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="initialFollowUpTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="initialFollowUpTargetRequiredToFill">
+                        <label class="form-check-label" for="initialFollowUpTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="initialFollowUpTargetActivateCompliance">
+                        <label class="form-check-label" for="initialFollowUpTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="initialFollowUpTargetAcknowledgeActual">
+                        <label class="form-check-label" for="initialFollowUpTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="initialFollowUpTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="initialFollowUpTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="initialFollowUpTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="initialFollowUpTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quotation Submission Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">Quotation Submission Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="quotationSubmissionTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="quotationSubmissionTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="quotationSubmissionTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetWithinOfficeHours">
+                            <label class="form-check-label" for="quotationSubmissionTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="quotationSubmissionTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetRequiredToFill">
+                        <label class="form-check-label" for="quotationSubmissionTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetActivateCompliance">
+                        <label class="form-check-label" for="quotationSubmissionTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetAcknowledgeActual">
+                        <label class="form-check-label" for="quotationSubmissionTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="quotationSubmissionTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="quotationSubmissionTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Approval Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">Cost Approval Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="costApprovalTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="costApprovalTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="costApprovalTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="costApprovalTargetWithinOfficeHours">
+                            <label class="form-check-label" for="costApprovalTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="costApprovalTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="costApprovalTargetRequiredToFill">
+                        <label class="form-check-label" for="costApprovalTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="costApprovalTargetActivateCompliance">
+                        <label class="form-check-label" for="costApprovalTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="costApprovalTargetAcknowledgeActual">
+                        <label class="form-check-label" for="costApprovalTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="costApprovalTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="costApprovalTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="costApprovalTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="costApprovalTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Work Completion Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">Work Completion Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="workCompletionTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="workCompletionTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="workCompletionTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="workCompletionTargetWithinOfficeHours">
+                            <label class="form-check-label" for="workCompletionTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="workCompletionTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="workCompletionTargetRequiredToFill">
+                        <label class="form-check-label" for="workCompletionTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="workCompletionTargetActivateCompliance">
+                        <label class="form-check-label" for="workCompletionTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="workCompletionTargetAcknowledgeActual">
+                        <label class="form-check-label" for="workCompletionTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="workCompletionTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="workCompletionTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="workCompletionTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="workCompletionTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- After Work Follow Up Target -->
+            <div class="form-section">
+                <h5 class="form-section-title">After Work Follow Up Target</h5>
+                <div class="target-input-group mb-3">
+                    <div class="target-input">
+                        <label class="form-label">Days</label>
+                        <input type="number" class="form-control" id="afterWorkFollowUpTargetDays" value="0" min="0">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" id="afterWorkFollowUpTargetHours" value="0" min="0" max="23">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">Minutes</label>
+                        <input type="number" class="form-control" id="afterWorkFollowUpTargetMinutes" value="0" min="0" max="59">
+                    </div>
+                    <div class="target-input">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetWithinOfficeHours">
+                            <label class="form-check-label" for="afterWorkFollowUpTargetWithinOfficeHours">
+                                Within Office Hours
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reference-select">
+                    <label class="form-label">Reference</label>
+                    <select class="form-select" id="afterWorkFollowUpTargetReference">
+                        <option value="">Select reference...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetRequiredToFill">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetRequiredToFill">
+                            Required to Fill on Work Request Completion
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetActivateCompliance">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetActivateCompliance">
+                            Activate Compliance Duration
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetAcknowledgeActual">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetAcknowledgeActual">
+                            Acknowledge Requestor when The Actual already filled
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetAcknowledgeTargetChanged">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetAcknowledgeTargetChanged">
+                            Acknowledge Requestor when The Target Changed
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetReminderBeforeTarget">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetReminderBeforeTarget">
+                            Reminder Before Target
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetActivateAutoFill">
+                        <label class="form-check-label" for="afterWorkFollowUpTargetActivateAutoFill">
+                            Activate Auto Fill After Work Follow Up
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-section">
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="/Helpdesk/PriorityLevel" class="btn btn-secondary">
+                        <i class="ti ti-x me-1"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-save-priority">
+                        <i class="ti ti-device-floppy me-1"></i>
+                        Update Priority Level
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        const priorityLevelId = @ViewBag.PriorityLevelId;
+    </script>
+    <script src="~/assets/js/pages/settings/priority-level-edit.js"></script>
+}

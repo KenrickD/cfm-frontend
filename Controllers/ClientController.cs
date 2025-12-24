@@ -1,4 +1,5 @@
-﻿using cfm_frontend.DTOs;
+﻿using cfm_frontend.Constants;
+using cfm_frontend.DTOs;
 using cfm_frontend.DTOs.Client;
 using cfm_frontend.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -46,7 +47,7 @@ namespace cfm_frontend.Controllers
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/client/list", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Client.List}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -97,7 +98,7 @@ namespace cfm_frontend.Controllers
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/client/switch", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Client.Switch}", content);
 
                 if (response.IsSuccessStatusCode)
                 {

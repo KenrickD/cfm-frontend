@@ -1,0 +1,298 @@
+@{
+    ViewBag.Title = "Priority Level Management";
+    ViewBag.pTitle = "Settings";
+    ViewBag.cTitle = "Priority Level";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .page-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .breadcrumb-custom {
+            background-color: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .stats-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+        }
+
+        .total-count {
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .priority-table {
+            background: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        .priority-table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .priority-table-body {
+            max-height: none;
+        }
+
+        .priority-row {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            transition: background-color 0.2s;
+        }
+
+        .priority-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .priority-row:last-child {
+            border-bottom: none;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+        }
+
+        .priority-name {
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .priority-name:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        .target-info {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+
+        .target-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .target-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+
+        .target-value {
+            color: #6c757d;
+        }
+
+        .within-office-hours {
+            display: inline-block;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.25rem;
+        }
+
+        .btn-view {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #000;
+        }
+
+        .btn-edit:hover {
+            background-color: #e0a800;
+            border-color: #d39e00;
+            color: #000;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .compliance-badge {
+            display: inline-block;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-left: 0.25rem;
+        }
+
+        .checkbox-info {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+
+        .checkbox-info i {
+            margin-right: 0.25rem;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb breadcrumb-custom">
+                <li class="breadcrumb-item"><a href="/Helpdesk/Settings">Settings</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Priority Level</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header-custom">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        List of Priority Level
+                    </h4>
+                    <p class="mb-0 opacity-75">Manage priority levels and their response time targets</p>
+                </div>
+                <div>
+                    <a href="/Helpdesk/Settings" class="btn btn-light btn-sm me-2">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to Settings
+                    </a>
+                    <a href="/Helpdesk/PriorityLevelAdd" class="btn btn-primary btn-sm">
+                        <i class="ti ti-plus me-1"></i>
+                        Add New Priority Level
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="total-count">
+                Showing total of <strong><span id="totalCount">0</span></strong> Priority Levels
+            </div>
+        </div>
+
+        <!-- Priority Level Table -->
+        <div class="priority-table">
+            <div class="priority-table-header">
+                <div class="row">
+                    <div class="col-md-1 text-center">No.</div>
+                    <div class="col-md-2">Name</div>
+                    <div class="col-md-1">Helpdesk Response Target</div>
+                    <div class="col-md-2">Initial Follow Up Target</div>
+                    <div class="col-md-2">Quotation Submission Target</div>
+                    <div class="col-md-1">Cost Approval Target</div>
+                    <div class="col-md-2">Work Completion Target</div>
+                    <div class="col-md-1">After Work Follow Up Target</div>
+                    <div class="col-md-1 text-end">Actions</div>
+                </div>
+            </div>
+            <div class="priority-table-body" id="priorityTableBody">
+                <div class="empty-state" id="emptyState">
+                    <i class="ti ti-alert-triangle"></i>
+                    <p>No priority levels found</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this priority level?</p>
+                <p class="text-muted small mb-0">
+                    <strong id="deletePriorityName"></strong>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/assets/js/pages/settings/priority-level.js"></script>
+}

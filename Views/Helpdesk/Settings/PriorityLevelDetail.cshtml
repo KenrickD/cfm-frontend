@@ -1,0 +1,498 @@
+@{
+    ViewBag.Title = "Priority Level Detail";
+    ViewBag.pTitle = "Settings";
+    ViewBag.cTitle = "Priority Level Detail";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .page-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .breadcrumb-custom {
+            background-color: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        .detail-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .detail-row {
+            margin-bottom: 1rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+
+        .checkbox-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkbox-indicator.checked {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .checkbox-indicator.unchecked {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .checkbox-indicator i {
+            font-size: 1rem;
+        }
+
+        .target-display {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .within-office-hours-badge {
+            display: inline-block;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+        }
+
+        .color-preview-large {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            border: 2px solid #dee2e6;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        .compliance-duration-display {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            border-left: 3px solid #ffc107;
+        }
+
+        .empty-value {
+            color: #adb5bd;
+            font-style: italic;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb breadcrumb-custom">
+                <li class="breadcrumb-item"><a href="/Helpdesk/Settings">Settings</a></li>
+                <li class="breadcrumb-item"><a href="/Helpdesk/PriorityLevel">Priority Level</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Priority Level Detail</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header-custom">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="ti ti-file-description me-2"></i>
+                        Priority Level Detail
+                    </h4>
+                    <p class="mb-0 opacity-75">View priority level configuration and response time targets</p>
+                </div>
+                <div>
+                    <a href="/Helpdesk/PriorityLevel" class="btn btn-light btn-sm me-2">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
+                    <button type="button" class="btn btn-primary btn-sm" id="editBtn">
+                        <i class="ti ti-edit me-1"></i>
+                        Edit this Priority Level
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Basic Information</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-row">
+                        <div class="detail-label">Name</div>
+                        <div class="detail-value" id="name">-</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-row">
+                        <div class="detail-label">Visual Color</div>
+                        <div class="detail-value">
+                            <span id="visualColorName">-</span>
+                            <span id="colorPreview" class="color-preview-large"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Helpdesk Response Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Helpdesk Response Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="helpdeskResponseTarget">-</span>
+                    <span id="helpdeskResponseWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="helpdeskResponseReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="helpdeskResponseRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="helpdeskResponseActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                    <div id="helpdeskComplianceDurationDisplay" style="display: none;">
+                        <div class="compliance-duration-display">
+                            <div class="detail-label">Compliance Duration</div>
+                            <div class="detail-value">
+                                <span class="target-display" id="helpdeskComplianceDuration">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="helpdeskResponseAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="helpdeskResponseAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="helpdeskResponseReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Initial Follow Up Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Initial Follow Up Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="initialFollowUpTarget">-</span>
+                    <span id="initialFollowUpWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="initialFollowUpReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="initialFollowUpRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="initialFollowUpActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="initialFollowUpAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="initialFollowUpAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="initialFollowUpReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quotation Submission Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Quotation Submission Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="quotationSubmissionTarget">-</span>
+                    <span id="quotationSubmissionWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="quotationSubmissionReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="quotationSubmissionRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="quotationSubmissionActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="quotationSubmissionAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="quotationSubmissionAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="quotationSubmissionReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Approval Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Cost Approval Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="costApprovalTarget">-</span>
+                    <span id="costApprovalWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="costApprovalReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="costApprovalRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="costApprovalActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="costApprovalAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="costApprovalAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="costApprovalReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Completion Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">Work Completion Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="workCompletionTarget">-</span>
+                    <span id="workCompletionWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="workCompletionReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="workCompletionRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="workCompletionActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="workCompletionAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="workCompletionAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="workCompletionReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- After Work Follow Up Target -->
+        <div class="detail-section">
+            <h5 class="detail-section-title">After Work Follow Up Target</h5>
+            <div class="detail-row">
+                <div class="detail-label">Target Duration</div>
+                <div class="detail-value">
+                    <span class="target-display" id="afterWorkFollowUpTarget">-</span>
+                    <span id="afterWorkFollowUpWithinOfficeHours"></span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Reference</div>
+                <div class="detail-value" id="afterWorkFollowUpReference">-</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Settings</div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpRequiredToFill">
+                        <i class="ti ti-square"></i>
+                        <span>Required to Fill on Work Request Completion</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpActivateCompliance">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Compliance Duration</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpAcknowledgeActual">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Actual already filled</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpAcknowledgeTargetChanged">
+                        <i class="ti ti-square"></i>
+                        <span>Acknowledge Requestor when The Target Changed</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpReminderBeforeTarget">
+                        <i class="ti ti-square"></i>
+                        <span>Reminder Before Target</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="checkbox-indicator" id="afterWorkFollowUpActivateAutoFill">
+                        <i class="ti ti-square"></i>
+                        <span>Activate Auto Fill After Work Follow Up</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        const priorityLevelId = @ViewBag.PriorityLevelId;
+    </script>
+    <script src="~/assets/js/pages/settings/priority-level-detail.js"></script>
+}

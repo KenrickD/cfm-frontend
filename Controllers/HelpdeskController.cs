@@ -1,9 +1,11 @@
-﻿using cfm_frontend.DTOs.WorkRequest;
+﻿using cfm_frontend.Constants;
+using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Models;
 using cfm_frontend.Models.WorkRequest;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
@@ -29,7 +31,7 @@ namespace Mvc.Controllers
         /// GET: Work Request List page
         /// </summary>
         //[Authorize]
-        public async Task<IActionResult> Index(int page = 0, int pageSize = 50)
+        public async Task<IActionResult> Index(int page = 1, string search = "")
         {
             var viewmodel = new WorkRequestViewModel();
 
@@ -53,10 +55,10 @@ namespace Mvc.Controllers
 
                 var idClient = userInfo.PreferredClientId;
                 var idActor = 1; //currently unused
-                var idEmployee = userInfo.UserId;
+                var idEmployee = userInfo.IdWebUser;
 
                 // Load all data in parallel for better performance
-                var workRequestTask = GetWorkRequestsAsync(client, backendUrl, page, pageSize, idClient, idActor, idEmployee);
+                var workRequestTask = GetWorkRequestsAsync(client, backendUrl, page, idClient, idActor, idEmployee, search);
                 var propertyGroupsTask = GetPropertyGroupsAsync(client, backendUrl, idClient);
                 var statusesTask = GetStatusesAsync(client, backendUrl);
                 var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
@@ -79,13 +81,17 @@ namespace Mvc.Controllers
                 var workRequestResponse = await workRequestTask;
                 if (workRequestResponse != null)
                 {
-                    viewmodel.WorkRequest = workRequestResponse.data;
+                    // Sort by request date descending (most recent first)
+                    viewmodel.WorkRequest = workRequestResponse.data?
+                        .OrderByDescending(wr => wr.requestDate)
+                        .ToList() ?? new List<WorkRequestResponseModel>();
+
                     viewmodel.Paging = new PagingInfo
                     {
-                        CurrentPage = workRequestResponse.currentPage,
-                        TotalPages = workRequestResponse.totalPages,
-                        PageSize = workRequestResponse.pageSize,
-                        TotalRecords = workRequestResponse.totalRecords
+                        CurrentPage = workRequestResponse.CurrentPage,
+                        TotalPages = workRequestResponse.TotalPages,
+                        PageSize = workRequestResponse.PageSize,
+                        TotalRecords = workRequestResponse.TotalCount
                     };
                 }
 
@@ -222,7 +228,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/workrequest/create", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -355,7 +361,7 @@ namespace Mvc.Controllers
                 var workRequest = new WorkRequestCreateRequest
                 {
                     IdClient = userInfo.PreferredClientId,
-                    IdEmployee = userInfo.UserId,
+                    IdEmployee = userInfo.IdWebUser,
                     IdLocation = IdLocation,
                     IdFloor = IdFloor,
                     IdRoom = IdRoom,
@@ -366,7 +372,7 @@ namespace Mvc.Controllers
                     Status = "New",
                     PriorityLevel = "Medium", 
                     RequestDate = DateTime.UtcNow,
-                    IdRequestor = userInfo.UserId,
+                    IdRequestor = userInfo.IdWebUser,
                     RequestorName = userInfo.FullName
                 };
 
@@ -383,7 +389,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/workrequest/create", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -504,7 +510,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/floor/list?locationId={locationId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Floor.List}?locationId={locationId}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -537,7 +543,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/room/list?floorId={floorId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Room.List}?floorId={floorId}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -606,7 +612,7 @@ namespace Mvc.Controllers
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 var response = await client.GetAsync(
-                    $"{backendUrl}/api/employee/persons-in-charge?idClient={idClient}"
+                    $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}"
                 );
 
                 if (response.IsSuccessStatusCode)
@@ -690,12 +696,12 @@ namespace Mvc.Controllers
                 }
 
                 var idClient = userInfo.PreferredClientId;
-                var userId = userInfo.UserId;
+                var userId = userInfo.IdWebUser;
 
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/location/list?idClient={idClient}&userId={userId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Location.List}?idClient={idClient}&userId={userId}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -744,7 +750,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var url = $"{backendUrl}/api/employee/persons-in-charge?idClient={idClient}";
+                var url = $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}";
                 if (idWorkCategory.HasValue)
                 {
                     url += $"&idWorkCategory={idWorkCategory.Value}";
@@ -804,7 +810,7 @@ namespace Mvc.Controllers
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 var response = await client.GetAsync(
-                    $"{backendUrl}/api/employee/search-requestors?term={Uri.EscapeDataString(term)}&idCompany={idCompany}"
+                    $"{backendUrl}{ApiEndpoints.Employee.SearchRequestors}?term={Uri.EscapeDataString(term)}&idCompany={idCompany}"
                 );
 
                 if (response.IsSuccessStatusCode)
@@ -838,7 +844,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/lookup/list?type=workRequestMethod");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestMethod}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -871,7 +877,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/lookup/list?type=workRequestStatus");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestStatus}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -921,7 +927,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/serviceprovider/list?idClient={idClient}&idCompany={idCompany}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1092,18 +1098,21 @@ namespace Mvc.Controllers
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=workRequestAdditionalInformation&idClient={idClient}"
+                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"
                 );
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var checklist = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                    var checklist = await JsonSerializer.DeserializeAsync<List<ImportantChecklistItemModel>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    return Json(new { success = true, data = checklist });
+                    // Sort by displayOrder for consistent ordering
+                    var sortedChecklist = checklist?.OrderBy(x => x.displayOrder).ToList();
+
+                    return Json(new { success = true, data = sortedChecklist });
                 }
 
                 return Json(new { success = false, message = "Failed to load important checklist" });
@@ -1245,7 +1254,7 @@ namespace Mvc.Controllers
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=workRequestPriorityLevel&idClient={idClient}"
+                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}"
                 );
 
                 if (response.IsSuccessStatusCode)
@@ -1311,30 +1320,25 @@ namespace Mvc.Controllers
             HttpClient client,
             string backendUrl,
             int page,
-            int pageSize,
             int idClient,
             int idActor,
-            int idEmployee)
+            int idEmployee,
+            string keyWordSearch = "")
         {
             try
             {
                 var requestBody = new WorkRequestBodyModel
                 {
-                    idClient = idClient,
-                    idEmployee = idEmployee,
-                    idStatus = 0,
-                    fromDate = string.Empty,
-                    toDate = string.Empty,
-                    filterWorkCategory = string.Empty,
-                    filterLocation = string.Empty,
-                    filterStatus = 0
+                    Client_idClient = idClient,
+                    page = page,
+                    keyWordSearch = keyWordSearch
                 };
 
                 var jsonPayload = JsonSerializer.Serialize(requestBody);
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync(
-                    $"{backendUrl}/api/workrequest/list?page={page}&pageSize={pageSize}",
+                    $"{backendUrl}{ApiEndpoints.WorkRequest.List}",
                     content
                 );
 
@@ -1361,7 +1365,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/propertygroup/list?idClient={idClient}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.PropertyGroup.List}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1387,7 +1391,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/workrequest/statuses");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Statuses}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1413,7 +1417,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/location/list?idClient={idClient}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Location.List}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1439,7 +1443,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/serviceprovider/list?idClient={idClient}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1465,7 +1469,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/workcategory/list");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1491,7 +1495,7 @@ namespace Mvc.Controllers
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}/api/othercategory/list");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.OtherCategory.List}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1546,7 +1550,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/workcategory/list");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1590,7 +1594,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/workcategory/create", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Create}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1637,7 +1641,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PutAsync($"{backendUrl}/api/workcategory/update", content);
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Update}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1673,7 +1677,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.DeleteAsync($"{backendUrl}/api/workcategory/delete/{model.id}");
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Delete(model.id)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1765,6 +1769,436 @@ namespace Mvc.Controllers
 
         #endregion
 
+        #region Important Checklist
+
+        public IActionResult ImportantChecklist() => View("~/Views/Helpdesk/Settings/ImportantChecklist.cshtml");
+
+        [HttpGet]
+        public async Task<IActionResult> GetImportantChecklists()
+        {
+            try
+            {
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var checklist = await JsonSerializer.DeserializeAsync<List<ImportantChecklistItemModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    // Sort by displayOrder
+                    var sortedChecklist = checklist?.OrderBy(x => x.displayOrder).ToList();
+
+                    return Json(new { success = true, data = sortedChecklist });
+                }
+
+                return Json(new { success = false, message = "Failed to load important checklist" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching important checklist");
+                return Json(new { success = false, message = "Error loading important checklist" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(model.name))
+                {
+                    return Json(new { success = false, message = "Checklist name is required" });
+                }
+
+                // Get user session for idClient
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Set label to name if not provided
+                if (string.IsNullOrWhiteSpace(model.label))
+                {
+                    model.label = model.name;
+                }
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Important checklist item created successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to create important checklist. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to create important checklist item" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating important checklist");
+                return Json(new { success = false, message = "Error creating important checklist item" });
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        {
+            try
+            {
+                if (model.id <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid checklist ID" });
+                }
+
+                if (string.IsNullOrWhiteSpace(model.name))
+                {
+                    return Json(new { success = false, message = "Checklist name is required" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Set label to name if not provided
+                if (string.IsNullOrWhiteSpace(model.label))
+                {
+                    model.label = model.name;
+                }
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Important checklist item updated successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to update important checklist. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to update important checklist item" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating important checklist");
+                return Json(new { success = false, message = "Error updating important checklist item" });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        {
+            try
+            {
+                if (model.id <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid checklist ID" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Important checklist item deleted successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to delete important checklist. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to delete important checklist item" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting important checklist");
+                return Json(new { success = false, message = "Error deleting important checklist item" });
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateImportantChecklistOrder([FromBody] ImportantChecklistUpdateOrderRequest request)
+        {
+            try
+            {
+                if (request.items == null || !request.items.Any())
+                {
+                    return Json(new { success = false, message = "No items to update" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var jsonPayload = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.UpdateOrder}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Checklist order updated successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to update checklist order. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to update checklist order" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating checklist order");
+                return Json(new { success = false, message = "Error updating checklist order" });
+            }
+        }
+
+        #endregion
+
+        #region Related Document
+
+        public IActionResult RelatedDocument() => View("~/Views/Helpdesk/Settings/RelatedDocument.cshtml");
+
+        [HttpGet]
+        public async Task<IActionResult> GetRelatedDocuments()
+        {
+            try
+            {
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}&idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var documents = await JsonSerializer.DeserializeAsync<List<RelatedDocumentModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = documents });
+                }
+
+                return Json(new { success = false, message = "Failed to load related documents" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching related documents");
+                return Json(new { success = false, message = "Error loading related documents" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateRelatedDocument([FromBody] RelatedDocumentModel model)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(model.name))
+                {
+                    return Json(new { success = false, message = "Document name is required" });
+                }
+
+                // Get user session for idClient
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Set label to name if not provided
+                if (string.IsNullOrWhiteSpace(model.label))
+                {
+                    model.label = model.name;
+                }
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Related document created successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to create related document. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to create related document" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating related document");
+                return Json(new { success = false, message = "Error creating related document" });
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateRelatedDocument([FromBody] RelatedDocumentModel model)
+        {
+            try
+            {
+                if (model.id <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid document ID" });
+                }
+
+                if (string.IsNullOrWhiteSpace(model.name))
+                {
+                    return Json(new { success = false, message = "Document name is required" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Set label to name if not provided
+                if (string.IsNullOrWhiteSpace(model.label))
+                {
+                    model.label = model.name;
+                }
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Related document updated successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to update related document. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to update related document" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating related document");
+                return Json(new { success = false, message = "Error updating related document" });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteRelatedDocument([FromBody] RelatedDocumentModel model)
+        {
+            try
+            {
+                if (model.id <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid document ID" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Related document deleted successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to delete related document. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to delete related document" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting related document");
+                return Json(new { success = false, message = "Error deleting related document" });
+            }
+        }
+
+        #endregion
+
         #region Generic CRUD Helpers
 
         private async Task<IActionResult> GetCategoriesGeneric(string endpoint, string entityName)
@@ -1774,7 +2208,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/{endpoint}/list");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.GenericCategory.List(endpoint)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1809,7 +2243,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/{endpoint}/create", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Create(endpoint)}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1838,7 +2272,7 @@ namespace Mvc.Controllers
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PutAsync($"{backendUrl}/api/{endpoint}/update", content);
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Update(endpoint)}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1866,7 +2300,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.DeleteAsync($"{backendUrl}/api/{endpoint}/delete/{id}");
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Delete(endpoint, id)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1899,7 +2333,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/settings/persons-in-charge");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.List}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1929,7 +2363,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/settings/persons-in-charge/{id}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.GetById(id)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1968,7 +2402,7 @@ namespace Mvc.Controllers
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}/api/settings/properties?idClient={userInfo.PreferredClientId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.Properties}?idClient={userInfo.PreferredClientId}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2004,7 +2438,7 @@ namespace Mvc.Controllers
                 });
 
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{backendUrl}/api/settings/persons-in-charge", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Create}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2035,7 +2469,7 @@ namespace Mvc.Controllers
                 });
 
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = await client.PutAsync($"{backendUrl}/api/settings/persons-in-charge", content);
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Update}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2062,7 +2496,7 @@ namespace Mvc.Controllers
 
                 var id = ((JsonElement)model.GetProperty("id")).GetInt32();
 
-                var response = await client.DeleteAsync($"{backendUrl}/api/settings/persons-in-charge/{id}");
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(id)}");
 
                 if (response.IsSuccessStatusCode)
                 {

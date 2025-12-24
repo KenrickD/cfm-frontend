@@ -157,7 +157,7 @@
                     <div class="grid gap-0 column-gap-2 d-flex flex-row" style="width: 100%">
                         <div class="input-group w-100" style="border-color: #DBE0E5;">
                             <input placeholder="Search by entering keywords for Work Request Code, Work Title, or Requestor ..."
-                                   type="text" class="form-control" id="mainSearchInput">
+                                   type="text" class="form-control" id="mainSearchInput" value="@Context.Request.Query["search"]">
                             <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
                                     data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                     data-bs-content="Search" data-bs-trigger="hover" id="searchButton">
@@ -215,7 +215,7 @@
                                 @foreach (var workRequest in Model.WorkRequest)
                                 {
                                     var statusClass = "";
-                                    switch (workRequest.status)
+                                    switch (workRequest.workRequestStatus)
                                     {
                                         case "New":
                                             statusClass = "bg-light-primary";
@@ -235,90 +235,66 @@
                                             <div class="align-items-center text-wrap" style="width: 250px">
                                                 <span>
                                                     <a href="work-requests/@workRequest.idWorkRequest">@workRequest.workRequestCode</a>
-                                                    <span class="badge" style="background-color: @workRequest.plmColor;">@workRequest.plm</span>
+                                                    @* <span class="badge" style="background-color: @workRequest.plmColor;">@workRequest.plm</span> *@
                                                 </span>
                                                 <div>
                                                     <span>@workRequest.workTitle</span>
                                                 </div>
+                                                @if (workRequest.totalWorker > 0)
+                                                {
+                                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                                        <span>Completed by @workRequest.totalWorkerCompleted of @workRequest.totalWorker Workers</span>
+                                                    </div>
+                                                }
                                             </div>
                                         </td>
                                         <td>
                                             <div>
-                                                <a href="#!" uk-toggle="target: #requestorModal-@workRequest.idWorkRequest">
-                                                    Bayu Wilanda
-                                                </a>
+                                                @workRequest.fullName @(!string.IsNullOrEmpty(workRequest.requestorDeptName) ? $"({workRequest.requestorDeptName})" : "")
                                             </div>
-                                            <div id="requestorModal-@workRequest.idWorkRequest" uk-modal>
-                                                <div class="uk-modal-dialog uk-modal-body">
-                                                    <button class="uk-modal-close-default" type="button" uk-close></button>
-                                                    <h2 class="uk-modal-title">Requestor Information</h2>
-                                                    <div class="row">
-                                                        <div class="col-md-12">
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Name</label>
-                                                                <div>Bayu Wilanda</div>
-                                                            </div>
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Phone</label>
-                                                                <div>
-                                                                    +62 813-9850-5188
-                                                                    <a data-clipboard="true" role="button"
-                                                                       data-clipboard-text="+62 813-9850-5188"
-                                                                       class="text-primary">
-                                                                        <i class="ti ti-copy"></i>
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Email</label>
-                                                                <div>
-                                                                    bayuwilanda@gmail.com <span class="fw-semibold">(Main)</span>
-                                                                    <a data-clipboard="true" role="button"
-                                                                       data-clipboard-text="bayuwilanda@gmail.com"
-                                                                       class="text-primary">
-                                                                        <i class="ti ti-copy"></i>
-                                                                    </a>
-                                                                </div>
-                                                                <div>
-                                                                    muhamadbayuwilanda@gmail.com
-                                                                    <a data-clipboard="true" role="button"
-                                                                       data-clipboard-text="muhamadbayuwilanda@gmail.com"
-                                                                       class="text-primary">
-                                                                        <i class="ti ti-copy"></i>
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Department</label>
-                                                                <div>IT Software Development</div>
-                                                            </div>
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Role</label>
-                                                                <div>Tukang</div>
-                                                            </div>
-                                                            <div class="mb-3 col-md-12">
-                                                                <label class="form-label fw-semibold">Notes</label>
-                                                                <div>-</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            <div style="font-size: 0.875rem; color: #6c757d;">
+                                                On @workRequest.requestDate.ToString("dd MMM yyyy hh:mm tt")
                                             </div>
-                                            <p>On @workRequest.requestDate</p>
                                         </td>
                                         <td>
                                             <div class="d-flex flex-column" style="width: 200px">
-                                                <span class="text-wrap">@workRequest.locationFinal</span>
+                                                @if (!string.IsNullOrEmpty(workRequest.propertyName))
+                                                {
+                                                    <span class="text-wrap">@workRequest.propertyName</span>
+                                                }
+                                                @{
+                                                    var locationParts = new List<string>();
+                                                    if (!string.IsNullOrEmpty(workRequest.floorProp))
+                                                    {
+                                                        locationParts.Add(workRequest.floorProp);
+                                                    }
+                                                    if (!string.IsNullOrEmpty(workRequest.roomZoneName))
+                                                    {
+                                                        locationParts.Add(workRequest.roomZoneName);
+                                                    }
+                                                    if (locationParts.Any())
+                                                    {
+                                                        <span class="text-wrap">@string.Join(", ", locationParts)</span>
+                                                    }
+                                                }
                                             </div>
                                         </td>
                                         <td>
                                             <div class="d-flex flex-column">
-                                                <span>@workRequest.workCategory</span>
-                                                <span>Service Provider: Self-Performed</span>
+                                                <span>@workRequest.workCategoryName</span>
+                                                <span>Service Provider: @workRequest.serviceProviderName</span>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge @statusClass">@workRequest.status</span>
+                                            <div class="d-flex flex-column align-items-start">
+                                                <span class="badge @statusClass">@workRequest.workRequestStatus</span>
+                                                @if (workRequest.totalHasSentEmail > 0)
+                                                {
+                                                    <div class="mt-1">
+                                                        <i class="ti ti-mail" style="font-size: 18px; color: #04a9f5;" title="Email sent"></i>
+                                                    </div>
+                                                }
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="grid gap-0 column-gap-2 d-flex flex-row">
@@ -362,11 +338,16 @@
 
                     <nav aria-label="Pagination" class="mt-4">
                         <ul class="pagination justify-content-center">
+                            @{
+                                var searchParam = Context.Request.Query["search"].ToString();
+                                var searchQuery = !string.IsNullOrEmpty(searchParam) ? $"&search={Uri.EscapeDataString(searchParam)}" : "";
+                            }
+
                             @* Previous Button *@
                             <li class="page-item @(!Model.Paging.HasPreviousPage ? "disabled" : "")">
                                 @if (Model.Paging.HasPreviousPage)
                                 {
-                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage - 1)" aria-label="Previous">
+                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage - 1)@searchQuery" aria-label="Previous">
                                         <span aria-hidden="true">
                                             <i class="ti ti-chevron-left"></i>
                                             Previous
@@ -397,7 +378,7 @@
                                 else
                                 {
                                     <li class="page-item @(pageNumber == Model.Paging.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="?page=@pageNumber">@pageNumber</a>
+                                        <a class="page-link" href="?page=@pageNumber@searchQuery">@pageNumber</a>
                                     </li>
                                 }
                             }
@@ -406,7 +387,7 @@
                             <li class="page-item @(!Model.Paging.HasNextPage ? "disabled" : "")">
                                 @if (Model.Paging.HasNextPage)
                                 {
-                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage + 1)" aria-label="Next">
+                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage + 1)@searchQuery" aria-label="Next">
                                         <span aria-hidden="true">
                                             Next
                                             <i class="ti ti-chevron-right"></i>
@@ -877,15 +858,34 @@
             // Main search button
             $('#searchButton').on('click', function() {
                 var searchTerm = $('#mainSearchInput').val();
-                console.log('Searching for:', searchTerm);
-                // TODO: Implement search logic
+                var currentUrl = new URL(window.location.href);
+
+                if (searchTerm && searchTerm.trim() !== '') {
+                    currentUrl.searchParams.set('search', searchTerm.trim());
+                } else {
+                    currentUrl.searchParams.delete('search');
+                }
+
+                // Reset to page 1 when searching
+                currentUrl.searchParams.delete('page');
+
+                window.location.href = currentUrl.toString();
+            });
+
+            // Allow Enter key to trigger search
+            $('#mainSearchInput').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    $('#searchButton').click();
+                }
             });
 
             // Clear search button
             $('#clearSearchButton').on('click', function() {
                 $('#mainSearchInput').val('');
-                console.log('Clearing search...');
-                // TODO: Implement clear search logic - reload page without filters
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('search');
+                currentUrl.searchParams.delete('page');
+                window.location.href = currentUrl.toString();
             });
         });
     </script>

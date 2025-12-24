@@ -1,4 +1,5 @@
-﻿using cfm_frontend.DTOs.Login;
+﻿using cfm_frontend.Constants;
+using cfm_frontend.DTOs.Login;
 using cfm_frontend.DTOs.UserInfo;
 using cfm_frontend.Models;
 using cfm_frontend.ViewModels;
@@ -47,7 +48,7 @@ namespace cfm_frontend.Controllers
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/auth/login", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.Login}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -60,22 +61,25 @@ namespace cfm_frontend.Controllers
                     if (authResponse != null)
                     {
                         // Step 2: Fetch user info using the tokens
-                        var userInfoResponse = await FetchUserInfoAsync(authResponse.AccessToken, authResponse.RefreshToken);
+                        var userInfoResponse = await FetchUserInfoAsync(authResponse.Token, authResponse.RefreshToken);
 
                         if (userInfoResponse != null)
                         {
                             // Step 3: Create UserSession object
                             var userInfo = new UserInfo
                             {
-                                UserId = userInfoResponse.UserId,
-                                Username = userInfoResponse.Username,
-                                Email = userInfoResponse.Email,
+                                IdWebUser = userInfoResponse.IdWebUser,
+                                //Username = userInfoResponse.Username,
+                                //Email = userInfoResponse.Email,
                                 FullName = userInfoResponse.FullName,
-                                Role = userInfoResponse.Role,
-                                Department = userInfoResponse.Department,
-                                PhoneNumber = userInfoResponse.PhoneNumber,
-                                ProfilePicture = userInfoResponse.ProfilePicture,
-                                PreferredClientId = userInfoResponse.PreferredClientId,
+                                //Role = userInfoResponse.Role,
+                                //Department = userInfoResponse.Department,
+                                //PhoneNumber = userInfoResponse.PhoneNumber,
+                                //ProfilePicture = userInfoResponse.ProfilePicture,
+
+                                PreferredClientId = userInfoResponse.Preferred_Client_idClient,
+                                TimeZoneName = userInfoResponse.TimeZoneName,
+                                PreferredTimezoneIdTimezone = userInfoResponse.Preferred_TimeZone_idTimeZone,
                                 IdCompany = userInfoResponse.IdCompany,
                                 LoginTime = DateTime.UtcNow
                             };
@@ -87,7 +91,7 @@ namespace cfm_frontend.Controllers
                             {
                                 new Claim(ClaimTypes.Name, userInfo.FullName ?? userInfo.Username),
                                 new Claim("Username", userInfo.Username),
-                                new Claim("UserId", userInfo.UserId.ToString()),
+                                new Claim("UserId", userInfo.IdWebUser.ToString()),
                                 new Claim(ClaimTypes.Email, userInfo.Email ?? string.Empty),
                                 new Claim(ClaimTypes.Role, userInfo.Role ?? string.Empty)
                             };
@@ -101,7 +105,7 @@ namespace cfm_frontend.Controllers
 
                             authProperties.StoreTokens(new List<AuthenticationToken>
                             {
-                                new AuthenticationToken { Name = "access_token", Value = authResponse.AccessToken },
+                                new AuthenticationToken { Name = "access_token", Value = authResponse.Token },
                                 new AuthenticationToken { Name = "refresh_token", Value = authResponse.RefreshToken }
                             });
 
@@ -112,7 +116,7 @@ namespace cfm_frontend.Controllers
                             );
 
                             _logger.LogInformation("User {Username} (ID: {UserId}) logged in successfully at {Time}",
-                                userInfo.Username, userInfo.UserId, DateTime.UtcNow);
+                                userInfo.Username, userInfo.IdWebUser, DateTime.UtcNow);
 
                             return RedirectToAction("Index", "Dashboard");
                         }
@@ -146,16 +150,11 @@ namespace cfm_frontend.Controllers
                 var client = _httpClientFactory.CreateClient();
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var payload = new
-                {
-                    accessToken = accessToken,
-                    refreshToken = refreshToken
-                };
+                // Add Bearer token to the request header
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-                var jsonPayload = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}/api/auth/userinfo", content);
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.UserInfo.GetUserDetail}");
 
                 if (response.IsSuccessStatusCode)
                 {

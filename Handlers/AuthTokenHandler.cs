@@ -99,7 +99,7 @@ namespace cfm_frontend.Handlers
                         var properties = result.Properties;
                         if (properties != null)
                         {
-                            properties.UpdateTokenValue("access_token", newTokens.AccessToken);
+                            properties.UpdateTokenValue("access_token", newTokens.Token);
                             properties.UpdateTokenValue("refresh_token", newTokens.RefreshToken);
 
                             // Re-issue the cookie

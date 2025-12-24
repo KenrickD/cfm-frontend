@@ -1,0 +1,469 @@
+namespace cfm_frontend.Constants
+{
+    /// <summary>
+    /// Centralized repository for all backend API endpoints.
+    /// Organized hierarchically by domain/feature area following RESTful conventions.
+    /// </summary>
+    public static class ApiEndpoints
+    {
+        private const string ApiBase = "/api";
+
+        #region Authentication
+
+        /// <summary>
+        /// Authentication and user management endpoints
+        /// </summary>
+        public static class Auth
+        {
+            private const string Base = ApiBase + "/Auth";
+
+            /// <summary>
+            /// POST: Authenticate user with credentials
+            /// </summary>
+            public const string Login = Base + "/Login";
+
+        }
+
+        #endregion
+
+        /// <summary>
+        /// User info endpoints 
+        /// </summary>
+        #region SessionInfo
+        public static class UserInfo
+        {
+            private const string Base = ApiBase + "/WebUser";
+
+            /// <summary>
+            /// POST: Authenticate user with credentials
+            /// </summary>
+            public const string GetUserDetail = Base + "/GetUserDetail";
+        }
+        #endregion
+
+        #region Client Management
+
+        /// <summary>
+        /// Client management and switching endpoints
+        /// </summary>
+        public static class Client
+        {
+            private const string Base = ApiBase + "/client";
+
+            /// <summary>
+            /// POST: Get list of clients for authenticated user
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// POST: Switch user's active client
+            /// </summary>
+            public const string Switch = Base + "/switch";
+        }
+
+        #endregion
+
+        #region Work Request
+
+        /// <summary>
+        /// Work request management endpoints
+        /// </summary>
+        public static class WorkRequest
+        {
+            private const string Base = ApiBase + "/WorkRequest";
+
+            /// <summary>
+            /// POST: Create new work request
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// POST: Create new work request
+            /// </summary>
+            public const string List = Base + "/GetWorkRequestList";
+
+            /// <summary>
+            /// GET: Get all work request statuses
+            /// </summary>
+            public const string Statuses = Base + "/statuses";
+        }
+
+        #endregion
+
+        #region Location & Property
+
+        /// <summary>
+        /// Location management endpoints
+        /// </summary>
+        public static class Location
+        {
+            private const string Base = ApiBase + "/location";
+
+            /// <summary>
+            /// GET: Get locations
+            /// Query params: idClient, userId (optional)
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        /// <summary>
+        /// Floor management endpoints
+        /// </summary>
+        public static class Floor
+        {
+            private const string Base = ApiBase + "/floor";
+
+            /// <summary>
+            /// GET: Get floors for a specific location
+            /// Query params: locationId
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        /// <summary>
+        /// Room management endpoints
+        /// </summary>
+        public static class Room
+        {
+            private const string Base = ApiBase + "/room";
+
+            /// <summary>
+            /// GET: Get rooms for a specific floor
+            /// Query params: floorId
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        /// <summary>
+        /// Property group management endpoints
+        /// </summary>
+        public static class PropertyGroup
+        {
+            private const string Base = ApiBase + "/propertygroup";
+
+            /// <summary>
+            /// GET: Get property groups for client
+            /// Query params: idClient
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        #endregion
+
+        #region Employee & Person In Charge
+
+        /// <summary>
+        /// Employee and requestor search endpoints
+        /// </summary>
+        public static class Employee
+        {
+            private const string Base = ApiBase + "/employee";
+
+            /// <summary>
+            /// GET: Get persons in charge filtered by category and location
+            /// Query params: idClient, idWorkCategory, idLocation
+            /// </summary>
+            public const string PersonsInCharge = Base + "/persons-in-charge";
+
+            /// <summary>
+            /// GET: Search employees/requestors by search term
+            /// Query params: term, idCompany
+            /// </summary>
+            public const string SearchRequestors = Base + "/search-requestors";
+        }
+
+        #endregion
+
+        #region Service Provider
+
+        /// <summary>
+        /// Service provider management endpoints
+        /// </summary>
+        public static class ServiceProvider
+        {
+            private const string Base = ApiBase + "/serviceprovider";
+
+            /// <summary>
+            /// GET: Get service providers for client and company
+            /// Query params: idClient, idCompany
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        #endregion
+
+        #region Lookup Tables
+
+        /// <summary>
+        /// Lookup table endpoints for dynamic reference data
+        /// </summary>
+        public static class Lookup
+        {
+            private const string Base = ApiBase + "/lookup";
+
+            /// <summary>
+            /// GET: Get lookup items by type
+            /// Query params: type, idClient (optional depending on type)
+            /// Example types: workRequestMethod, workRequestStatus, workRequestAdditionalInformation, workRequestDocument
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// POST: Create lookup item
+            /// Query params: type
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// PUT: Update lookup item
+            /// Query params: type
+            /// </summary>
+            public const string Update = Base + "/update";
+
+            /// <summary>
+            /// DELETE: Delete lookup item by ID
+            /// Path params: {id}
+            /// Query params: type
+            /// </summary>
+            /// <param name="id">Lookup item ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/delete/{id}";
+
+            /// <summary>
+            /// PUT: Update order of lookup items
+            /// Query params: type
+            /// </summary>
+            public const string UpdateOrder = Base + "/updateorder";
+
+            /// <summary>
+            /// Common lookup types for type-safe usage
+            /// </summary>
+            public static class Types
+            {
+                public const string WorkRequestMethod = "workRequestMethod";
+                public const string WorkRequestStatus = "workRequestStatus";
+                public const string WorkRequestPriorityLevel = "workRequestPriorityLevel";
+                public const string WorkRequestAdditionalInformation = "workRequestAdditionalInformation";
+                public const string WorkRequestDocument = "workRequestDocument";
+            }
+        }
+
+        #endregion
+
+        #region Work Category
+
+        /// <summary>
+        /// Work category management endpoints
+        /// </summary>
+        public static class WorkCategory
+        {
+            private const string Base = ApiBase + "/workcategory";
+
+            /// <summary>
+            /// GET: Get all work categories
+            /// Query params: idClient (optional), categoryType (optional)
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// POST: Create new work category
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// PUT: Update existing work category
+            /// </summary>
+            public const string Update = Base + "/update";
+
+            /// <summary>
+            /// DELETE: Delete work category by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Work category ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/delete/{id}";
+        }
+
+        #endregion
+
+        #region Other Category
+
+        /// <summary>
+        /// Other category management endpoints
+        /// </summary>
+        public static class OtherCategory
+        {
+            private const string Base = ApiBase + "/othercategory";
+
+            /// <summary>
+            /// GET: Get all other categories
+            /// Query params: idClient (optional), categoryType (optional)
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// POST: Create new other category
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// PUT: Update existing other category
+            /// </summary>
+            public const string Update = Base + "/update";
+
+            /// <summary>
+            /// DELETE: Delete other category by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Other category ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/delete/{id}";
+        }
+
+        #endregion
+
+        #region Generic Category Endpoints
+
+        /// <summary>
+        /// Generic category endpoint builder for reusable CRUD operations
+        /// Supports: othercategory, othercategory2, jobcodegroup, materialtype
+        /// </summary>
+        public static class GenericCategory
+        {
+            /// <summary>
+            /// GET: List items for generic category endpoint
+            /// </summary>
+            /// <param name="endpoint">Category endpoint name (e.g., "othercategory", "jobcodegroup")</param>
+            /// <returns>List endpoint URL</returns>
+            public static string List(string endpoint) => $"{ApiBase}/{endpoint}/list";
+
+            /// <summary>
+            /// POST: Create item for generic category endpoint
+            /// </summary>
+            /// <param name="endpoint">Category endpoint name</param>
+            /// <returns>Create endpoint URL</returns>
+            public static string Create(string endpoint) => $"{ApiBase}/{endpoint}/create";
+
+            /// <summary>
+            /// PUT: Update item for generic category endpoint
+            /// </summary>
+            /// <param name="endpoint">Category endpoint name</param>
+            /// <returns>Update endpoint URL</returns>
+            public static string Update(string endpoint) => $"{ApiBase}/{endpoint}/update";
+
+            /// <summary>
+            /// DELETE: Delete item for generic category endpoint
+            /// </summary>
+            /// <param name="endpoint">Category endpoint name</param>
+            /// <param name="id">Item ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(string endpoint, int id) => $"{ApiBase}/{endpoint}/delete/{id}";
+        }
+
+        #endregion
+
+        #region Settings - Person In Charge
+
+        /// <summary>
+        /// Settings management for persons in charge
+        /// </summary>
+        public static class Settings
+        {
+            private const string Base = ApiBase + "/settings";
+
+            /// <summary>
+            /// Person in charge settings endpoints
+            /// </summary>
+            public static class PersonInCharge
+            {
+                private const string PersonsBase = Base + "/persons-in-charge";
+
+                /// <summary>
+                /// GET: Get all persons in charge
+                /// </summary>
+                public const string List = PersonsBase;
+
+                /// <summary>
+                /// GET: Get person in charge by ID
+                /// Path params: {id}
+                /// </summary>
+                /// <param name="id">Person in charge ID</param>
+                /// <returns>Get by ID endpoint URL</returns>
+                public static string GetById(int id) => $"{PersonsBase}/{id}";
+
+                /// <summary>
+                /// POST: Create person in charge
+                /// </summary>
+                public const string Create = PersonsBase;
+
+                /// <summary>
+                /// PUT: Update person in charge
+                /// </summary>
+                public const string Update = PersonsBase;
+
+                /// <summary>
+                /// DELETE: Delete person in charge by ID
+                /// Path params: {id}
+                /// </summary>
+                /// <param name="id">Person in charge ID</param>
+                /// <returns>Delete endpoint URL</returns>
+                public static string Delete(int id) => $"{PersonsBase}/{id}";
+            }
+
+            /// <summary>
+            /// GET: Get properties for client
+            /// Query params: idClient
+            /// </summary>
+            public const string Properties = Base + "/properties";
+
+            /// <summary>
+            /// Priority Level settings endpoints
+            /// </summary>
+            public static class PriorityLevel
+            {
+                private const string PriorityLevelBase = Base + "/priority-level";
+
+                /// <summary>
+                /// GET: Get all priority levels for client
+                /// Query params: idClient
+                /// </summary>
+                public const string List = PriorityLevelBase;
+
+                /// <summary>
+                /// GET: Get priority level by ID
+                /// Path params: {id}
+                /// Query params: idClient
+                /// </summary>
+                /// <param name="id">Priority level ID</param>
+                /// <returns>Get by ID endpoint URL</returns>
+                public static string GetById(int id) => $"{PriorityLevelBase}/{id}";
+
+                /// <summary>
+                /// POST: Create priority level
+                /// </summary>
+                public const string Create = PriorityLevelBase;
+
+                /// <summary>
+                /// PUT: Update priority level
+                /// </summary>
+                public const string Update = PriorityLevelBase;
+
+                /// <summary>
+                /// DELETE: Delete priority level by ID
+                /// Path params: {id}
+                /// </summary>
+                /// <param name="id">Priority level ID</param>
+                /// <returns>Delete endpoint URL</returns>
+                public static string Delete(int id) => $"{PriorityLevelBase}/{id}";
+
+                /// <summary>
+                /// GET: Get dropdown options for priority level forms
+                /// Query params: type (one of: priorityLevelInitialFollowUp, priorityLevelQuotationSubmission, etc.)
+                /// </summary>
+                public const string DropdownOptions = PriorityLevelBase + "/dropdown-options";
+            }
+        }
+
+        #endregion
+    }
+}
