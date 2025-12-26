@@ -1,7 +1,10 @@
 ﻿using cfm_frontend.Constants;
+using cfm_frontend.Controllers;
 using cfm_frontend.DTOs.WorkRequest;
+using cfm_frontend.Extensions;
 using cfm_frontend.Models;
 using cfm_frontend.Models.WorkRequest;
+using cfm_frontend.Services;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,13 +15,18 @@ using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
 
 namespace Mvc.Controllers
 {
-    public class HelpdeskController : Controller
+    public class HelpdeskController : BaseController
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<HelpdeskController> _logger;
 
-        public HelpdeskController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<HelpdeskController> logger)
+        public HelpdeskController(
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            ILogger<HelpdeskController> logger,
+            IPrivilegeService privilegeService)
+            : base(privilegeService, logger)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
@@ -30,9 +38,12 @@ namespace Mvc.Controllers
         /// <summary>
         /// GET: Work Request List page
         /// </summary>
-        //[Authorize]
         public async Task<IActionResult> Index(int page = 1, string search = "")
         {
+            // Check if user has permission to view Work Request Management
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
             var viewmodel = new WorkRequestViewModel();
 
             try
@@ -122,6 +133,10 @@ namespace Mvc.Controllers
         //[Authorize]
         public async Task<IActionResult> WorkRequestAdd()
         {
+            // Check if user has permission to view Work Request Add page
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
             var viewmodel = new WorkRequestViewModel();
 
             try
@@ -182,6 +197,10 @@ namespace Mvc.Controllers
         //[Authorize]
         public async Task<IActionResult> WorkRequestAdd(WorkRequestCreateRequest model)
         {
+            // Check if user has permission to add Work Requests
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -277,11 +296,15 @@ namespace Mvc.Controllers
         }
 
         /// <summary>
-        /// GET: Send New Work Request page 
+        /// GET: Send New Work Request page
         /// </summary>
         //[Authorize]
         public async Task<IActionResult> SendNewWorkRequest()
         {
+            // Check if user has permission to view Send Work Request page
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Send Work Request");
+            if (accessCheck != null) return accessCheck;
+
             var viewmodel = new WorkRequestViewModel();
 
             try
@@ -324,7 +347,7 @@ namespace Mvc.Controllers
         }
 
         /// <summary>
-        /// POST: Submit New Work Request 
+        /// POST: Submit New Work Request
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -338,6 +361,10 @@ namespace Mvc.Controllers
             string RequestDetail,
             List<IFormFile> RelatedPhotos)
         {
+            // Check if user has permission to add Work Requests
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Send Work Request");
+            if (accessCheck != null) return accessCheck;
+
             try
             {
                 var client = _httpClientFactory.CreateClient("BackendAPI");
@@ -434,6 +461,10 @@ namespace Mvc.Controllers
         //[Authorize]
         public async Task<IActionResult> WorkRequestDetail(int id)
         {
+            // Check if user has permission to view Work Request Detail
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
             var viewmodel = new WorkRequestDetailViewModel();
 
             try
@@ -495,7 +526,6 @@ namespace Mvc.Controllers
             return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml", viewmodel);
         }
 
-        #endregion
 
         #region API Endpoints for Dynamic Data Loading
 
@@ -1227,6 +1257,17 @@ namespace Mvc.Controllers
         }
 
         /// <summary>
+        /// GET: Priority Level Settings page
+        /// </summary>
+        public IActionResult PriorityLevel()
+        {
+            ViewBag.Title = "Priority Level Management";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/PriorityLevel.cshtml");
+        }
+
+        /// <summary>
         /// API: Get priority levels from lookup table
         /// idClient is retrieved from session
         /// </summary>
@@ -1519,6 +1560,9 @@ namespace Mvc.Controllers
 
         #endregion
 
+        #endregion
+
+
         #region Settings
 
         /// <summary>
@@ -1527,6 +1571,8 @@ namespace Mvc.Controllers
         //[Authorize]
         public IActionResult Settings()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
             return View("~/Views/Helpdesk/Settings/Index.cshtml");
         }
 
@@ -1536,6 +1582,9 @@ namespace Mvc.Controllers
         //[Authorize]
         public IActionResult WorkCategory()
         {
+            ViewBag.Title = "Work Category";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
             return View("~/Views/Helpdesk/Settings/WorkCategory.cshtml");
         }
 
@@ -1699,7 +1748,13 @@ namespace Mvc.Controllers
 
         #region Other Category
 
-        public IActionResult OtherCategory() => View("~/Views/Helpdesk/Settings/OtherCategory.cshtml");
+        public IActionResult OtherCategory()
+        {
+            ViewBag.Title = "Other Category";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/OtherCategory.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetOtherCategories() => await GetCategoriesGeneric("othercategory", "other categories");
@@ -1717,7 +1772,13 @@ namespace Mvc.Controllers
 
         #region Other Category 2
 
-        public IActionResult OtherCategory2() => View("~/Views/Helpdesk/Settings/OtherCategory2.cshtml");
+        public IActionResult OtherCategory2()
+        {
+            ViewBag.Title = "Other Category 2";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/OtherCategory2.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetOtherCategories2() => await GetCategoriesGeneric("othercategory2", "other categories 2");
@@ -1735,7 +1796,13 @@ namespace Mvc.Controllers
 
         #region Job Code Group
 
-        public IActionResult JobCodeGroup() => View("~/Views/Helpdesk/Settings/JobCodeGroup.cshtml");
+        public IActionResult JobCodeGroup()
+        {
+            ViewBag.Title = "Job Code Group";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/JobCodeGroup.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetJobCodeGroups() => await GetCategoriesGeneric("jobcodegroup", "job code groups");
@@ -1753,7 +1820,13 @@ namespace Mvc.Controllers
 
         #region Material Type
 
-        public IActionResult MaterialType() => View("~/Views/Helpdesk/Settings/MaterialType.cshtml");
+        public IActionResult MaterialType()
+        {
+            ViewBag.Title = "Material Type";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/MaterialType.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetMaterialTypes() => await GetCategoriesGeneric("materialtype", "material types");
@@ -1771,7 +1844,13 @@ namespace Mvc.Controllers
 
         #region Important Checklist
 
-        public IActionResult ImportantChecklist() => View("~/Views/Helpdesk/Settings/ImportantChecklist.cshtml");
+        public IActionResult ImportantChecklist()
+        {
+            ViewBag.Title = "Important Checklist";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/ImportantChecklist.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetImportantChecklists()
@@ -2007,7 +2086,13 @@ namespace Mvc.Controllers
 
         #region Related Document
 
-        public IActionResult RelatedDocument() => View("~/Views/Helpdesk/Settings/RelatedDocument.cshtml");
+        public IActionResult RelatedDocument()
+        {
+            ViewBag.Title = "Related Document";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/RelatedDocument.cshtml");
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetRelatedDocuments()
@@ -2322,6 +2407,9 @@ namespace Mvc.Controllers
 
         public IActionResult PersonInCharge()
         {
+            ViewBag.Title = "Person in Charge";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
             return View("~/Views/Helpdesk/Settings/PersonInCharge.cshtml");
         }
 

@@ -1,7 +1,9 @@
 ﻿using cfm_frontend.Constants;
 using cfm_frontend.DTOs.Login;
 using cfm_frontend.DTOs.UserInfo;
+using cfm_frontend.Extensions;
 using cfm_frontend.Models;
+using cfm_frontend.Services;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -12,17 +14,24 @@ using System.Text.Json;
 
 namespace cfm_frontend.Controllers
 {
-    public class LoginController : Controller
+    public class LoginController : BaseController
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<LoginController> _logger;
+        private readonly IPrivilegeService _privilegeService;
 
-        public LoginController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<LoginController> logger)
+        public LoginController(
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            ILogger<LoginController> logger,
+            IPrivilegeService privilegeService)
+            : base(privilegeService, logger)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _privilegeService = privilegeService;
         }
 
         public IActionResult Index()
@@ -41,6 +50,9 @@ namespace cfm_frontend.Controllers
 
             try
             {
+                // IMPORTANT: Use plain HttpClient (NOT "BackendAPI") during login flow
+                // The "BackendAPI" client has AuthTokenHandler which requires an authenticated session cookie
+                // Before HttpContext.SignInAsync() is called (line 136), the cookie doesn't exist yet
                 var client = _httpClientFactory.CreateClient();
                 var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -86,7 +98,22 @@ namespace cfm_frontend.Controllers
 
                             HttpContext.Session.SetString("UserSession", JsonSerializer.Serialize(userInfo));
 
-                            // Step 5: Create claims with user info
+                            // Step 5: Load user privileges (pass token explicitly since auth cookie not created yet)
+                            var privileges = await _privilegeService.LoadUserPrivilegesAsync(authResponse.Token);
+                            if (privileges != null)
+                            {
+                                HttpContext.Session.SetPrivileges(privileges);
+                                _logger.LogInformation("User privileges loaded successfully: {ModuleCount} modules, {PageCount} pages",
+                                    privileges.Modules.Count,
+                                    privileges.Modules.Sum(m => m.Pages.Count));
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Failed to load user privileges for {Username}. User will have no access.", model.Username);
+                                // Continue login - user will have no privileges (all authorization checks will fail)
+                            }
+
+                            // Step 6: Create claims with user info
                             var claims = new List<Claim>
                             {
                                 new Claim(ClaimTypes.Name, userInfo.FullName ?? userInfo.Username),
@@ -142,15 +169,18 @@ namespace cfm_frontend.Controllers
 
         /// <summary>
         /// Fetch user information from backend API using access and refresh tokens
+        /// IMPORTANT: Uses plain HttpClient (NOT "BackendAPI") because this is called during login
+        /// before the authentication cookie is created
         /// </summary>
         private async Task<UserInfoResponse?> FetchUserInfoAsync(string accessToken, string refreshToken)
         {
             try
             {
+                // Do NOT use "BackendAPI" client - auth cookie doesn't exist yet
                 var client = _httpClientFactory.CreateClient();
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                // Add Bearer token to the request header
+                // Manually add Bearer token to the request header
                 client.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -184,6 +214,7 @@ namespace cfm_frontend.Controllers
         {
             // Clear session
             HttpContext.Session.Remove("UserSession");
+            HttpContext.Session.Remove("UserPrivileges");
 
             // Sign out from authentication
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,7 +1,7 @@
 @{
     ViewBag.Title = "Add New Priority Level";
-    ViewBag.pTitle = "Settings";
-    ViewBag.cTitle = "Add Priority Level";
+    ViewBag.pTitle = "Priority Level Management";
+    ViewBag.pTitleUrl = "/Helpdesk/PriorityLevel";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -108,17 +108,8 @@
 
 <div class="row">
     <div class="col-sm-12">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb breadcrumb-custom">
-                <li class="breadcrumb-item"><a href="/Helpdesk/Settings">Settings</a></li>
-                <li class="breadcrumb-item"><a href="/Helpdesk/PriorityLevel">Priority Level</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Add New Priority Level</li>
-            </ol>
-        </nav>
-
         <!-- Page Header -->
-        <div class="page-header-custom">
+        <div class="page-header-custom mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h4 class="mb-1">

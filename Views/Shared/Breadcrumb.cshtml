@@ -4,9 +4,22 @@
         <div class="row align-items-center">
             <div class="col-md-12">
                 <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/dashboard/index">Home</a></li>
-                    <li class="breadcrumb-item"><a href="javascript: void(0)">@ViewBag.pTitle</a></li>
-                    <li class="breadcrumb-item" aria-current="page">@ViewBag.Title</li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Dashboard")">Home</a></li>
+                    @if (!string.IsNullOrEmpty(ViewBag.pTitle))
+                    {
+                        @if (!string.IsNullOrEmpty(ViewBag.pTitleUrl))
+                        {
+                            <li class="breadcrumb-item"><a href="@ViewBag.pTitleUrl">@ViewBag.pTitle</a></li>
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item">@ViewBag.pTitle</li>
+                        }
+                    }
+                    @if (!string.IsNullOrEmpty(ViewBag.Title))
+                    {
+                        <li class="breadcrumb-item active" aria-current="page">@ViewBag.Title</li>
+                    }
                 </ul>
             </div>
             <div class="col-md-12">

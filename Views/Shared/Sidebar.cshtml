@@ -141,6 +141,8 @@
     }
 
     function switchClient(clientId, clientName) {
+        showNotification('Switching client...', 'info', 'Please wait');
+
         fetch('/Client/SwitchClient', {
             method: 'POST',
             headers: {
@@ -155,14 +157,17 @@
                 const logoImg = document.getElementById('sidebarLogo');
                 logoImg.src = logoPath;
 
-                location.reload();
+                showNotification('Client switched successfully. Reloading...', 'success', 'Success');
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
             } else {
-                alert('Failed to switch client: ' + (data.message || 'Unknown error'));
+                showNotification(data.message || 'Failed to switch client', 'error', 'Error');
             }
         })
         .catch(error => {
             console.error('Error switching client:', error);
-            alert('Error switching client. Please try again.');
+            showNotification('Error switching client. Please try again.', 'error', 'Error');
         });
     }
 </script>

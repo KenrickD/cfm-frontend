@@ -1,0 +1,1241 @@
+[
+    {
+        "moduleName": "Asset Management",
+        "pages": [
+            {
+                "pageName": "Asset List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Group List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Group Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Label Print",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Assignment Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus Photos",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Unreserved Label Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": false
+            },
+            {
+                "pageName": "Asset Stock Taking List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Stock Taking Group Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Stock Taking Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Stock Taking Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Other Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Other Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Label",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Important Checklist",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Asset Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Contact Library",
+        "pages": [
+            {
+                "pageName": "Company Contact List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Company Contact Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Contact List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Contact Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Cross-Company Contact List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Cross-Company Contact Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Company Department List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Company Department Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Department List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Department Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Helpdesk",
+        "pages": [
+            {
+                "pageName": "Send Work Request",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Request Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Request Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Request Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Request Print",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Job Code Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Job Code Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inventory Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus Job Code",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Report Detail",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Work Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Other Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Other Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Other Category 2 List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Other Category 2 Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "JSA Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "JSA Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Important Checklist Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "PIC Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "PIC Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Priority Level Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Priority Level Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Related Document List",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Related Document Detail",
+                "canView": true,
+                "canAdd": false,
+                "canEdit": false,
+                "canDelete": false
+            },
+            {
+                "pageName": "Cost Approver Group List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Cost Approver Group Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Category Relation List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Work Category Relation Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Email Distribution List Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Email Distribution List Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Job Code Group List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Job Code Group Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Material Type List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Material Type Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Inspector",
+        "pages": [
+            {
+                "pageName": "Inspection Form Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Form Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Record Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Record Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection PIC List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection PIC Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Form Question Choice List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection Form Question Choice Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection PIC Group List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Inspection PIC Group Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Preventive Maintenance",
+        "pages": [
+            {
+                "pageName": "Maintenance Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Activity Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Activity Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Schedule Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Important Checklist Management",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Work Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Work Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Maintenance Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Property Portfolio",
+        "pages": [
+            {
+                "pageName": "Property List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Exodus Room Zone",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Type List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Type Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Label List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Label Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Important Checklist",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Priority Level List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Priority Level Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Other Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Other Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Billing Information List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Billing Information Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Deposit Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Deposit Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Other Expense List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Other Expense Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Responsibilities Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Lease Agreement Responsibilities Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Label List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Label Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Other Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Other Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Important Checklist",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "License And Tax Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Category List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Category Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Important Checklist",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Important Checklist Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Related Document List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Property Confidential Document Related Document Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Space Planning Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    },
+    {
+        "moduleName": "Supply Chain Management",
+        "pages": [
+            {
+                "pageName": "Service Provider List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Service Provider Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Contract Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Report Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Settings",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Contract Priority Level List",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            {
+                "pageName": "Contract Priority Level Detail",
+                "canView": true,
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        ]
+    }
+]

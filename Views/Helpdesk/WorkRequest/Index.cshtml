@@ -1,4 +1,5 @@
-﻿@model cfm_frontend.ViewModels.WorkRequestViewModel
+@using cfm_frontend.Extensions
+@model cfm_frontend.ViewModels.WorkRequestViewModel
 @{
     ViewBag.Title = "Work Request Management";
     ViewBag.pTitle = "Helpdesk";
@@ -188,11 +189,14 @@
                                     data-bs-content="Send Summary" data-bs-trigger="hover">
                                 <i class="ti ti-mail-forward"></i>
                             </button>
-                            <a href="@Url.Action("WorkRequestAdd", "Helpdesk")" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
-                               data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
-                               data-bs-content="Add New Work Request" data-bs-trigger="hover">
-                                <i class="ti ti-plus"></i>
-                            </a>
+                            @if (Context.Session.CanAdd("Helpdesk", "Work Request Management"))
+                            {
+                                <a href="@Url.Action("WorkRequestAdd", "Helpdesk")" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                                   data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                   data-bs-content="Add New Work Request" data-bs-trigger="hover">
+                                    <i class="ti ti-plus"></i>
+                                </a>
+                            }
                         </div>
                     </div>
                 </div>
@@ -298,15 +302,21 @@
                                         </td>
                                         <td>
                                             <div class="grid gap-0 column-gap-2 d-flex flex-row">
-                                                <a class="btn btn-light btn-sm" href="#" role="button" data-bs-container="body"
-                                                   data-bs-toggle="popover" data-bs-placement="top"
-                                                   data-bs-content="Edit this Work Request" data-bs-trigger="hover">
-                                                    <i class="ti ti-edit-circle"></i>
-                                                </a>
-                                                <button data-pc-animate="blur" type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
-                                                        data-bs-target="#deleteModal">
-                                                    <i class="ti ti-trash"></i>
-                                                </button>
+                                                @if (Context.Session.CanEdit("Helpdesk", "Work Request Management"))
+                                                {
+                                                    <a class="btn btn-light btn-sm" href="#" role="button" data-bs-container="body"
+                                                       data-bs-toggle="popover" data-bs-placement="top"
+                                                       data-bs-content="Edit this Work Request" data-bs-trigger="hover">
+                                                        <i class="ti ti-edit-circle"></i>
+                                                    </a>
+                                                }
+                                                @if (Context.Session.CanDelete("Helpdesk", "Work Request Management"))
+                                                {
+                                                    <button data-pc-animate="blur" type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                                                            data-bs-target="#deleteModal">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                }
                                             </div>
                                         </td>
                                     </tr>

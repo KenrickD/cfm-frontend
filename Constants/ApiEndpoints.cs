@@ -27,7 +27,7 @@ namespace cfm_frontend.Constants
         #endregion
 
         /// <summary>
-        /// User info endpoints 
+        /// User info endpoints
         /// </summary>
         #region SessionInfo
         public static class UserInfo
@@ -35,9 +35,14 @@ namespace cfm_frontend.Constants
             private const string Base = ApiBase + "/WebUser";
 
             /// <summary>
-            /// POST: Authenticate user with credentials
+            /// GET: Get user details
             /// </summary>
             public const string GetUserDetail = Base + "/GetUserDetail";
+
+            /// <summary>
+            /// GET: Get user privileges (uses bearer token for user identification)
+            /// </summary>
+            public const string GetUserPrivileges = Base + "/GetUserPrivileges";
         }
         #endregion
 

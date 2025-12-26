@@ -1,26 +1,43 @@
-﻿<li class="pc-item pc-caption">
+@using cfm_frontend.Extensions
+
+<li class="pc-item pc-caption">
     <label>Core Module</label>
 </li>
-<li class="pc-item pc-hasmenu">
-    <a href="#!" class="pc-link">
-        <span class="pc-micon">
-            <i class="ph-duotone ph-gauge"></i>
-        </span>
-        <span class="pc-mtext">Helpdesk</span>
-        <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
-        <span class="pc-badge">2</span>
-    </a>
-    <ul class="pc-submenu">
-        <li class="pc-item"><a class="pc-link" href="/helpdesk/sendnewworkrequest">Send Work Request</a></li>
-        <li class="pc-item"><a class="pc-link" href="/helpdesk/workrequestadd">Add Work Request</a></li>
-        <li class="pc-item"><a class="pc-link" href="/helpdesk/index">Work Request Management</a></li>
-        <li class="pc-item"><a class="pc-link" href="/helpdesk/workrequestdashboard">Work Request</a></li>
-        <li class="pc-item"><a class="pc-link" href="/helpdesk/settings">Settings</a></li>
-        <li class="pc-item"><a class="pc-link" href="/dashboard/affiliatedashboard">Job Code</a></li>
-        <li class="pc-item"><a class="pc-link" href="/dashboard/finance">Inventory</a></li>
-        <li class="pc-item"><a class="pc-link" href="/dashboard/invoice">Reports</a></li>
-    </ul>
-</li>
+
+@* Only show Helpdesk module if user has access to at least one page *@
+@if (Context.Session.HasModuleAccess("Helpdesk"))
+{
+    <li class="pc-item pc-hasmenu">
+        <a href="#!" class="pc-link">
+            <span class="pc-micon">
+                <i class="ph-duotone ph-gauge"></i>
+            </span>
+            <span class="pc-mtext">Helpdesk</span>
+            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+        </a>
+        <ul class="pc-submenu">
+            @if (Context.Session.CanView("Helpdesk", "Send Work Request"))
+            {
+                <li class="pc-item"><a class="pc-link" href="/helpdesk/sendnewworkrequest">Send Work Request</a></li>
+            }
+            @if (Context.Session.CanView("Helpdesk", "Work Request Management"))
+            {
+                <li class="pc-item"><a class="pc-link" href="/helpdesk/workrequestadd">Add Work Request</a></li>
+                <li class="pc-item"><a class="pc-link" href="/helpdesk/index">Work Request Management</a></li>
+            }
+            @if (Context.Session.CanView("Helpdesk", "Settings"))
+            {
+                <li class="pc-item"><a class="pc-link" href="/helpdesk/settings">Settings</a></li>
+            }
+            @* TODO: Add privilege checks for other menu items when privileges are defined *@
+            @* <li class="pc-item"><a class="pc-link" href="/helpdesk/workrequestdashboard">Work Request</a></li>
+            
+            <li class="pc-item"><a class="pc-link" href="/dashboard/affiliatedashboard">Job Code</a></li>
+            <li class="pc-item"><a class="pc-link" href="/dashboard/finance">Inventory</a></li>
+            <li class="pc-item"><a class="pc-link" href="/dashboard/invoice">Reports</a></li> *@
+        </ul>
+    </li>
+}
 @* <li class="pc-item pc-hasmenu">
     <a href="#!" class="pc-link">
         <span class="pc-micon"> <i class="ph-duotone ph-layout"></i></span><span class="pc-mtext">Layouts</span><span class="pc-arrow"><i data-feather="chevron-right"></i></span>

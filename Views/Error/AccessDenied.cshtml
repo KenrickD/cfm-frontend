@@ -1,0 +1,70 @@
+@{
+    ViewData["Title"] = "Access Denied";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="auth-wrapper">
+    <div class="auth-content">
+        <div class="card">
+            <div class="row align-items-center text-center">
+                <div class="col-md-12">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <i class="ph-duotone ph-lock" style="font-size: 120px; color: #dc3545;"></i>
+                        </div>
+                        <h1 class="mb-3 f-w-400">Access Denied</h1>
+                        <h5 class="text-muted mb-4">
+                            You don't have permission to access this page.
+                        </h5>
+                        <p class="text-muted">
+                            If you believe this is an error, please contact your administrator or try refreshing your permissions.
+                        </p>
+                        <div class="mt-4">
+                            <a href="@Url.Action("Index", "Dashboard")" class="btn btn-primary me-2">
+                                <i class="ph-duotone ph-house me-2"></i>Back to Dashboard
+                            </a>
+                            <a href="#" onclick="refreshPrivileges(); return false;" class="btn btn-outline-secondary">
+                                <i class="ph-duotone ph-arrow-clockwise me-2"></i>Refresh Permissions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Show TempData message as toastr if present
+        @if (TempData["AccessDeniedMessage"] != null)
+        {
+            <text>
+            showNotification('@Html.Raw(TempData["AccessDeniedMessage"])', 'warning', 'Access Denied');
+            </text>
+        }
+
+        function refreshPrivileges() {
+            showNotification('Refreshing permissions...', 'info', 'Please wait');
+
+            $.ajax({
+                url: '@Url.Action("RefreshPrivileges", "Account")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showNotification('Permissions refreshed. Redirecting to dashboard...', 'success', 'Success');
+                        setTimeout(function() {
+                            window.location.href = '@Url.Action("Index", "Dashboard")';
+                        }, 1500);
+                    } else {
+                        showNotification(response.message || 'Failed to refresh permissions', 'error', 'Error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotification('Network error while refreshing permissions', 'error', 'Error');
+                    console.error('Refresh privileges error:', error);
+                }
+            });
+        }
+    </script>
+}

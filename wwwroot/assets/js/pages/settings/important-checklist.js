@@ -568,62 +568,10 @@
     }
 
     /**
-     * Show notification toast
+     * Note: showNotification() is now a global function defined in _Layout.cshtml
+     * It uses toastr library for consistent notifications across the application
+     * Toastr already handles HTML escaping for XSS protection
      */
-    function showNotification(message, type = 'info') {
-        const bgColors = {
-            success: 'bg-success',
-            error: 'bg-danger',
-            warning: 'bg-warning',
-            info: 'bg-info'
-        };
-
-        const icons = {
-            success: 'ti-check',
-            error: 'ti-x',
-            warning: 'ti-alert-triangle',
-            info: 'ti-info-circle'
-        };
-
-        const toast = $(`
-            <div class="toast align-items-center text-white ${bgColors[type]} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="ti ${icons[type]} me-2"></i>
-                        ${escapeHtml(message)}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `);
-
-        const container = $('.toast-container');
-        if (container.length === 0) {
-            $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3"></div>');
-        }
-
-        $('.toast-container').append(toast);
-        const bsToast = new bootstrap.Toast(toast[0], { delay: 5000 });
-        bsToast.show();
-
-        toast.on('hidden.bs.toast', function () {
-            $(this).remove();
-        });
-    }
-
-    /**
-     * Escape HTML to prevent XSS
-     */
-    function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
 
     // Initialize on document ready
     $(document).ready(init);

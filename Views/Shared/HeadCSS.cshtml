@@ -9,6 +9,79 @@
 <link rel="stylesheet" href="~/assets/fonts/fontawesome.css">
 <!-- [Material Icons] https://fonts.google.com/icons -->
 <link rel="stylesheet" href="~/assets/fonts/material.css">
+<!-- [Toastr] https://github.com/CodeSeven/toastr -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <!-- [Template CSS Files] -->
 <link rel="stylesheet" href="~/assets/css/style.css" id="main-style-link">
 <link rel="stylesheet" href="~/assets/css/style-preset.css">
+
+<!-- [Toastr Custom Styling] Override for consistent colors in light/dark mode -->
+<style>
+    /* Toastr custom colors - always visible regardless of theme */
+    #toast-container > div {
+        opacity: 1 !important;
+        box-shadow: 0 0 12px rgba(0,0,0,0.3) !important;
+    }
+
+    /* Success - Green */
+    #toast-container > .toast-success {
+        background-color: #28a745 !important;
+        color: #ffffff !important;
+    }
+
+    /* Error - Red */
+    #toast-container > .toast-error {
+        background-color: #dc3545 !important;
+        color: #ffffff !important;
+    }
+
+    /* Warning - Orange/Yellow */
+    #toast-container > .toast-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important; /* Dark text for better contrast on yellow */
+    }
+
+    /* Info - Blue */
+    #toast-container > .toast-info {
+        background-color: #17a2b8 !important;
+        color: #ffffff !important;
+    }
+
+    /* Toastr title styling */
+    #toast-container > div .toast-title {
+        font-weight: bold !important;
+        color: inherit !important;
+    }
+
+    /* Toastr message styling */
+    #toast-container > div .toast-message {
+        color: inherit !important;
+    }
+
+    /* Close button - always visible */
+    #toast-container > div .toast-close-button {
+        color: inherit !important;
+        opacity: 0.8 !important;
+    }
+
+    #toast-container > div .toast-close-button:hover {
+        opacity: 1 !important;
+    }
+
+    /* Progress bar colors */
+    #toast-container > .toast-success .toast-progress {
+        background-color: rgba(255,255,255,0.7) !important;
+    }
+
+    #toast-container > .toast-error .toast-progress {
+        background-color: rgba(255,255,255,0.7) !important;
+    }
+
+    #toast-container > .toast-warning .toast-progress {
+        background-color: rgba(33,37,41,0.5) !important;
+    }
+
+    #toast-container > .toast-info .toast-progress {
+        background-color: rgba(255,255,255,0.7) !important;
+    }
+</style>

@@ -34,6 +34,73 @@
 
     @Html.Partial("~/Views/Shared/VendorScripts.cshtml")
 
+    <script>
+        // Configure toastr global options
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
+        /**
+         * Global notification helper function using toastr
+         * Parameters:
+         *   - message (string): The message to display
+         *   - type (string): Notification type: 'success', 'error', 'warning', 'info'
+         *   - title (string): Optional title for the notification
+         *   - options (object): Optional toastr options to override defaults
+         */
+        function showNotification(message, type = 'info', title = '', options = {}) {
+            type = type.toLowerCase();
+
+            // Validate type
+            if (!['success', 'error', 'warning', 'info'].includes(type)) {
+                console.warn('Invalid notification type:', type, '- defaulting to info');
+                type = 'info';
+            }
+
+            // Call appropriate toastr method
+            toastr[type](message, title, options);
+        }
+
+        function refreshPrivileges() {
+            // Show loading indicator
+            showNotification('Refreshing permissions...', 'info', 'Please wait');
+
+            $.ajax({
+                url: '@Url.Action("RefreshPrivileges", "Account")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showNotification('Permissions refreshed. Reloading page...', 'success', 'Success');
+                        // Reload page after brief delay to show new privileges
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification(response.message || 'Failed to refresh permissions', 'error', 'Error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotification('Network error while refreshing permissions', 'error', 'Error');
+                    console.error('Refresh privileges error:', error);
+                }
+            });
+        }
+    </script>
+
     @RenderSection("scripts", required: false)
 </body>
 </html>

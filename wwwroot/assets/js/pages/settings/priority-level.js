@@ -235,12 +235,10 @@
     }
 
     function showSuccess(message) {
-        // You can implement a toast notification here
-        alert(message);
+        showNotification(message, 'success', 'Success');
     }
 
     function showError(message) {
-        // You can implement a toast notification here
-        alert(message);
+        showNotification(message, 'error', 'Error');
     }
 })();

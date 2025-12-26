@@ -1,4 +1,5 @@
 using cfm_frontend.Handlers;
+using cfm_frontend.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthTokenHandler>();
+builder.Services.AddScoped<IPrivilegeService, PrivilegeService>();
 
 builder.Services.AddHttpClient("BackendAPI", client =>
 {

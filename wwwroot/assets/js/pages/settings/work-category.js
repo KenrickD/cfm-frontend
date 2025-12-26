@@ -445,41 +445,9 @@
     }
 
     /**
-     * Utility: Show notification
+     * Note: showNotification() is now a global function defined in _Layout.cshtml
+     * It uses toastr library for consistent notifications across the application
      */
-    function showNotification(message, type = 'info') {
-        let $notificationArea = $('#notification-area');
-        if ($notificationArea.length === 0) {
-            $notificationArea = $('<div id="notification-area" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>');
-            $('body').append($notificationArea);
-        }
-
-        const alertClass = type === 'success' ? 'alert-success' :
-            type === 'error' ? 'alert-danger' :
-                type === 'warning' ? 'alert-warning' :
-                    'alert-info';
-
-        const icon = type === 'success' ? 'ti-check' :
-            type === 'error' ? 'ti-x' :
-                type === 'warning' ? 'ti-alert-triangle' :
-                    'ti-info-circle';
-
-        const $notification = $(`
-            <div class="alert ${alertClass} alert-dismissible fade show" role="alert" style="min-width: 300px;">
-                <i class="ti ${icon} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
-
-        $notificationArea.append($notification);
-
-        setTimeout(function () {
-            $notification.fadeOut(function () {
-                $(this).remove();
-            });
-        }, 5000);
-    }
 
     // Initialize when document is ready
     $(document).ready(function () {
