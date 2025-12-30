@@ -34,6 +34,9 @@
 
     @Html.Partial("~/Views/Shared/VendorScripts.cshtml")
 
+    <!-- MVC Endpoints - Centralized endpoint definitions (load before page-specific scripts) -->
+    <script src="~/assets/js/mvc-endpoints.js"></script>
+
     <script>
         // Configure toastr global options
         toastr.options = {

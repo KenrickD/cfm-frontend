@@ -13,27 +13,27 @@
         minSearchLength: 2,
         apiEndpoints: {
             // Location cascade
-            locations: '/Helpdesk/GetLocationsByClient',
-            floors: '/Helpdesk/GetFloorsByLocation',
-            rooms: '/Helpdesk/GetRoomsByFloor',
+            locations: MvcEndpoints.Helpdesk.Location.GetByClient,
+            floors: MvcEndpoints.Helpdesk.Location.GetFloorsByLocation,
+            rooms: MvcEndpoints.Helpdesk.Location.GetRoomsByFloor,
 
             // Dropdowns
-            workCategories: '/Helpdesk/GetWorkCategoriesByClient',
-            otherCategories: '/Helpdesk/GetOtherCategoriesByClient',
-            serviceProviders: '/Helpdesk/GetServiceProvidersByClient',
-            priorityLevels: '/Helpdesk/GetPriorityLevels',
-            feedbackTypes: '/Helpdesk/GetFeedbackTypes',
-            importantChecklist: '/Helpdesk/GetImportantChecklist',
+            workCategories: MvcEndpoints.Helpdesk.WorkRequest.GetWorkCategoriesByClient,
+            otherCategories: MvcEndpoints.Helpdesk.WorkRequest.GetOtherCategoriesByClient,
+            serviceProviders: MvcEndpoints.Helpdesk.WorkRequest.GetServiceProvidersByClient,
+            priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
+            feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypes,
+            importantChecklist: MvcEndpoints.Helpdesk.WorkRequest.GetImportantChecklist,
 
             // Radio buttons
-            requestMethods: '/Helpdesk/GetWorkRequestMethods',
-            statuses: '/Helpdesk/GetWorkRequestStatuses',
+            requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethods,
+            statuses: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestStatuses,
 
             // Search/autocomplete
-            searchRequestors: '/Helpdesk/SearchRequestors',
-            searchWorkersByCompany: '/Helpdesk/SearchWorkersByCompany',
-            searchWorkersByServiceProvider: '/Helpdesk/SearchWorkersByServiceProvider',
-            personsInCharge: '/Helpdesk/GetPersonsInChargeByFilters'
+            searchRequestors: MvcEndpoints.Helpdesk.Search.Requestors,
+            searchWorkersByCompany: MvcEndpoints.Helpdesk.Search.WorkersByCompany,
+            searchWorkersByServiceProvider: MvcEndpoints.Helpdesk.Search.WorkersByServiceProvider,
+            personsInCharge: MvcEndpoints.Helpdesk.WorkRequest.GetPersonsInChargeByFilters
         },
         priorityLevels: {
             'Critical': {

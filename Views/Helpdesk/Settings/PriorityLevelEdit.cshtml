@@ -6,6 +6,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
     <style>
         .page-header-custom {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -144,7 +145,11 @@
                         <div class="mb-3">
                             <label for="visualColor" class="form-label">Visual Color</label>
                             <div class="d-flex align-items-center">
-                                <select class="form-select" id="visualColor">
+                                <select class="form-select"
+                                        id="visualColor"
+                                        data-searchable="true"
+                                        data-placeholder="Select color..."
+                                        data-search-placeholder="Search color...">
                                     <option value="">Select color...</option>
                                 </select>
                                 <span id="colorPreview" class="color-preview"></span>
@@ -183,7 +188,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="helpdeskResponseTargetReference">
+                    <select class="form-select"
+                            id="helpdeskResponseTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -268,7 +277,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="initialFollowUpTargetReference">
+                    <select class="form-select"
+                            id="initialFollowUpTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -336,7 +349,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="quotationSubmissionTargetReference">
+                    <select class="form-select"
+                            id="quotationSubmissionTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -404,7 +421,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="costApprovalTargetReference">
+                    <select class="form-select"
+                            id="costApprovalTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -472,7 +493,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="workCompletionTargetReference">
+                    <select class="form-select"
+                            id="workCompletionTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -540,7 +565,11 @@
 
                 <div class="reference-select">
                     <label class="form-label">Reference</label>
-                    <select class="form-select" id="afterWorkFollowUpTargetReference">
+                    <select class="form-select"
+                            id="afterWorkFollowUpTargetReference"
+                            data-searchable="true"
+                            data-placeholder="Select reference..."
+                            data-search-placeholder="Search reference...">
                         <option value="">Select reference...</option>
                     </select>
                 </div>
@@ -603,6 +632,7 @@
 </div>
 
 @section scripts {
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
     <script>
         const priorityLevelId = @ViewBag.PriorityLevelId;
     </script>

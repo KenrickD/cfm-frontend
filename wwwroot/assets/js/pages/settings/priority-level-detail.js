@@ -2,25 +2,29 @@
 (function () {
     'use strict';
 
+    let priorityLevelId = null;
+
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', function () {
+        getPriorityLevelIdFromUrl();
         initializeButtons();
         loadPriorityLevel();
     });
 
+    function getPriorityLevelIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        priorityLevelId = urlParams.get('id');
+    }
+
     function initializeButtons() {
-        const editBtn = document.getElementById('editBtn');
-        if (editBtn) {
-            editBtn.addEventListener('click', function () {
-                if (typeof priorityLevelId !== 'undefined') {
-                    window.location.href = `/Helpdesk/PriorityLevelEdit?id=${priorityLevelId}`;
-                }
-            });
+        const editButton = document.getElementById('editButton');
+        if (editButton && priorityLevelId) {
+            editButton.href = `/Helpdesk/PriorityLevelEdit?id=${priorityLevelId}`;
         }
     }
 
     async function loadPriorityLevel() {
-        if (typeof priorityLevelId === 'undefined') {
+        if (!priorityLevelId) {
             showError('Priority level ID not found');
             return;
         }
@@ -41,98 +45,96 @@
     }
 
     function populateDetails(data) {
-        // Basic Information
+        // Name and Visual Color
         setText('name', data.name);
-        setText('visualColorName', data.visualColor);
 
-        const colorPreview = document.getElementById('colorPreview');
-        if (colorPreview) {
-            colorPreview.style.backgroundColor = getColorStyle(data.visualColor);
+        const visualColorBadge = document.getElementById('visualColorBadge');
+        if (visualColorBadge && data.visualColor) {
+            visualColorBadge.textContent = data.visualColor;
+            visualColorBadge.style.backgroundColor = getColorStyle(data.visualColor);
+            visualColorBadge.style.color = getTextColorForBackground(data.visualColor);
         }
 
-        // Helpdesk Response Target
-        setTargetDisplay('helpdeskResponseTarget', data.helpdeskResponseTargetDays, data.helpdeskResponseTargetHours, data.helpdeskResponseTargetMinutes);
-        setWithinOfficeHours('helpdeskResponseWithinOfficeHours', data.helpdeskResponseTargetWithinOfficeHours);
-        setText('helpdeskResponseReference', formatReference(data.helpdeskResponseTargetReference));
-        setCheckboxIndicator('helpdeskResponseRequiredToFill', data.helpdeskResponseTargetRequiredToFill);
-        setCheckboxIndicator('helpdeskResponseActivateCompliance', data.helpdeskResponseTargetActivateCompliance);
+        // Populate each section
+        populateTargetSection('helpdeskResponse', data, 'helpdeskResponseTarget');
+        populateTargetSection('quotationSubmission', data, 'quotationSubmissionTarget');
+        populateTargetSection('workCompletion', data, 'workCompletionTarget');
+        populateTargetSection('initialFollowUp', data, 'initialFollowUpTarget');
+        populateTargetSection('costApproval', data, 'costApprovalTarget');
+        populateTargetSection('afterWorkFollowUp', data, 'afterWorkFollowUpTarget');
+    }
 
-        if (data.helpdeskResponseTargetActivateCompliance) {
+    function populateTargetSection(prefix, data, targetKey) {
+        const camelPrefix = toCamelCase(targetKey);
+
+        // Set target duration
+        const days = data[`${camelPrefix}Days`] || 0;
+        const hours = data[`${camelPrefix}Hours`] || 0;
+        const minutes = data[`${camelPrefix}Minutes`] || 0;
+        const duration = formatDuration(days, hours, minutes);
+        const withinOfficeHours = data[`${camelPrefix}WithinOfficeHours`];
+
+        setText(`${prefix}Target`, duration + (withinOfficeHours ? ' Within Office Hours' : ''));
+
+        // Set reference
+        setText(`${prefix}Reference`, formatReference(data[`${camelPrefix}Reference`]));
+
+        // Set checkboxes
+        const checkboxContainer = document.getElementById(`${prefix}Checkboxes`);
+        if (checkboxContainer) {
+            const checkboxes = [];
+
+            if (data[`${camelPrefix}RequiredToFill`]) {
+                checkboxes.push(createCheckboxItem('Required to Fill on Work Request Completion'));
+            }
+            if (data[`${camelPrefix}ActivateCompliance`]) {
+                checkboxes.push(createCheckboxItem('Activate Compliance Duration'));
+            }
+            if (data[`${camelPrefix}AcknowledgeActual`]) {
+                checkboxes.push(createCheckboxItem('Acknowledge Requestor when The Actual already filled'));
+            }
+            if (data[`${camelPrefix}AcknowledgeTargetChanged`]) {
+                checkboxes.push(createCheckboxItem('Acknowledge Requestor when The Target Changed'));
+            }
+            if (data[`${camelPrefix}ReminderBeforeTarget`]) {
+                checkboxes.push(createCheckboxItem('Reminder Before Target'));
+            }
+
+            // Special checkbox for After Work Follow Up
+            if (prefix === 'afterWorkFollowUp' && data.afterWorkFollowUpTargetActivateAutoFill) {
+                checkboxes.push(createCheckboxItem('Activate Auto Fill After Work Follow Up'));
+            }
+
+            checkboxContainer.innerHTML = checkboxes.join('');
+        }
+
+        // Special handling for Helpdesk Response compliance duration
+        if (prefix === 'helpdeskResponse' && data.helpdeskResponseTargetActivateCompliance) {
             const complianceDiv = document.getElementById('helpdeskComplianceDurationDisplay');
             if (complianceDiv) {
                 complianceDiv.style.display = 'block';
-                setTargetDisplay('helpdeskComplianceDuration', data.helpdeskResponseTargetComplianceDurationDays, data.helpdeskResponseTargetComplianceDurationHours, data.helpdeskResponseTargetComplianceDurationMinutes);
+                const compDuration = formatDuration(
+                    data.helpdeskResponseTargetComplianceDurationDays,
+                    data.helpdeskResponseTargetComplianceDurationHours,
+                    data.helpdeskResponseTargetComplianceDurationMinutes
+                );
+                setText('helpdeskComplianceDuration', compDuration);
             }
         }
+    }
 
-        setCheckboxIndicator('helpdeskResponseAcknowledgeActual', data.helpdeskResponseTargetAcknowledgeActual);
-        setCheckboxIndicator('helpdeskResponseAcknowledgeTargetChanged', data.helpdeskResponseTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('helpdeskResponseReminderBeforeTarget', data.helpdeskResponseTargetReminderBeforeTarget);
+    function createCheckboxItem(text) {
+        return `<div class="checkbox-item"><i class="ti ti-check"></i><span>${text}</span></div>`;
+    }
 
-        // Initial Follow Up Target
-        setTargetDisplay('initialFollowUpTarget', data.initialFollowUpTargetDays, data.initialFollowUpTargetHours, data.initialFollowUpTargetMinutes);
-        setWithinOfficeHours('initialFollowUpWithinOfficeHours', data.initialFollowUpTargetWithinOfficeHours);
-        setText('initialFollowUpReference', formatReference(data.initialFollowUpTargetReference));
-        setCheckboxIndicator('initialFollowUpRequiredToFill', data.initialFollowUpTargetRequiredToFill);
-        setCheckboxIndicator('initialFollowUpActivateCompliance', data.initialFollowUpTargetActivateCompliance);
-        setCheckboxIndicator('initialFollowUpAcknowledgeActual', data.initialFollowUpTargetAcknowledgeActual);
-        setCheckboxIndicator('initialFollowUpAcknowledgeTargetChanged', data.initialFollowUpTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('initialFollowUpReminderBeforeTarget', data.initialFollowUpTargetReminderBeforeTarget);
-
-        // Quotation Submission Target
-        setTargetDisplay('quotationSubmissionTarget', data.quotationSubmissionTargetDays, data.quotationSubmissionTargetHours, data.quotationSubmissionTargetMinutes);
-        setWithinOfficeHours('quotationSubmissionWithinOfficeHours', data.quotationSubmissionTargetWithinOfficeHours);
-        setText('quotationSubmissionReference', formatReference(data.quotationSubmissionTargetReference));
-        setCheckboxIndicator('quotationSubmissionRequiredToFill', data.quotationSubmissionTargetRequiredToFill);
-        setCheckboxIndicator('quotationSubmissionActivateCompliance', data.quotationSubmissionTargetActivateCompliance);
-        setCheckboxIndicator('quotationSubmissionAcknowledgeActual', data.quotationSubmissionTargetAcknowledgeActual);
-        setCheckboxIndicator('quotationSubmissionAcknowledgeTargetChanged', data.quotationSubmissionTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('quotationSubmissionReminderBeforeTarget', data.quotationSubmissionTargetReminderBeforeTarget);
-
-        // Cost Approval Target
-        setTargetDisplay('costApprovalTarget', data.costApprovalTargetDays, data.costApprovalTargetHours, data.costApprovalTargetMinutes);
-        setWithinOfficeHours('costApprovalWithinOfficeHours', data.costApprovalTargetWithinOfficeHours);
-        setText('costApprovalReference', formatReference(data.costApprovalTargetReference));
-        setCheckboxIndicator('costApprovalRequiredToFill', data.costApprovalTargetRequiredToFill);
-        setCheckboxIndicator('costApprovalActivateCompliance', data.costApprovalTargetActivateCompliance);
-        setCheckboxIndicator('costApprovalAcknowledgeActual', data.costApprovalTargetAcknowledgeActual);
-        setCheckboxIndicator('costApprovalAcknowledgeTargetChanged', data.costApprovalTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('costApprovalReminderBeforeTarget', data.costApprovalTargetReminderBeforeTarget);
-
-        // Work Completion Target
-        setTargetDisplay('workCompletionTarget', data.workCompletionTargetDays, data.workCompletionTargetHours, data.workCompletionTargetMinutes);
-        setWithinOfficeHours('workCompletionWithinOfficeHours', data.workCompletionTargetWithinOfficeHours);
-        setText('workCompletionReference', formatReference(data.workCompletionTargetReference));
-        setCheckboxIndicator('workCompletionRequiredToFill', data.workCompletionTargetRequiredToFill);
-        setCheckboxIndicator('workCompletionActivateCompliance', data.workCompletionTargetActivateCompliance);
-        setCheckboxIndicator('workCompletionAcknowledgeActual', data.workCompletionTargetAcknowledgeActual);
-        setCheckboxIndicator('workCompletionAcknowledgeTargetChanged', data.workCompletionTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('workCompletionReminderBeforeTarget', data.workCompletionTargetReminderBeforeTarget);
-
-        // After Work Follow Up Target
-        setTargetDisplay('afterWorkFollowUpTarget', data.afterWorkFollowUpTargetDays, data.afterWorkFollowUpTargetHours, data.afterWorkFollowUpTargetMinutes);
-        setWithinOfficeHours('afterWorkFollowUpWithinOfficeHours', data.afterWorkFollowUpTargetWithinOfficeHours);
-        setText('afterWorkFollowUpReference', formatReference(data.afterWorkFollowUpTargetReference));
-        setCheckboxIndicator('afterWorkFollowUpRequiredToFill', data.afterWorkFollowUpTargetRequiredToFill);
-        setCheckboxIndicator('afterWorkFollowUpActivateCompliance', data.afterWorkFollowUpTargetActivateCompliance);
-        setCheckboxIndicator('afterWorkFollowUpAcknowledgeActual', data.afterWorkFollowUpTargetAcknowledgeActual);
-        setCheckboxIndicator('afterWorkFollowUpAcknowledgeTargetChanged', data.afterWorkFollowUpTargetAcknowledgeTargetChanged);
-        setCheckboxIndicator('afterWorkFollowUpReminderBeforeTarget', data.afterWorkFollowUpTargetReminderBeforeTarget);
-        setCheckboxIndicator('afterWorkFollowUpActivateAutoFill', data.afterWorkFollowUpTargetActivateAutoFill);
+    function toCamelCase(str) {
+        return str.charAt(0).toLowerCase() + str.slice(1);
     }
 
     function setText(id, value) {
         const element = document.getElementById(id);
         if (element) {
             element.textContent = value || '-';
-        }
-    }
-
-    function setTargetDisplay(id, days, hours, minutes) {
-        const element = document.getElementById(id);
-        if (element) {
-            const formatted = formatDuration(days, hours, minutes);
-            element.textContent = formatted;
         }
     }
 
@@ -148,33 +150,8 @@
 
     function formatReference(reference) {
         if (!reference) return '-';
+        // Convert camelCase to Title Case (e.g., "afterRequestDate" -> "After Request Date")
         return reference.replace(/([A-Z])/g, ' $1').trim();
-    }
-
-    function setWithinOfficeHours(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            if (value) {
-                element.innerHTML = '<span class="within-office-hours-badge">Within Office Hours</span>';
-            } else {
-                element.innerHTML = '';
-            }
-        }
-    }
-
-    function setCheckboxIndicator(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            if (value) {
-                element.classList.add('checked');
-                element.classList.remove('unchecked');
-                element.querySelector('i').className = 'ti ti-square-check';
-            } else {
-                element.classList.add('unchecked');
-                element.classList.remove('checked');
-                element.querySelector('i').className = 'ti ti-square';
-            }
-        }
     }
 
     function getColorStyle(colorName) {
@@ -193,7 +170,12 @@
         return colorMap[colorName] || '#6c757d';
     }
 
+    function getTextColorForBackground(colorName) {
+        const darkColors = ['Red', 'Purple', 'Blue', 'Brown', 'Gray'];
+        return darkColors.includes(colorName) ? '#ffffff' : '#000000';
+    }
+
     function showError(message) {
-        alert(message);
+        showNotification(message, 'error', 'Error');
     }
 })();

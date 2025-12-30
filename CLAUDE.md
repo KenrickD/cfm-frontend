@@ -12,6 +12,9 @@ This is an **ASP.NET Core 8.0 MVC frontend application** that serves as a web-ba
 - Communication: JSON over HTTP with automatic bearer token injection
 - Primary feature: Work Request Management (Helpdesk module)
 
+## Most Important Points
+- do not in any way break the previous functionality without first confirming.
+
 ## Development Commands
 
 ### Build and Run
@@ -219,6 +222,584 @@ viewmodel.Locations = await locationsTask;
 viewmodel.Categories = await categoriesTask;
 viewmodel.Providers = await providersTask;
 ```
+
+### Pagination Pattern
+
+The application uses a **standardized pagination system** for all list views. Pagination is handled through a shared partial view component that automatically renders pagination controls with query string parameter preservation.
+
+#### Pagination Components
+
+**Shared Partial View**: `Views/Shared/_Pagination.cshtml`
+- Reusable pagination component used across all list pages
+- Automatically preserves all query string parameters (search, filters, etc.)
+- Renders "Showing X to Y of Z results" info text
+- Displays Previous/Next buttons and page numbers
+- Smart page number display with ellipsis for large page counts
+
+**PagingInfo Model**: `Models/PagingInfo.cs`
+```csharp
+public class PagingInfo
+{
+    public int CurrentPage { get; set; }
+    public int TotalPages { get; set; }
+    public int PageSize { get; set; }
+    public int TotalRecords { get; set; }
+    public bool HasPreviousPage => CurrentPage > 1;
+    public bool HasNextPage => CurrentPage < TotalPages;
+
+    public List<int> GetPageNumbers()  // Smart page number generation with ellipsis
+}
+```
+
+#### Controller Implementation Pattern
+
+**1. Accept page parameter in action:**
+```csharp
+public async Task<IActionResult> Index(int page = 1, string search = "")
+{
+    var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
+    if (accessCheck != null) return accessCheck;
+
+    var viewmodel = new YourViewModel();
+
+    // Call backend API with page parameter
+    var response = await GetDataAsync(client, backendUrl, page, search);
+
+    // Map response to PagingInfo
+    if (response != null)
+    {
+        viewmodel.Data = response.data;
+        viewmodel.Paging = new PagingInfo
+        {
+            CurrentPage = response.CurrentPage,
+            TotalPages = response.TotalPages,
+            PageSize = response.PageSize,
+            TotalRecords = response.TotalCount
+        };
+    }
+
+    return View(viewmodel);
+}
+```
+
+**2. Backend API Response DTO:**
+```csharp
+public class ListApiResponse<T>
+{
+    public List<T> data { get; set; }
+    public int CurrentPage { get; set; }
+    public int TotalPages { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+}
+```
+
+#### View Implementation Pattern
+
+**Add PagingInfo to ViewModel:**
+```csharp
+public class YourViewModel
+{
+    public List<YourDataModel>? Data { get; set; }
+    public PagingInfo? Paging { get; set; }
+    // Other properties...
+}
+```
+
+**Render pagination in view:**
+```razor
+@model YourViewModel
+
+<div class="table-responsive">
+    <table class="table">
+        <!-- Table content -->
+    </table>
+</div>
+
+@* Pagination Component *@
+@await Html.PartialAsync("_Pagination", Model.Paging)
+```
+
+#### How It Works
+
+1. **Controller receives page number** from query string (defaults to 1)
+2. **Passes page to backend API** along with other filter parameters
+3. **Backend returns paginated data** plus metadata (CurrentPage, TotalPages, PageSize, TotalCount)
+4. **Controller maps to PagingInfo** model
+5. **View renders pagination component** via `@await Html.PartialAsync("_Pagination", Model.Paging)`
+6. **Component automatically preserves query parameters** when building pagination links
+
+#### Example: Work Request List
+
+**Controller** ([HelpdeskController.cs:41-127](Controllers/HelpdeskController.cs#L41-L127)):
+```csharp
+public async Task<IActionResult> Index(int page = 1, string search = "")
+{
+    var workRequestResponse = await GetWorkRequestsAsync(client, backendUrl, page, idClient, idActor, idEmployee, search);
+
+    if (workRequestResponse != null)
+    {
+        viewmodel.WorkRequest = workRequestResponse.data;
+        viewmodel.Paging = new PagingInfo
+        {
+            CurrentPage = workRequestResponse.CurrentPage,
+            TotalPages = workRequestResponse.TotalPages,
+            PageSize = workRequestResponse.PageSize,
+            TotalRecords = workRequestResponse.TotalCount
+        };
+    }
+
+    return View(viewmodel);
+}
+```
+
+**View** ([Views/Helpdesk/WorkRequest/Index.cshtml:296-297](Views/Helpdesk/WorkRequest/Index.cshtml#L296-L297)):
+```razor
+@* Pagination Component *@
+@await Html.PartialAsync("_Pagination", Model.Paging)
+```
+
+#### Best Practices
+
+1. **Always use the shared `_Pagination.cshtml` component** - Never create custom pagination markup
+2. **Include `PagingInfo` in all list ViewModels** - Standardize the property name as `Paging`
+3. **Default page to 1** in controller actions - Use `int page = 1` parameter
+4. **Map all pagination fields** from API response to `PagingInfo` model
+5. **Backend API must return pagination metadata** - CurrentPage, TotalPages, PageSize, TotalCount
+6. **The component handles query string preservation** - No need to manually build URLs in views
+7. **Use consistent page size** - Backend typically uses 10, 20, or 50 items per page
+
+#### Styling
+
+The pagination component includes built-in Bootstrap-compatible styles:
+- Primary color (`#04a9f5`) for active page
+- Rounded page buttons with hover effects
+- Disabled state for Previous/Next when not applicable
+- Ellipsis (`...`) for large page ranges
+- Responsive layout with centered alignment
+
+All pagination styling is self-contained in `_Pagination.cshtml` to avoid conflicts.
+
+## Searchable Dropdown Component
+
+The application uses a **standardized searchable dropdown component** for all `<select>` elements that need search functionality. This provides a modern, accessible alternative to native dropdowns with built-in search, keyboard navigation, and consistent styling.
+
+### Overview
+
+The searchable dropdown component transforms standard HTML `<select>` elements into modern search selection dropdowns, inspired by Semantic UI but optimized for Bootstrap 5. It provides:
+- **Live search filtering** with instant results
+- **Keyboard navigation** (Arrow keys, Enter, Escape)
+- **Clear button** for easy reset
+- **Custom templates** for option rendering
+- **AJAX support** for dynamic data loading
+- **Accessibility** with ARIA attributes
+- **Lightweight** - No external dependencies (no jQuery required)
+
+### Component Files
+
+**CSS**: `wwwroot/assets/css/components/searchable-dropdown.css`
+- Complete styling for dropdown states, search input, options list
+- Includes hover, active, disabled, and validation states
+- Smooth transitions and animations
+- Custom scrollbar styling
+- Bootstrap-compatible validation classes
+
+**JavaScript**: `wwwroot/assets/js/components/searchable-dropdown.js`
+- Core `SearchableDropdown` class
+- Automatic initialization via `data-searchable` attribute
+- Event handling for keyboard, mouse, and touch interactions
+- AJAX loading support
+- Extensible through options and callbacks
+
+### Basic Usage
+
+#### Automatic Initialization (Recommended)
+
+Simply add the `data-searchable="true"` attribute to any `<select>` element:
+
+```html
+<select class="form-select form-select-sm"
+        id="locationSelect"
+        name="IdLocation"
+        data-searchable="true"
+        data-placeholder="Select Location"
+        data-search-placeholder="Search location..."
+        required>
+    <option value="">Select Location</option>
+    <option value="1">Building A</option>
+    <option value="2">Building B</option>
+    <option value="3">Building C</option>
+</select>
+```
+
+**Data Attributes:**
+- `data-searchable="true"` - Enables searchable dropdown (required)
+- `data-placeholder` - Text shown when no option is selected
+- `data-search-placeholder` - Placeholder text in search input
+- `data-allow-clear="false"` - Disable the clear button (default: true)
+
+The component will automatically initialize on `DOMContentLoaded`.
+
+#### Manual Initialization (JavaScript)
+
+For dynamic dropdowns or custom configurations:
+
+```javascript
+const dropdown = new SearchableDropdown('#mySelect', {
+    placeholder: 'Select an option',
+    searchPlaceholder: 'Search...',
+    allowClear: true,
+    size: 'small',  // 'default' or 'small'
+    data: [
+        { value: '1', label: 'Option 1', description: 'Description text' },
+        { value: '2', label: 'Option 2' }
+    ],
+    onChange: function(value, label) {
+        console.log('Selected:', value, label);
+    }
+});
+```
+
+### Advanced Features
+
+#### AJAX Data Loading
+
+Load options dynamically from an API endpoint:
+
+```javascript
+const dropdown = new SearchableDropdown('#serviceProviderSelect', {
+    placeholder: 'Select Service Provider',
+    searchPlaceholder: 'Type to search providers...',
+    minimumInputLength: 2,  // Only search after 2 characters
+    ajax: async function(searchTerm) {
+        const response = await fetch(`/api/providers/search?term=${encodeURIComponent(searchTerm)}`);
+        const data = await response.json();
+
+        return data.map(item => ({
+            value: item.id,
+            label: item.name,
+            description: item.companyName
+        }));
+    }
+});
+```
+
+#### Custom Option Templates
+
+Customize how options are displayed:
+
+```javascript
+const dropdown = new SearchableDropdown('#priorityLevelSelect', {
+    placeholder: 'Select Priority',
+    templateResult: function(item) {
+        return `
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 12px; height: 12px; border-radius: 50%; background-color: ${item.color};"></span>
+                <span>${item.label}</span>
+            </span>
+        `;
+    }
+});
+```
+
+#### Cascading Dropdowns
+
+Enable/disable dependent dropdowns based on selection:
+
+```javascript
+// Location dropdown
+const locationDropdown = new SearchableDropdown('#locationSelect', {
+    onChange: async function(value, label) {
+        if (value) {
+            // Load floors for selected location
+            const floors = await loadFloorsForLocation(value);
+
+            // Enable and populate floor dropdown
+            floorDropdown.enable();
+            floorDropdown.renderOptions(floors);
+        } else {
+            // Disable dependent dropdowns
+            floorDropdown.disable();
+            roomDropdown.disable();
+        }
+    }
+});
+
+const floorDropdown = new SearchableDropdown('#floorSelect', {
+    disabled: true,
+    onChange: async function(value, label) {
+        if (value) {
+            const rooms = await loadRoomsForFloor(value);
+            roomDropdown.enable();
+            roomDropdown.renderOptions(rooms);
+        } else {
+            roomDropdown.disable();
+        }
+    }
+});
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `placeholder` | string | "Select an option" | Text shown when no option selected |
+| `searchPlaceholder` | string | "Search..." | Placeholder in search input |
+| `allowClear` | boolean | true | Show clear button to reset selection |
+| `data` | array | null | Array of option objects: `[{ value, label, description }]` |
+| `ajax` | function | null | Async function for loading data: `async (searchTerm) => []` |
+| `minimumInputLength` | number | 0 | Minimum characters before AJAX search triggers |
+| `disabled` | boolean | false | Initial disabled state |
+| `size` | string | "default" | Size variant: "default" or "small" |
+| `templateResult` | function | null | Custom HTML template for options |
+| `templateSelection` | function | null | Custom HTML template for selected value |
+| `onChange` | function | null | Callback when value changes: `(value, label) => {}` |
+| `onSelect` | function | null | Callback when option selected: `(value, label) => {}` |
+
+### API Methods
+
+```javascript
+const dropdown = new SearchableDropdown('#mySelect', options);
+
+// Get current value
+const value = dropdown.getValue();          // Returns selected value
+const label = dropdown.getLabel();          // Returns selected label text
+
+// Set value programmatically
+dropdown.setValue('2', 'Building B', true); // (value, label, triggerChange)
+
+// Clear selection
+dropdown.clear();
+
+// Enable/disable
+dropdown.enable();
+dropdown.disable();
+
+// Update options
+dropdown.renderOptions([
+    { value: '1', label: 'New Option 1' },
+    { value: '2', label: 'New Option 2' }
+]);
+
+// Destroy component
+dropdown.destroy();  // Removes component, restores original <select>
+```
+
+### Keyboard Navigation
+
+The searchable dropdown supports full keyboard navigation:
+
+- **Tab** - Focus next element
+- **Enter / Space** - Open dropdown menu
+- **Arrow Down** - Highlight next option
+- **Arrow Up** - Highlight previous option
+- **Enter** (in menu) - Select highlighted option
+- **Escape** - Close menu and return focus to toggle
+- **Type to search** - Filters options in real-time
+
+### Styling and Customization
+
+#### Size Variants
+
+```html
+<!-- Default size -->
+<select class="form-select" data-searchable="true">...</select>
+
+<!-- Small size -->
+<select class="form-select form-select-sm" data-searchable="true">...</select>
+```
+
+#### Validation States
+
+The component automatically applies Bootstrap validation classes:
+
+```html
+<!-- Invalid state -->
+<select class="form-select is-invalid" data-searchable="true">...</select>
+<div class="invalid-feedback">This field is required.</div>
+
+<!-- Valid state -->
+<select class="form-select is-valid" data-searchable="true">...</select>
+<div class="valid-feedback">Looks good!</div>
+```
+
+#### Custom Styling
+
+Override default styles using CSS:
+
+```css
+/* Change primary color */
+.searchable-dropdown-toggle:focus,
+.searchable-dropdown.active .searchable-dropdown-toggle {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+}
+
+.searchable-dropdown-option.active {
+    background-color: #28a745;
+}
+
+/* Custom option height */
+.searchable-dropdown-option {
+    padding: 0.75rem 1rem;
+}
+```
+
+### Common Patterns
+
+#### Work Request Form Pattern
+
+```html
+<!-- Location, Floor, Room cascade -->
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label class="form-label fw-semibold required-field">Location</label>
+        <select class="form-select form-select-sm"
+                id="locationSelect"
+                name="IdLocation"
+                data-searchable="true"
+                data-placeholder="Select Location"
+                data-search-placeholder="Search location..."
+                required>
+            <option value="">Select Location</option>
+        </select>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label class="form-label fw-semibold required-field">Floor</label>
+        <select class="form-select form-select-sm"
+                id="floorSelect"
+                name="IdFloor"
+                data-searchable="true"
+                data-placeholder="Select Floor"
+                data-search-placeholder="Search floor..."
+                required
+                disabled>
+            <option value="">Select Floor</option>
+        </select>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label class="form-label fw-semibold required-field">Room/Area/Zone</label>
+        <select class="form-select form-select-sm"
+                id="roomSelect"
+                name="IdRoom"
+                data-searchable="true"
+                data-placeholder="Select Room/Area/Zone"
+                data-search-placeholder="Search room..."
+                required
+                disabled>
+            <option value="">Select Room/Area/Zone</option>
+        </select>
+    </div>
+</div>
+```
+
+### Including Component in Views
+
+**In the `@section styles` block:**
+```razor
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+}
+```
+
+**In the `@section scripts` block:**
+```razor
+@section scripts {
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+    <script src="~/assets/js/pages/your-page.js"></script>
+}
+```
+
+### Migration from Select2
+
+If migrating from Select2, the searchable dropdown component provides similar functionality with these benefits:
+
+**Before (Select2):**
+```html
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$('#mySelect').select2({
+    placeholder: 'Select an option',
+    allowClear: true
+});
+</script>
+```
+
+**After (Searchable Dropdown):**
+```html
+<link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+<script src="~/assets/js/components/searchable-dropdown.js"></script>
+
+<select id="mySelect"
+        data-searchable="true"
+        data-placeholder="Select an option">
+    ...
+</select>
+```
+
+**Benefits:**
+- No jQuery dependency (30KB+ saved)
+- No CDN dependencies (faster, more reliable)
+- Better keyboard navigation
+- Consistent styling with Bootstrap 5
+- Smaller footprint (~15KB vs 70KB+)
+- Modern ES6+ code
+
+### Best Practices
+
+1. **Always use `data-searchable="true"` for automatic initialization** - Simplest and most consistent approach
+2. **Set meaningful placeholders** - Use `data-placeholder` and `data-search-placeholder`
+3. **Use small size for forms** - Add `form-select-sm` class for compact forms
+4. **Enable validation** - Add `required`, `is-invalid`, or `is-valid` classes
+5. **Implement cascading logic** - Use `onChange` callback to update dependent dropdowns
+6. **Use AJAX for large datasets** - Load options dynamically when >100 items
+7. **Add descriptions for clarity** - Use `description` property in data objects
+8. **Test keyboard navigation** - Ensure all dropdowns are keyboard accessible
+9. **Handle loading states** - Show loading indicator during AJAX calls
+10. **Clean up on page unload** - Call `destroy()` if dynamically removing dropdowns
+
+### Accessibility
+
+The searchable dropdown component follows WCAG 2.1 AA guidelines:
+
+- ✅ **Keyboard navigable** - All functions accessible via keyboard
+- ✅ **ARIA attributes** - Proper `role`, `aria-expanded`, `aria-label`
+- ✅ **Focus management** - Logical focus order and visible indicators
+- ✅ **Screen reader support** - Meaningful labels and state announcements
+- ✅ **High contrast** - Sufficient color contrast ratios
+- ✅ **Touch friendly** - Minimum 44x44px touch targets
+
+### Browser Support
+
+- ✅ Chrome 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+- ✅ Mobile browsers (iOS Safari, Chrome Mobile)
+
+### Troubleshooting
+
+**Dropdown not initializing:**
+- Ensure `data-searchable="true"` is present
+- Check that `searchable-dropdown.js` is loaded
+- Verify `<select>` element exists in DOM when script runs
+
+**Options not showing:**
+- Check browser console for errors
+- Verify `<option>` elements have `value` attributes
+- For AJAX: ensure the function returns properly formatted array
+
+**Keyboard navigation not working:**
+- Ensure dropdown is focused (click or Tab to it)
+- Check for JavaScript errors preventing event handlers
+
+**Styling conflicts:**
+- Load `searchable-dropdown.css` after Bootstrap
+- Check for CSS specificity issues
+- Use browser DevTools to inspect applied styles
 
 ## Breadcrumb Navigation System
 
@@ -1098,6 +1679,12 @@ For destructive actions (delete, etc.), use Bootstrap modals for confirmation:
    showNotification('Saved! Redirecting...', 'success', 'Success', { timeOut: 1500 });
    setTimeout(() => location.reload(), 1500);
    ```
+7. **C# API Endpoints constants are centralized on Constants/APIEndpoint.cs, if there are any changes or addition on endpoints refer to this class.
+8. **Javascript Endpoints constant are centralized on assets/js/mvc-endpoints.js, if there are any changes or addition on endpoints refer to this class.
+9. **Do not add comment that is too AI, add comment only for documentation and for warning the next developer.
+
+#### VIews Design
+Use the light able bootstrap as the basis for any design or html related things. make sure the design adhere to industry standard best practice regarding UI/UX of Modern application.
 
 #### Migration Notes
 

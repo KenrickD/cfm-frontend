@@ -3,11 +3,11 @@
 
     const CONFIG = {
         apiEndpoints: {
-            list: '/Helpdesk/Settings/GetImportantChecklists',
-            create: '/Helpdesk/Settings/CreateImportantChecklist',
-            update: '/Helpdesk/Settings/UpdateImportantChecklist',
-            delete: '/Helpdesk/Settings/DeleteImportantChecklist',
-            updateOrder: '/Helpdesk/Settings/UpdateImportantChecklistOrder'
+            list: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.List,
+            create: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Create,
+            update: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Update,
+            delete: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Delete,
+            updateOrder: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.UpdateOrder
         },
         entityName: 'Important Checklist Item',
         entityNamePlural: 'Important Checklist Items'

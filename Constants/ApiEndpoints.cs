@@ -22,6 +22,11 @@ namespace cfm_frontend.Constants
             /// </summary>
             public const string Login = Base + "/Login";
 
+            /// <summary>
+            /// POST: Refresh access token using refresh token
+            /// </summary>
+            public const string RefreshToken = Base + "/refresh_token";
+
         }
 
         #endregion
@@ -250,6 +255,8 @@ namespace cfm_frontend.Constants
                 public const string WorkRequestPriorityLevel = "workRequestPriorityLevel";
                 public const string WorkRequestAdditionalInformation = "workRequestAdditionalInformation";
                 public const string WorkRequestDocument = "workRequestDocument";
+                public const string Currency = "currency";
+                public const string MeasurementUnit = "measurementUnit";
             }
         }
 
@@ -467,6 +474,94 @@ namespace cfm_frontend.Constants
                 /// </summary>
                 public const string DropdownOptions = PriorityLevelBase + "/dropdown-options";
             }
+
+            /// <summary>
+            /// Cost Approver Group settings endpoints
+            /// </summary>
+            public static class CostApproverGroup
+            {
+                private const string CostApproverGroupBase = Base + "/cost-approver-group";
+
+                /// <summary>
+                /// GET: Get all cost approver groups for client
+                /// Query params: idClient
+                /// </summary>
+                public const string List = CostApproverGroupBase;
+
+                /// <summary>
+                /// GET: Get cost approver group by ID
+                /// Path params: {id}
+                /// Query params: idClient
+                /// </summary>
+                /// <param name="id">Cost approver group ID</param>
+                /// <returns>Get by ID endpoint URL</returns>
+                public static string GetById(int id) => $"{CostApproverGroupBase}/{id}";
+
+                /// <summary>
+                /// POST: Create cost approver group
+                /// </summary>
+                public const string Create = CostApproverGroupBase;
+
+                /// <summary>
+                /// PUT: Update cost approver group
+                /// </summary>
+                public const string Update = CostApproverGroupBase;
+
+                /// <summary>
+                /// DELETE: Delete cost approver group by ID
+                /// Path params: {id}
+                /// </summary>
+                /// <param name="id">Cost approver group ID</param>
+                /// <returns>Delete endpoint URL</returns>
+                public static string Delete(int id) => $"{CostApproverGroupBase}/{id}";
+            }
+        }
+
+        #endregion
+
+        #region Email Distribution
+
+        /// <summary>
+        /// Email distribution list management endpoints
+        /// </summary>
+        public static class EmailDistribution
+        {
+            private const string Base = ApiBase + "/EmailDistribution";
+
+            /// <summary>
+            /// GET: Get all email distribution page references with status
+            /// Returns list of distribution types with hasDistributionList flag
+            /// </summary>
+            public const string GetPageReferences = Base + "/GetPageReferences";
+
+            /// <summary>
+            /// GET: Get email distribution by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Email distribution list ID</param>
+            /// <returns>Get by ID endpoint URL</returns>
+            public static string GetById(int id) => $"{Base}/GetById/{id}";
+
+            /// <summary>
+            /// POST: Create new email distribution
+            /// </summary>
+            public const string Create = Base + "/Create";
+
+            /// <summary>
+            /// PUT: Update email distribution
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Email distribution list ID</param>
+            /// <returns>Update endpoint URL</returns>
+            public static string Update(int id) => $"{Base}/Update/{id}";
+
+            /// <summary>
+            /// DELETE: Delete email distribution by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Email distribution list ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/Delete/{id}";
         }
 
         #endregion

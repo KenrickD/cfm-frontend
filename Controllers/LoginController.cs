@@ -126,8 +126,8 @@ namespace cfm_frontend.Controllers
                             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                             var authProperties = new AuthenticationProperties
                             {
-                                IsPersistent = true,
-                                ExpiresUtc = DateTime.UtcNow.AddDays(7)
+                                IsPersistent = model.RememberMe,
+                                ExpiresUtc = model.RememberMe ? DateTime.UtcNow.AddDays(30) : DateTime.UtcNow.AddHours(12)
                             };
 
                             authProperties.StoreTokens(new List<AuthenticationToken>
@@ -142,8 +142,8 @@ namespace cfm_frontend.Controllers
                                 authProperties
                             );
 
-                            _logger.LogInformation("User {Username} (ID: {UserId}) logged in successfully at {Time}",
-                                userInfo.Username, userInfo.IdWebUser, DateTime.UtcNow);
+                            _logger.LogInformation("User {Username} (ID: {UserId}) logged in successfully at {Time}. RememberMe: {RememberMe}",
+                                userInfo.Username, userInfo.IdWebUser, DateTime.UtcNow, model.RememberMe);
 
                             return RedirectToAction("Index", "Dashboard");
                         }

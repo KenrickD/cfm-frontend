@@ -1,4 +1,5 @@
-﻿using cfm_frontend.Controllers;
+﻿using cfm_frontend.Constants;
+using cfm_frontend.Controllers;
 using cfm_frontend.DTOs.Login;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -74,14 +75,13 @@ namespace cfm_frontend.Handlers
         {
             try
             {
-                // Create a fresh client to avoid loop
                 var client = new HttpClient();
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 var payload = new { accessToken = expiredAccess, refreshToken = refresh };
                 var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}/api/auth/refresh-token", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.RefreshToken}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -93,8 +93,6 @@ namespace cfm_frontend.Handlers
 
                     if (newTokens != null)
                     {
-                        // UPDATE THE BROWSER COOKIE WITH NEW TOKENS
-                        // We need to clone existing properties and update tokens
                         var result = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                         var properties = result.Properties;
                         if (properties != null)
@@ -102,20 +100,26 @@ namespace cfm_frontend.Handlers
                             properties.UpdateTokenValue("access_token", newTokens.Token);
                             properties.UpdateTokenValue("refresh_token", newTokens.RefreshToken);
 
-                            // Re-issue the cookie
                             await context.SignInAsync(
                                 CookieAuthenticationDefaults.AuthenticationScheme,
                                 result.Principal,
                                 properties
                             );
+
+                            _logger.LogInformation("Access token refreshed successfully at {Time}", DateTime.UtcNow);
                             return true;
                         }
                     }
                 }
+                else
+                {
+                    _logger.LogWarning("Token refresh failed with status code {StatusCode} at {Time}",
+                        response.StatusCode, DateTime.UtcNow);
+                }
             }
             catch(Exception ex)
             {
-                _logger.LogError(ex, "Error logging when refreshing token on {date}", DateTime.UtcNow);
+                _logger.LogError(ex, "Error refreshing token at {Time}", DateTime.UtcNow);
             }
             return false;
         }

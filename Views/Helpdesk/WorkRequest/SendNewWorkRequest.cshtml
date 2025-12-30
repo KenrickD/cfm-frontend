@@ -8,6 +8,7 @@
 }
 
 @section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
     <style>
         .required-field::after {
             content: " *";
@@ -78,6 +79,9 @@
                     <select class="form-select form-select-sm"
                             id="locationSelect"
                             name="IdLocation"
+                            data-searchable="true"
+                            data-placeholder="Select Location"
+                            data-search-placeholder="Search location..."
                             required>
                         <option value="">Select Location</option>
                         @if (Model?.Locations != null && Model.Locations.Any())
@@ -96,6 +100,9 @@
                     <select class="form-select form-select-sm"
                             id="floorSelect"
                             name="IdFloor"
+                            data-searchable="true"
+                            data-placeholder="Select Floor"
+                            data-search-placeholder="Search floor..."
                             required
                             disabled>
                         <option value="">Select Floor</option>
@@ -108,6 +115,9 @@
                     <select class="form-select form-select-sm"
                             id="roomSelect"
                             name="IdRoom"
+                            data-searchable="true"
+                            data-placeholder="Select Room/Area/Zone"
+                            data-search-placeholder="Search room..."
                             required
                             disabled>
                         <option value="">Select Room/Area/Zone</option>
@@ -132,7 +142,13 @@
                 <!-- Work Category -->
                 <div class="col-md-12 mb-3">
                     <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Work Category</label>
-                    <select class="form-select form-select-sm" id="workCategorySelect" name="IdWorkCategory" required>
+                    <select class="form-select form-select-sm"
+                            id="workCategorySelect"
+                            name="IdWorkCategory"
+                            data-searchable="true"
+                            data-placeholder="Select Work Category"
+                            data-search-placeholder="Search category..."
+                            required>
                         <option value="">-</option>
                         @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
                         {
@@ -200,5 +216,6 @@
 </div>
 
 @section scripts {
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
     <script src="~/assets/js/pages/workrequest/send-work-request.js"></script>
 }

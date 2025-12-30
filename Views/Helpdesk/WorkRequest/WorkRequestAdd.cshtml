@@ -9,19 +9,12 @@
 
 @section styles {
     <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
 
     <style>
         .required-field::after {
             content: " *";
             color: #dc3545;
-        }
-
-        .select2-container--bootstrap-5 .select2-selection {
-            min-height: calc(1.5em + 0.5rem + 2px);
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
         }
 
         .form-control-sm, .form-select-sm {
@@ -159,22 +152,19 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <!-- Location Search and Dropdown -->
+                        <!-- Location Searchable Dropdown -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold required-field">Location</label>
-                            <div class="location-search-wrapper">
-                                <input type="text"
-                                       class="form-control form-control-sm mb-2"
-                                       id="locationSearch"
-                                       placeholder="Search location...">
-                                <select class="form-select form-select-sm"
-                                        id="locationSelect"
-                                        name="IdLocation"
-                                        required>
-                                    <option value="">Select Location</option>
-                                    <!-- Options loaded dynamically via JavaScript -->
-                                </select>
-                            </div>
+                            <select class="form-select form-select-sm"
+                                    id="locationSelect"
+                                    name="IdLocation"
+                                    data-searchable="true"
+                                    data-placeholder="Select Location"
+                                    data-search-placeholder="Search location..."
+                                    required>
+                                <option value="">Select Location</option>
+                                <!-- Options loaded dynamically via JavaScript -->
+                            </select>
                         </div>
 
                         <!-- Floor -->
@@ -183,6 +173,9 @@
                             <select class="form-select form-select-sm"
                                     id="floorSelect"
                                     name="IdFloor"
+                                    data-searchable="true"
+                                    data-placeholder="Select Floor"
+                                    data-search-placeholder="Search floor..."
                                     required
                                     disabled>
                                 <option value="">Select Floor</option>
@@ -195,6 +188,9 @@
                             <select class="form-select form-select-sm"
                                     id="roomSelect"
                                     name="IdRoom"
+                                    data-searchable="true"
+                                    data-placeholder="Select Room/Area/Zone"
+                                    data-search-placeholder="Search room..."
                                     required
                                     disabled>
                                 <option value="">Select Room/Area/Zone</option>
@@ -300,7 +296,13 @@
                         <!-- Work Category -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold required-field">Work Category</label>
-                            <select class="form-select form-select-sm" id="workCategorySelect" name="IdWorkCategory" required>
+                            <select class="form-select form-select-sm"
+                                    id="workCategorySelect"
+                                    name="IdWorkCategory"
+                                    data-searchable="true"
+                                    data-placeholder="Select Work Category"
+                                    data-search-placeholder="Search category..."
+                                    required>
                                 <option value="">Select Work Category</option>
                                 <!-- Options loaded dynamically via JavaScript -->
                             </select>
@@ -309,7 +311,12 @@
                         <!-- Other Category -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Other Category</label>
-                            <select class="form-select form-select-sm" id="otherCategorySelect" name="IdOtherCategory">
+                            <select class="form-select form-select-sm"
+                                    id="otherCategorySelect"
+                                    name="IdOtherCategory"
+                                    data-searchable="true"
+                                    data-placeholder="Select Other Category"
+                                    data-search-placeholder="Search category...">
                                 <option value="">Select Other Category</option>
                                 <!-- Options loaded dynamically via JavaScript -->
                             </select>
@@ -318,7 +325,12 @@
                         <!-- Other Category 2 -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Other Category 2</label>
-                            <select class="form-select form-select-sm" id="otherCategory2Select" name="IdOtherCategory2">
+                            <select class="form-select form-select-sm"
+                                    id="otherCategory2Select"
+                                    name="IdOtherCategory2"
+                                    data-searchable="true"
+                                    data-placeholder="Select Other Category 2"
+                                    data-search-placeholder="Search category...">
                                 <option value="">Select Other Category 2</option>
                                 <!-- Options loaded dynamically via JavaScript -->
                             </select>
@@ -349,7 +361,13 @@
                         <!-- Person in Charge -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold required-field">Person in Charge</label>
-                            <select class="form-select form-select-sm" id="personInChargeSelect" name="IdPersonInCharge" required>
+                            <select class="form-select form-select-sm"
+                                    id="personInChargeSelect"
+                                    name="IdPersonInCharge"
+                                    data-searchable="true"
+                                    data-placeholder="Select Person in Charge"
+                                    data-search-placeholder="Search person..."
+                                    required>
                                 <option value="">Select Person in Charge</option>
                             </select>
                         </div>
@@ -357,7 +375,12 @@
                         <!-- Service Provider -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Service Provider</label>
-                            <select class="form-select form-select-sm" id="serviceProviderSelect" name="IdServiceProvider">
+                            <select class="form-select form-select-sm"
+                                    id="serviceProviderSelect"
+                                    name="IdServiceProvider"
+                                    data-searchable="true"
+                                    data-placeholder="Select Service Provider"
+                                    data-search-placeholder="Search provider...">
                                 <option value="">Select Service Provider</option>
                                 <!-- Options loaded dynamically via JavaScript -->
                             </select>
@@ -412,14 +435,17 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th width="15%">Qty</th>
-                                    <th width="20%">Unit Price</th>
+                                    <th width="12%">Transaction Date</th>
+                                    <th width="10%">Qty</th>
+                                    <th width="12%">Unit</th>
+                                    <th width="15%">Unit Price</th>
+                                    <th width="15%">Total</th>
                                     <th width="5%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">
+                                    <td colspan="7" class="text-center text-muted">
                                         <em>No Labor/Material added yet</em>
                                     </td>
                                 </tr>
@@ -462,7 +488,13 @@
                         <!-- Priority Level -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold required-field">Priority Level</label>
-                            <select class="form-select form-select-sm" id="priorityLevelSelect" name="PriorityLevel" required>
+                            <select class="form-select form-select-sm"
+                                    id="priorityLevelSelect"
+                                    name="PriorityLevel"
+                                    data-searchable="true"
+                                    data-placeholder="Select Priority Level"
+                                    data-search-placeholder="Search priority..."
+                                    required>
                                 <option value="">Select Priority Level</option>
                                 <!-- Options loaded dynamically via JavaScript -->
                             </select>
@@ -675,7 +707,12 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Feedback Status</label>
-                        <select class="form-select form-select-sm" id="feedbackStatus" name="FeedbackStatus">
+                        <select class="form-select form-select-sm"
+                                id="feedbackStatus"
+                                name="FeedbackStatus"
+                                data-searchable="true"
+                                data-placeholder="No Feedback"
+                                data-search-placeholder="Search status...">
                             <option value="">No Feedback</option>
                             <!-- Options loaded dynamically via JavaScript -->
                         </select>
@@ -688,6 +725,91 @@
                 </div>
             </div>
 
+            <!-- Related Documents -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Related Documents</h5>
+                    <p class="text-muted mb-0 small">Upload related documents or files</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="file" class="form-control form-control-sm" id="relatedDocuments" multiple accept="*/*">
+                            <button type="button" class="btn btn-sm btn-primary" id="uploadDocumentBtn">
+                                Upload
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="ti ti-arrow-right me-1"></i>
+                            Search or drag and drop your file to 'Browse' or 'Choose File' field above
+                        </small>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="relatedDocumentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Document Label</th>
+                                    <th>File</th>
+                                    <th width="10%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        <em>No File</em>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="setWorkUpdateEmail" name="SetWorkUpdateEmail">
+                        <label class="form-check-label" for="setWorkUpdateEmail">
+                            Set Work Update Email
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Asset -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">Related Asset</h5>
+                            <p class="text-muted mb-0 small">Link assets to this work request</p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="addAssetBtn">
+                            <i class="ti ti-plus me-1"></i>
+                            Add New Asset
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="relatedAssetTable">
+                            <thead>
+                                <tr>
+                                    <th width="5%">No.</th>
+                                    <th>Asset Label</th>
+                                    <th>Asset Name</th>
+                                    <th width="10%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        <em>No Related Asset</em>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form Actions -->
             <div class="card">
                 <div class="card-body">
@@ -696,7 +818,8 @@
                             <i class="ti ti-x me-1"></i>
                             Cancel
                         </a>
-                        <div>
+                        <!--draft button is not yet implemented-->
+                        @* <div>
                             <button type="button" class="btn btn-outline-primary me-2" id="saveDraftBtn">
                                 <i class="ti ti-device-floppy me-1"></i>
                                 Save as Draft
@@ -705,7 +828,7 @@
                                 <i class="ti ti-check me-1"></i>
                                 Submit Work Request
                             </button>
-                        </div>
+                        </div> *@
                     </div>
                 </div>
             </div>
@@ -713,8 +836,204 @@
     </div>
 </div>
 
+<!-- Labor/Material Modal -->
+<div class="modal fade" id="laborMaterialModal" tabindex="-1" aria-labelledby="laborMaterialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="laborMaterialModalLabel">Labor/Material</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Mode Selection -->
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="laborMaterialMode" id="modeJobCode" value="jobCode" checked>
+                        <label class="form-check-label" for="modeJobCode">
+                            Search from Job Code
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="laborMaterialMode" id="modeAdHoc" value="adHoc">
+                        <label class="form-check-label" for="modeAdHoc">
+                            Add new Ad hoc Labor/Material
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Job Code Mode -->
+                <div id="jobCodeMode">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Name</label>
+                        <input type="text" class="form-control form-control-sm" id="jobCodeSearch" placeholder="Type the name here to search Job Code..." autocomplete="off">
+                        <div id="jobCodeDropdown" class="typeahead-dropdown"></div>
+                        <div id="jobCodeSelected" class="mt-2" style="display: none;">
+                            <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                                <div>
+                                    <strong id="selectedJobCodeName"></strong><br>
+                                    <small class="text-muted">Remaining Stock: <span id="selectedJobCodeStock"></span></small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" id="removeJobCodeBtn">
+                                    <i class="ti ti-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Transaction Date</label>
+                        <input type="date" class="form-control form-control-sm" id="jobCodeTransactionDate">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Quantity</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control form-control-sm" id="jobCodeQuantity" min="0.01" step="0.01" value="1.00">
+                            <span class="input-group-text" id="jobCodeUnit">PCS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ad Hoc Mode -->
+                <div id="adHocMode" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Name</label>
+                        <input type="text" class="form-control form-control-sm" id="adHocName" placeholder="Enter labor/material name">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Labor/Material?</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="adHocLabel" id="labelLabor" value="labor" checked>
+                                <label class="form-check-label" for="labelLabor">Labor</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="adHocLabel" id="labelBoth" value="both">
+                                <label class="form-check-label" for="labelBoth">Labor & Material</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="adHocLabel" id="labelMaterial" value="material">
+                                <label class="form-check-label" for="labelMaterial">Material</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Unit Price</label>
+                        <div class="input-group input-group-sm">
+                            <select class="form-select form-select-sm" id="adHocCurrency" style="max-width: 100px;">
+                                <option value="">IDR</option>
+                            </select>
+                            <input type="number" class="form-control form-control-sm" id="adHocUnitPrice" min="0" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Measurement Unit</label>
+                        <select class="form-select form-select-sm" id="adHocMeasurementUnit">
+                            <option value="">Select unit</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Quantity</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control form-control-sm" id="adHocQuantity" min="0.01" step="0.01" value="1.00">
+                            <span class="input-group-text">UNIT</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="ti ti-refresh"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveLaborMaterialBtn">
+                    <i class="ti ti-device-floppy"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Related Asset Modal -->
+<div class="modal fade" id="relatedAssetModal" tabindex="-1" aria-labelledby="relatedAssetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="relatedAssetModalLabel">Related Asset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Search Mode Selection -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold required-field">Name</label>
+                    <div class="mb-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="assetSearchMode" id="searchIndividual" value="individual" checked>
+                            <label class="form-check-label" for="searchIndividual">
+                                Search Asset Individually
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="assetSearchMode" id="searchGroup" value="group">
+                            <label class="form-check-label" for="searchGroup">
+                                Search by Asset Group
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Individual Search -->
+                    <div id="individualSearchMode">
+                        <input type="text" class="form-control form-control-sm" id="assetIndividualSearch" placeholder="Type to search asset..." autocomplete="off">
+                        <div id="assetIndividualDropdown" class="typeahead-dropdown"></div>
+                        <div id="assetIndividualSelected" class="mt-2" style="display: none;">
+                            <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                                <div>
+                                    <strong id="selectedAssetName"></strong>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" id="removeAssetIndividualBtn">
+                                    <i class="ti ti-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group Search -->
+                    <div id="groupSearchMode" style="display: none;">
+                        <input type="text" class="form-control form-control-sm" id="assetGroupSearch" placeholder="Type to search asset group..." autocomplete="off">
+                        <div id="assetGroupDropdown" class="typeahead-dropdown"></div>
+                        <div id="assetGroupSelected" class="mt-2" style="display: none;">
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <strong>Selected Assets:</strong>
+                                    <button type="button" class="btn btn-sm btn-danger" id="removeAssetGroupBtn">
+                                        <i class="ti ti-trash"></i> Delete
+                                    </button>
+                                </div>
+                                <ol id="selectedAssetGroupList" class="mb-0 ps-3">
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="ti ti-refresh"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveAssetBtn">
+                    <i class="ti ti-device-floppy"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section scripts {
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
     <script src="~/assets/js/pages/workrequest/work-request-add.js"></script>
+    <script src="~/assets/js/pages/workrequest/work-request-add-extended.js"></script>
 }

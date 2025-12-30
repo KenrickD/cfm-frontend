@@ -2,6 +2,19 @@
 (function ($) {
     'use strict';
 
+    // Configuration
+    const CONFIG = {
+        apiEndpoints: {
+            list: MvcEndpoints.Helpdesk.Settings.PersonInCharge.List,
+            getById: MvcEndpoints.Helpdesk.Settings.PersonInCharge.GetById,
+            create: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Create,
+            update: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Update,
+            delete: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Delete,
+            getProperties: MvcEndpoints.Helpdesk.Settings.GetProperties,
+            searchEmployees: MvcEndpoints.Helpdesk.Search.Employees
+        }
+    };
+
     // State management
     let picList = [];
     let allProperties = [];
@@ -78,7 +91,7 @@
     // Load PIC list
     function loadPICList() {
         $.ajax({
-            url: '/Helpdesk/Settings/GetPersonsInCharge',
+            url: CONFIG.apiEndpoints.list,
             type: 'GET',
             success: function (response) {
                 if (response.success) {
@@ -98,7 +111,7 @@
     // Load properties list
     function loadProperties() {
         $.ajax({
-            url: '/Helpdesk/Settings/GetProperties',
+            url: CONFIG.apiEndpoints.getProperties,
             type: 'GET',
             success: function (response) {
                 if (response.success) {
@@ -199,7 +212,7 @@
 
         employeeSearchTimeout = setTimeout(() => {
             $.ajax({
-                url: '/Helpdesk/SearchEmployees',
+                url: CONFIG.apiEndpoints.searchEmployees,
                 type: 'GET',
                 data: { searchTerm: searchTerm },
                 success: function (response) {
@@ -410,7 +423,7 @@
         };
 
         $.ajax({
-            url: '/Helpdesk/Settings/CreatePersonInCharge',
+            url: CONFIG.apiEndpoints.create,
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(payload),
@@ -435,7 +448,7 @@
 
         // Fetch full PIC details including properties from backend
         $.ajax({
-            url: '/Helpdesk/Settings/GetPersonInChargeById',
+            url: CONFIG.apiEndpoints.getById,
             type: 'GET',
             data: { id: id },
             success: function (response) {
@@ -496,7 +509,7 @@
         };
 
         $.ajax({
-            url: '/Helpdesk/Settings/UpdatePersonInCharge',
+            url: CONFIG.apiEndpoints.update,
             type: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify(payload),
@@ -528,7 +541,7 @@
         const id = $(this).data('id');
 
         $.ajax({
-            url: '/Helpdesk/Settings/DeletePersonInCharge',
+            url: CONFIG.apiEndpoints.delete,
             type: 'DELETE',
             contentType: 'application/json',
             data: JSON.stringify({ id: id }),

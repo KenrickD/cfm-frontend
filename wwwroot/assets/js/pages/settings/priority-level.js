@@ -2,6 +2,14 @@
 (function () {
     'use strict';
 
+    // Configuration
+    const CONFIG = {
+        apiEndpoints: {
+            list: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
+            delete: MvcEndpoints.Helpdesk.DeletePriorityLevel
+        }
+    };
+
     let priorityLevels = [];
     let deleteModal;
     let currentDeleteId = null;
@@ -28,7 +36,7 @@
 
     async function loadPriorityLevels() {
         try {
-            const response = await fetch('/Helpdesk/GetPriorityLevels');
+            const response = await fetch(CONFIG.apiEndpoints.list);
             const result = await response.json();
 
             if (result.success) {
@@ -200,7 +208,7 @@
         if (!currentDeleteId) return;
 
         try {
-            const response = await fetch('/Helpdesk/DeletePriorityLevel', {
+            const response = await fetch(CONFIG.apiEndpoints.delete, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

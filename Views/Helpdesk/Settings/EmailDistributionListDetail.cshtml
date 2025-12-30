@@ -1,0 +1,469 @@
+@{
+    ViewBag.Title = ViewBag.Mode == "setup" ? "Set Up Email Distribution" : "Edit Email Distribution";
+    ViewBag.pTitle = "Email Distribution List Management";
+    ViewBag.pTitleUrl = "/Helpdesk/EmailDistributionList";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .page-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-label .required {
+            color: #dc3545;
+            margin-left: 0.25rem;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .radio-group .form-check {
+            margin-bottom: 0;
+        }
+
+        .custom-subject-options {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .custom-subject-options.show {
+            display: block;
+        }
+
+        .subject-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            margin: 0.25rem;
+            background-color: #e7f3ff;
+            border: 1px solid #0d6efd;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            color: #0d6efd;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .subject-tag:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .subject-tag i {
+            font-size: 0.75rem;
+        }
+
+        .custom-from-fields {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .custom-from-fields.show {
+            display: block;
+        }
+
+        .email-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .recipient-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s ease;
+        }
+
+        .recipient-card:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .recipient-info {
+            flex: 1;
+        }
+
+        .recipient-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .recipient-email {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+        }
+
+        .recipient-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            border: 1px dashed #dee2e6;
+            border-radius: 0.25rem;
+        }
+
+        .empty-state i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+
+        .subject-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 0.25rem;
+            display: none;
+        }
+
+        .subject-preview.show {
+            display: block;
+        }
+
+        .subject-preview-label {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        .subject-preview-content {
+            font-family: 'Courier New', monospace;
+            color: #495057;
+        }
+
+        .add-email-inline {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .inline-form-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: end;
+        }
+
+        .inline-form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .btn-icon-only {
+            padding: 0.5rem;
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-custom">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="ti ti-mail me-2"></i>
+                        @ViewBag.Title
+                    </h4>
+                    <p class="mb-0 opacity-75">Configure email recipients for <strong id="pageReferenceName">...</strong></p>
+                </div>
+                <div>
+                    <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-light btn-sm">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <form id="emailDistributionForm">
+            <!-- Subject Configuration -->
+            <div class="form-section">
+                <h5 class="section-title">Subject Configuration</h5>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Subject Type
+                        <span class="required">*</span>
+                    </label>
+                    <div class="radio-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="subjectType" id="subjectDefault" value="default" checked>
+                            <label class="form-check-label" for="subjectDefault">
+                                Default (System-generated)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="subjectType" id="subjectCustom" value="custom">
+                            <label class="form-check-label" for="subjectCustom">
+                                Custom
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-subject-options" id="customSubjectOptions">
+                    <label class="form-label">Build Custom Subject</label>
+                    <p class="text-muted small mb-2">Click tags below to add them to the subject line</p>
+                    <div class="mb-3">
+                        <span class="subject-tag" data-value="companyName">
+                            <i class="ti ti-building"></i>
+                            Company Name
+                        </span>
+                        <span class="subject-tag" data-value="location">
+                            <i class="ti ti-map-pin"></i>
+                            Location
+                        </span>
+                        <span class="subject-tag" data-value="requestDate">
+                            <i class="ti ti-calendar"></i>
+                            Request Date
+                        </span>
+                        <span class="subject-tag" data-value="requestorName">
+                            <i class="ti ti-user"></i>
+                            Requestor Name
+                        </span>
+                        <span class="subject-tag" data-value="requestorSalutation">
+                            <i class="ti ti-user-circle"></i>
+                            Requestor Salutation
+                        </span>
+                        <span class="subject-tag" data-value="subject">
+                            <i class="ti ti-file-text"></i>
+                            Subject
+                        </span>
+                        <span class="subject-tag" data-value="workRequestCode">
+                            <i class="ti ti-hash"></i>
+                            Work Request Code
+                        </span>
+                        <span class="subject-tag" data-value="workTitle">
+                            <i class="ti ti-note"></i>
+                            Work Title
+                        </span>
+                    </div>
+                    <textarea class="form-control" id="customSubjectText" rows="3" placeholder="Click tags above to build your subject or type custom text..."></textarea>
+
+                    <div class="subject-preview" id="subjectPreview">
+                        <div class="subject-preview-label">Preview:</div>
+                        <div class="subject-preview-content" id="subjectPreviewContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- From Configuration -->
+            <div class="form-section">
+                <h5 class="section-title">From Configuration</h5>
+                <div class="mb-3">
+                    <label class="form-label">
+                        From Type
+                        <span class="required">*</span>
+                    </label>
+                    <div class="radio-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fromType" id="fromDefault" value="default" checked>
+                            <label class="form-check-label" for="fromDefault">
+                                Default (System email)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fromType" id="fromCustom" value="custom">
+                            <label class="form-check-label" for="fromCustom">
+                                Custom
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-from-fields" id="customFromFields">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                From Name
+                                <span class="required">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="fromName" placeholder="e.g. Facility Management Team">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                From Email Address
+                                <span class="required">*</span>
+                            </label>
+                            <input type="email" class="form-control" id="fromEmail" placeholder="e.g. noreply@company.com">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- To Recipients -->
+            <div class="form-section">
+                <div class="email-list-header">
+                    <h5 class="section-title mb-0">
+                        To Recipients
+                        <span class="required">*</span>
+                    </h5>
+                </div>
+
+                <div class="add-email-inline">
+                    <div class="inline-form-row">
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="toRecipientName" placeholder="Enter recipient name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="toRecipientEmail" placeholder="Enter email address">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-icon-only" id="addToRecipientBtn" title="Add To Recipient">
+                            <i class="ti ti-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="toRecipientsContainer">
+                    <div class="empty-state">
+                        <i class="ti ti-inbox"></i>
+                        <p class="mb-0">No recipients added yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CC Recipients -->
+            <div class="form-section">
+                <div class="email-list-header">
+                    <h5 class="section-title mb-0">CC Recipients</h5>
+                </div>
+
+                <div class="add-email-inline">
+                    <div class="inline-form-row">
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="ccRecipientName" placeholder="Enter recipient name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="ccRecipientEmail" placeholder="Enter email address">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-icon-only" id="addCcRecipientBtn" title="Add CC Recipient">
+                            <i class="ti ti-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ccRecipientsContainer">
+                    <div class="empty-state">
+                        <i class="ti ti-inbox"></i>
+                        <p class="mb-0">No CC recipients added yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BCC Recipients -->
+            <div class="form-section">
+                <div class="email-list-header">
+                    <h5 class="section-title mb-0">BCC Recipients</h5>
+                </div>
+
+                <div class="add-email-inline">
+                    <div class="inline-form-row">
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="bccRecipientName" placeholder="Enter recipient name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="bccRecipientEmail" placeholder="Enter email address">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-icon-only" id="addBccRecipientBtn" title="Add BCC Recipient">
+                            <i class="ti ti-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="bccRecipientsContainer">
+                    <div class="empty-state">
+                        <i class="ti ti-inbox"></i>
+                        <p class="mb-0">No BCC recipients added yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-section">
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-secondary">
+                        <i class="ti ti-x me-1"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i>
+                        Save Email Distribution
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        const pageReference = '@ViewBag.PageReference';
+        const distributionListId = @(ViewBag.DistributionListId ?? "null");
+        const mode = '@ViewBag.Mode';
+    </script>
+    <script src="~/assets/js/pages/settings/email-distribution-detail.js"></script>
+}

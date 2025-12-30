@@ -3,7 +3,7 @@
     'use strict';
 
     const dropdownTypes = [
-        { id: 'helpdeskResponseTargetReference', type: 'priorityLevelInitialFollowUp' },
+        { id: 'helpdeskResponseTargetReference', type: 'priorityLevelHelpdeskResponse' },
         { id: 'initialFollowUpTargetReference', type: 'priorityLevelInitialFollowUp' },
         { id: 'quotationSubmissionTargetReference', type: 'priorityLevelQuotationSubmission' },
         { id: 'costApprovalTargetReference', type: 'priorityLevelCostApproval' },
@@ -255,10 +255,10 @@
     }
 
     function showSuccess(message) {
-        alert(message);
+        showNotification(message, 'success', 'Success');
     }
 
     function showError(message) {
-        alert(message);
+        showNotification(message, 'error', 'Error');
     }
 })();

@@ -274,7 +274,7 @@
                                 Define groups authorized to approve work request costs
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/Settings/CostApproverGroup" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/CostApprover" class="btn btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -325,7 +325,7 @@
                                 Define priority levels and their response time targets
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/Settings/PriorityLevel" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/PriorityLevel" class="btn btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -392,14 +392,14 @@
                             <div class="settings-icon icon-yellow">
                                 <i class="ti ti-mail-forward"></i>
                             </div>
-                            <h6 class="settings-card-title">Email Distribution List</h6>
+                            <h6 class="settings-card-title">Email Distribution List Management</h6>
                             <p class="settings-card-description">
-                                Manage email distribution groups for notifications
+                                Configure email recipients for system notifications
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/Settings/EmailDistribution" class="btn btn-settings btn-sm">
+                                <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
-                                    Edit
+                                    Manage
                                 </a>
                             </div>
                         </div>

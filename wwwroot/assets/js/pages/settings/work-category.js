@@ -9,10 +9,10 @@
     // Configuration
     const CONFIG = {
         apiEndpoints: {
-            list: '/Helpdesk/Settings/GetWorkCategories',
-            create: '/Helpdesk/Settings/CreateWorkCategory',
-            update: '/Helpdesk/Settings/UpdateWorkCategory',
-            delete: '/Helpdesk/Settings/DeleteWorkCategory'
+            list: MvcEndpoints.Helpdesk.Settings.WorkCategory.List,
+            create: MvcEndpoints.Helpdesk.Settings.WorkCategory.Create,
+            update: MvcEndpoints.Helpdesk.Settings.WorkCategory.Update,
+            delete: MvcEndpoints.Helpdesk.Settings.WorkCategory.Delete
         }
     };
 

@@ -10,6 +10,7 @@
 @section styles {
     <link href="~/assets/css/plugins/animate.min.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="~/assets/css/uikit.css">
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
 
     <style>
         .modal-footer.no-divider {
@@ -98,50 +99,6 @@
                 color: #545b62;
             }
 
-        /* Pagination Styling */
-        .pagination-info {
-            text-align: center;
-            color: #6c757d;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        .pagination {
-            margin: 0;
-        }
-
-            .pagination .page-link {
-                border-radius: 6px;
-                margin: 0 3px;
-                border: 1px solid #dee2e6;
-                color: #495057;
-                min-width: 40px;
-                text-align: center;
-            }
-
-            .pagination .page-item.active .page-link {
-                background-color: #04a9f5;
-                border-color: #04a9f5;
-                color: white;
-            }
-
-            .pagination .page-item.disabled .page-link {
-                background-color: #f8f9fa;
-                border-color: #dee2e6;
-                color: #6c757d;
-            }
-
-            .pagination .page-link:hover:not(.active) {
-                background-color: #e9ecef;
-                border-color: #dee2e6;
-                color: #495057;
-            }
-
-            .pagination .page-ellipsis {
-                padding: 0.375rem 0.75rem;
-                margin: 0 3px;
-                color: #6c757d;
-            }
     </style>
 }
 
@@ -337,86 +294,8 @@
                     </table>
                 </div>
 
-                @* Dynamic Pagination *@
-                @if (Model?.Paging != null && Model.Paging.TotalPages > 0)
-                {
-                    <div class="pagination-info">
-                        Showing @((Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1)
-                        to @(Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalRecords))
-                        of @Model.Paging.TotalRecords work requests
-                    </div>
-
-                    <nav aria-label="Pagination" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            @{
-                                var searchParam = Context.Request.Query["search"].ToString();
-                                var searchQuery = !string.IsNullOrEmpty(searchParam) ? $"&search={Uri.EscapeDataString(searchParam)}" : "";
-                            }
-
-                            @* Previous Button *@
-                            <li class="page-item @(!Model.Paging.HasPreviousPage ? "disabled" : "")">
-                                @if (Model.Paging.HasPreviousPage)
-                                {
-                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage - 1)@searchQuery" aria-label="Previous">
-                                        <span aria-hidden="true">
-                                            <i class="ti ti-chevron-left"></i>
-                                            Previous
-                                        </span>
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="page-link">
-                                        <span aria-hidden="true">
-                                            <i class="ti ti-chevron-left"></i>
-                                            Previous
-                                        </span>
-                                    </span>
-                                }
-                            </li>
-
-                            @* Page Numbers *@
-                            @foreach (var pageNumber in Model.Paging.GetPageNumbers())
-                            {
-                                if (pageNumber == -1)
-                                {
-                                    @* Ellipsis *@
-                                    <li class="page-item disabled">
-                                        <span class="page-ellipsis">...</span>
-                                    </li>
-                                }
-                                else
-                                {
-                                    <li class="page-item @(pageNumber == Model.Paging.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="?page=@pageNumber@searchQuery">@pageNumber</a>
-                                    </li>
-                                }
-                            }
-
-                            @* Next Button *@
-                            <li class="page-item @(!Model.Paging.HasNextPage ? "disabled" : "")">
-                                @if (Model.Paging.HasNextPage)
-                                {
-                                    <a class="page-link" href="?page=@(Model.Paging.CurrentPage + 1)@searchQuery" aria-label="Next">
-                                        <span aria-hidden="true">
-                                            Next
-                                            <i class="ti ti-chevron-right"></i>
-                                        </span>
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="page-link">
-                                        <span aria-hidden="true">
-                                            Next
-                                            <i class="ti ti-chevron-right"></i>
-                                        </span>
-                                    </span>
-                                }
-                            </li>
-                        </ul>
-                    </nav>
-                }
+                @* Pagination Component *@
+                @await Html.PartialAsync("_Pagination", Model.Paging)
             </div>
         </div>
     </div>
@@ -441,7 +320,12 @@
                             <!-- Property Group - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Property Group</label>
-                                <select class="form-select" id="filterPropertyGroup" name="propertyGroup">
+                                <select class="form-select"
+                                        id="filterPropertyGroup"
+                                        name="propertyGroup"
+                                        data-searchable="true"
+                                        data-placeholder="All Property Groups"
+                                        data-search-placeholder="Search property group...">
                                     <option value="">All</option>
                                     @if (Model?.PropertyGroups != null)
                                     {
@@ -506,7 +390,12 @@
                             <!-- Room Zone -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Room Zone</label>
-                                <select class="form-select" id="filterRoomZone" name="roomZone">
+                                <select class="form-select"
+                                        id="filterRoomZone"
+                                        name="roomZone"
+                                        data-searchable="true"
+                                        data-placeholder="All Room Zones"
+                                        data-search-placeholder="Search room zone...">
                                     <option value="">All</option>
                                     <!-- Room zones can be added here if available in model -->
                                 </select>
@@ -796,6 +685,7 @@
 
 @section scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
 
     <script>
         $(document).ready(function () {

@@ -99,10 +99,10 @@ namespace Mvc.Controllers
 
                     viewmodel.Paging = new PagingInfo
                     {
-                        CurrentPage = workRequestResponse.CurrentPage,
-                        TotalPages = workRequestResponse.TotalPages,
-                        PageSize = workRequestResponse.PageSize,
-                        TotalRecords = workRequestResponse.TotalCount
+                        CurrentPage = workRequestResponse.Metadata.CurrentPage,
+                        TotalPages = workRequestResponse.Metadata.TotalPages,
+                        PageSize = workRequestResponse.Metadata.PageSize,
+                        TotalCount = workRequestResponse.Metadata.TotalCount
                     };
                 }
 
@@ -195,7 +195,11 @@ namespace Mvc.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         //[Authorize]
-        public async Task<IActionResult> WorkRequestAdd(WorkRequestCreateRequest model)
+        public async Task<IActionResult> WorkRequestAdd(
+            WorkRequestCreateRequest model,
+            string Material_JobcodeJson = null,
+            string Material_AdhocJson = null,
+            string AssetsJson = null)
         {
             // Check if user has permission to add Work Requests
             var accessCheck = this.CheckAddAccess("Helpdesk", "Work Request Management");
@@ -221,7 +225,7 @@ namespace Mvc.Controllers
                 var viewmodel = new WorkRequestViewModel();
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
-                
+
 
                 viewmodel.Locations = await GetLocationsAsync(client, backendUrl, idClient);
                 viewmodel.ServiceProviders = await GetServiceProvidersAsync(client, backendUrl, idClient);
@@ -237,8 +241,57 @@ namespace Mvc.Controllers
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 // Set system fields from session
-                model.IdClient = idClient; 
+                model.Client_idClient = idClient;
                 model.IdEmployee = 1; // TODO: Get from session/authentication
+
+                // Parse JSON fields if provided
+                if (!string.IsNullOrEmpty(Material_JobcodeJson))
+                {
+                    try
+                    {
+                        model.Material_Jobcode = JsonSerializer.Deserialize<List<MaterialJobCodeDto>>(
+                            Material_JobcodeJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<MaterialJobCodeDto>();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse Material_JobcodeJson");
+                        model.Material_Jobcode = new List<MaterialJobCodeDto>();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(Material_AdhocJson))
+                {
+                    try
+                    {
+                        model.Material_Adhoc = JsonSerializer.Deserialize<List<MaterialAdhocDto>>(
+                            Material_AdhocJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<MaterialAdhocDto>();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse Material_AdhocJson");
+                        model.Material_Adhoc = new List<MaterialAdhocDto>();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(AssetsJson))
+                {
+                    try
+                    {
+                        model.Assets = JsonSerializer.Deserialize<List<AssetDto>>(
+                            AssetsJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<AssetDto>();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse AssetsJson");
+                        model.Assets = new List<AssetDto>();
+                    }
+                }
 
                 // Serialize and send to backend
                 var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
@@ -285,7 +338,7 @@ namespace Mvc.Controllers
             var failViewModel = new WorkRequestViewModel();
             var failClient = _httpClientFactory.CreateClient("BackendAPI");
             var failBackendUrl = _configuration["BackendBaseUrl"];
-            var failIdClient = idClient; 
+            var failIdClient = idClient;
 
             failViewModel.Locations = await GetLocationsAsync(failClient, failBackendUrl, failIdClient);
             failViewModel.ServiceProviders = await GetServiceProvidersAsync(failClient, failBackendUrl, failIdClient);
@@ -387,20 +440,19 @@ namespace Mvc.Controllers
                 // Prepare work request data
                 var workRequest = new WorkRequestCreateRequest
                 {
-                    IdClient = userInfo.PreferredClientId,
+                    Client_idClient = userInfo.PreferredClientId,
                     IdEmployee = userInfo.IdWebUser,
-                    IdLocation = IdLocation,
-                    IdFloor = IdFloor,
-                    IdRoom = IdRoom,
-                    IdWorkCategory = IdWorkCategory,
-                    RequestDetail = RequestDetail,
-                    WorkTitle = $"Work Request - {RequestDetail.Substring(0, Math.Min(50, RequestDetail.Length))}...",
-                    RequestMethod = "Web",
-                    Status = "New",
-                    PriorityLevel = "Medium", 
-                    RequestDate = DateTime.UtcNow,
-                    IdRequestor = userInfo.IdWebUser,
-                    RequestorName = userInfo.FullName
+                    Property_idProperty = IdLocation,
+                    PropertyFloor_idPropertyFloor = IdFloor,
+                    RoomZone_idRoomZone = IdRoom,
+                    workCategory_Type_idType = IdWorkCategory,
+                    requestDetail = RequestDetail,
+                    workTitle = $"Work Request - {RequestDetail.Substring(0, Math.Min(50, RequestDetail.Length))}...",
+                    requestMethod_Enum_idEnum = 1,
+                    status_Enum_idEnum = 1,
+                    PriorityLevel_idPriorityLevel = 1, 
+                    requestDate = DateTime.UtcNow,
+                    requestor_Employee_idEmployee = userInfo.IdWebUser
                 };
 
                 // For now, we're using the logged-in user as the requestor
@@ -1319,6 +1371,170 @@ namespace Mvc.Controllers
         }
 
         /// <summary>
+        /// GET: Priority Level Add page
+        /// </summary>
+        public IActionResult PriorityLevelAdd()
+        {
+            ViewBag.Title = "Add New Priority Level";
+            ViewBag.pTitle = "Priority Level Management";
+            ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/PriorityLevelAdd.cshtml");
+        }
+
+        /// <summary>
+        /// GET: Priority Level Detail page
+        /// </summary>
+        public IActionResult PriorityLevelDetail(int id)
+        {
+            ViewBag.Title = "Priority Level Detail";
+            ViewBag.pTitle = "Priority Level Management";
+            ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
+            ViewBag.PriorityLevelId = id;
+            return View("~/Views/Helpdesk/Settings/PriorityLevelDetail.cshtml");
+        }
+
+        /// <summary>
+        /// API: Get priority level by ID
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPriorityLevelById(int id)
+        {
+            try
+            {
+                // Get user session for idClient
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.GetById(id)}?idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var priorityLevel = await JsonSerializer.DeserializeAsync<dynamic>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = priorityLevel });
+                }
+
+                return Json(new { success = false, message = "Failed to load priority level details" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching priority level by ID {Id}", id);
+                return Json(new { success = false, message = "Error loading priority level details" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get dropdown options for priority level forms
+        /// Loads reference options and color options based on type parameter
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPriorityLevelDropdownOptions(string type)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.DropdownOptions}?type={type}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var options = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = options });
+                }
+
+                return Json(new { success = false, message = "Failed to load dropdown options" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching dropdown options for type {Type}", type);
+                return Json(new { success = false, message = "Error loading dropdown options" });
+            }
+        }
+
+        /// <summary>
+        /// POST: Create new priority level
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreatePriorityLevel([FromBody] dynamic priorityLevelData)
+        {
+            try
+            {
+                // Get user session for idClient
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Serialize the priority level data
+                var jsonPayload = JsonSerializer.Serialize(priorityLevelData, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.Create}",
+                    content
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Priority level created successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to create priority level. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to create priority level" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating priority level");
+                return Json(new { success = false, message = "Error creating priority level" });
+            }
+        }
+
+        /// <summary>
         /// API: Get feedback types from lookup table
         /// </summary>
         [HttpGet]
@@ -1350,6 +1566,243 @@ namespace Mvc.Controllers
             {
                 _logger.LogError(ex, "Error fetching feedback types");
                 return Json(new { success = false, message = "Error loading feedback types" });
+            }
+        }
+
+        /// <summary>
+        /// API: Search Job Code by name
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SearchJobCode(string term)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired" });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/jobcode/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var jobCodes = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = jobCodes });
+                }
+
+                return Json(new { success = false, message = "Failed to search job codes" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching job codes");
+                return Json(new { success = false, message = "Error searching job codes" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get currencies for unit price dropdown
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCurrencies()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/lookup/list?type=currency"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var currencies = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = currencies });
+                }
+
+                return Json(new { success = false, message = "Failed to load currencies" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching currencies");
+                return Json(new { success = false, message = "Error loading currencies" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get measurement units for dropdown
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetMeasurementUnits()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/lookup/list?type=measurementUnit"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var units = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = units });
+                }
+
+                return Json(new { success = false, message = "Failed to load measurement units" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching measurement units");
+                return Json(new { success = false, message = "Error loading measurement units" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get labor/material label enum
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetLaborMaterialLabels()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/lookup/list?type=laborMaterialLabel"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var labels = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = labels });
+                }
+
+                return Json(new { success = false, message = "Failed to load labor/material labels" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching labor/material labels");
+                return Json(new { success = false, message = "Error loading labor/material labels" });
+            }
+        }
+
+        /// <summary>
+        /// API: Search assets individually by name
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SearchAsset(string term)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired" });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/asset/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var assets = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = assets });
+                }
+
+                return Json(new { success = false, message = "Failed to search assets" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching assets");
+                return Json(new { success = false, message = "Error searching assets" });
+            }
+        }
+
+        /// <summary>
+        /// API: Search asset groups by name
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SearchAssetGroup(string term)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired" });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}/api/assetgroup/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var assetGroups = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = assetGroups });
+                }
+
+                return Json(new { success = false, message = "Failed to search asset groups" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching asset groups");
+                return Json(new { success = false, message = "Error searching asset groups" });
             }
         }
 
@@ -2600,6 +3053,387 @@ namespace Mvc.Controllers
                 return Json(new { success = false, message = "An error occurred while deleting person in charge" });
             }
         }
+
+        #endregion
+
+        #region Cost Approver Group
+
+        public IActionResult CostApprover()
+        {
+            ViewBag.Title = "Cost Approver Group";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/CostApprover.cshtml");
+        }
+
+        public IActionResult CostApproverAdd()
+        {
+            ViewBag.Title = "Add Cost Approver Group";
+            ViewBag.pTitle = "Cost Approver Group";
+            ViewBag.pTitleUrl = Url.Action("CostApprover", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/CostApproverAdd.cshtml");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCostApproverGroups()
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired" });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.List}?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var costApproverGroups = await JsonSerializer.DeserializeAsync<List<object>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = costApproverGroups });
+                }
+
+                return Json(new { success = false, message = "Failed to load cost approver groups" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching cost approver groups");
+                return Json(new { success = false, message = "Error loading cost approver groups" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateCostApproverGroup([FromBody] dynamic model)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Create}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Cost approver group created successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return Json(new { success = false, message = $"Failed to create cost approver group: {errorContent}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating cost approver group");
+                return Json(new { success = false, message = "An error occurred while creating cost approver group" });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteCostApproverGroup([FromBody] dynamic model)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var id = ((JsonElement)model.GetProperty("id")).GetInt32();
+
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Delete(id)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Cost approver group deleted successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return Json(new { success = false, message = $"Failed to delete cost approver group: {errorContent}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting cost approver group");
+                return Json(new { success = false, message = "An error occurred while deleting cost approver group" });
+            }
+        }
+
+        #region Email Distribution List Management
+
+        /// <summary>
+        /// GET: Email Distribution List management page
+        /// </summary>
+        [HttpGet]
+        public IActionResult EmailDistributionList()
+        {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
+            ViewBag.Title = "Email Distribution List Management";
+            ViewBag.pTitle = "Settings";
+            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionList.cshtml");
+        }
+
+        /// <summary>
+        /// API: Get all email distribution page references with status
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetEmailDistributionList()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetPageReferences}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var data = await JsonSerializer.DeserializeAsync<List<cfm_frontend.DTOs.EmailDistribution.EmailDistributionReferenceModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data });
+                }
+
+                _logger.LogError("Failed to load email distribution list. Status: {StatusCode}", response.StatusCode);
+                return Json(new { success = false, message = "Failed to load email distribution list" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading email distribution list");
+                return Json(new { success = false, message = "An error occurred while loading the data" });
+            }
+        }
+
+        /// <summary>
+        /// GET: Setup new email distribution list page
+        /// </summary>
+        [HttpGet]
+        public IActionResult EmailDistributionListSetup(string pageReference)
+        {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
+            if (string.IsNullOrWhiteSpace(pageReference))
+            {
+                TempData["ErrorMessage"] = "Invalid page reference";
+                return RedirectToAction("EmailDistributionList");
+            }
+
+            ViewBag.Title = "Set Up Email Distribution";
+            ViewBag.pTitle = "Email Distribution List Management";
+            ViewBag.pTitleUrl = Url.Action("EmailDistributionList", "Helpdesk");
+            ViewBag.PageReference = pageReference;
+            ViewBag.Mode = "setup";
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml");
+        }
+
+        /// <summary>
+        /// GET: Edit existing email distribution list page
+        /// </summary>
+        [HttpGet]
+        public IActionResult EmailDistributionListEdit(int id)
+        {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
+            ViewBag.Title = "Edit Email Distribution";
+            ViewBag.pTitle = "Email Distribution List Management";
+            ViewBag.pTitleUrl = Url.Action("EmailDistributionList", "Helpdesk");
+            ViewBag.DistributionListId = id;
+            ViewBag.Mode = "edit";
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml");
+        }
+
+        /// <summary>
+        /// API: Get email distribution by ID
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetEmailDistributionById(int id)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetById(id)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var data = await JsonSerializer.DeserializeAsync<cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data });
+                }
+
+                _logger.LogError("Failed to load email distribution. ID: {Id}, Status: {StatusCode}", id, response.StatusCode);
+                return Json(new { success = false, message = "Failed to load email distribution details" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading email distribution. ID: {Id}", id);
+                return Json(new { success = false, message = "An error occurred while loading the data" });
+            }
+        }
+
+        /// <summary>
+        /// API: Create new email distribution
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model)
+        {
+            try
+            {
+                var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
+                if (accessCheck != null)
+                    return Json(new { success = false, message = "You do not have permission to create" });
+
+                if (string.IsNullOrWhiteSpace(model.PageReference))
+                {
+                    return Json(new { success = false, message = "Page reference is required" });
+                }
+
+                if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
+                {
+                    return Json(new { success = false, message = "At least one 'To' recipient is required" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Create}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Email distribution created successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to create email distribution. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to create email distribution" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating email distribution");
+                return Json(new { success = false, message = "An error occurred while creating" });
+            }
+        }
+
+        /// <summary>
+        /// API: Update email distribution
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model, int id)
+        {
+            try
+            {
+                var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
+                if (accessCheck != null)
+                    return Json(new { success = false, message = "You do not have permission to update" });
+
+                if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
+                {
+                    return Json(new { success = false, message = "At least one 'To' recipient is required" });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Update(id)}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Email distribution updated successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to update email distribution. ID: {Id}, Status: {StatusCode}, Error: {Error}",
+                    id, response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to update email distribution" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating email distribution. ID: {Id}", id);
+                return Json(new { success = false, message = "An error occurred while updating" });
+            }
+        }
+
+        /// <summary>
+        /// API: Delete email distribution
+        /// </summary>
+        [HttpDelete]
+        public async Task<IActionResult> DeleteEmailDistribution([FromBody] dynamic model)
+        {
+            try
+            {
+                var accessCheck = this.CheckDeleteAccess("Helpdesk", "Settings");
+                if (accessCheck != null)
+                    return Json(new { success = false, message = "You do not have permission to delete" });
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var id = ((JsonElement)model.GetProperty("id")).GetInt32();
+
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Delete(id)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "Email distribution deleted successfully" });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete email distribution. ID: {Id}, Status: {StatusCode}, Error: {Error}",
+                    id, response.StatusCode, errorContent);
+
+                return Json(new { success = false, message = "Failed to delete email distribution" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting email distribution");
+                return Json(new { success = false, message = "An error occurred while deleting" });
+            }
+        }
+
+        #endregion
 
         #endregion
 
