@@ -1,0 +1,197 @@
+@model cfm_frontend.ViewModels.JobCodeEditViewModel
+@{
+    ViewBag.Title = "Edit Job Code";
+    ViewBag.pTitle = "Job Code Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Parse estimation time
+    var estimationTime = Model.JobCode?.EstimationTime ?? "";
+    var days = 0;
+    var hours = 0;
+    var minutes = 0;
+
+    if (!string.IsNullOrEmpty(estimationTime))
+    {
+        var parts = estimationTime.Split(' ');
+        foreach (var part in parts)
+        {
+            if (part.Contains("day")) days = int.Parse(part.Replace("days", "").Replace("day", "").Trim());
+            else if (part.Contains("hour")) hours = int.Parse(part.Replace("hours", "").Replace("hour", "").Trim());
+            else if (part.Contains("minute")) minutes = int.Parse(part.Replace("minutes", "").Replace("minute", "").Trim());
+        }
+    }
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/pages/job-code-form.css">
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="form-card">
+            <div class="form-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h4><i class="ti ti-edit me-2"></i>Edit This Job Code</h4>
+                    <i class="ti ti-info-circle info-icon"></i>
+                </div>
+            </div>
+
+            <form id="editJobCodeForm">
+                <input type="hidden" id="idJobCode" name="idJobCode" value="@Model.JobCode?.IdJobCode">
+
+                <div class="row">
+                    <!-- Name -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="@Model.JobCode?.Name" placeholder="Enter job code name" required>
+                        <div class="invalid-feedback">Please enter a job code name.</div>
+                    </div>
+
+                    <!-- Group -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Group</label>
+                        <select class="form-select" id="group" name="group" required>
+                            <option value="">Select Group</option>
+                            @if (Model.Groups != null && Model.Groups.Any())
+                            {
+                                foreach (var group in Model.Groups.Where(g => g.IsActiveData))
+                                {
+                                    <option value="@group.Name" selected="@(Model.JobCode?.Group == group.Name ? "selected" : null)">@group.Name</option>
+                                }
+                            }
+                        </select>
+                        <div class="invalid-feedback">Please select a group.</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter description (optional)">@Model.JobCode?.Description</textarea>
+                    </div>
+
+                    <!-- Labor/Material -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label required-field">Labor/Material?</label>
+                        <div class="radio-group">
+                            @if (Model.MaterialLabels != null && Model.MaterialLabels.Any())
+                            {
+                                var index = 0;
+                                foreach (var label in Model.MaterialLabels.Where(l => l.IsActiveData))
+                                {
+                                    var isChecked = Model.JobCode?.LaborOrMaterial == label.Value;
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial@(index)" value="@label.Value" @(isChecked ? "checked" : "")>
+                                        <label class="form-check-label" for="laborMaterial@(index)">
+                                            @label.Label
+                                        </label>
+                                    </div>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial0" value="Labor" @(Model.JobCode?.LaborOrMaterial == "Labor" ? "checked" : "")>
+                                    <label class="form-check-label" for="laborMaterial0">Labor</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial1" value="Labor & Material" @(Model.JobCode?.LaborOrMaterial == "Labor & Material" ? "checked" : "")>
+                                    <label class="form-check-label" for="laborMaterial1">Labor & Material</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial2" value="Material" @(Model.JobCode?.LaborOrMaterial == "Material" ? "checked" : "")>
+                                    <label class="form-check-label" for="laborMaterial2">Material</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Estimation Time -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Estimation Time</label>
+                        <div class="time-input-group">
+                            <div class="time-input-item">
+                                <label>Days</label>
+                                <input type="number" class="form-control" id="estimationTimeDays" name="estimationTimeDays" value="@days" min="0">
+                            </div>
+                            <div class="time-input-item">
+                                <label>Hours</label>
+                                <input type="number" class="form-control" id="estimationTimeHours" name="estimationTimeHours" value="@hours" min="0" max="23">
+                            </div>
+                            <div class="time-input-item">
+                                <label>Minutes</label>
+                                <input type="number" class="form-control" id="estimationTimeMinutes" name="estimationTimeMinutes" value="@minutes" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unit Price -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Unit Price</label>
+                        <div class="input-group">
+                            <select class="form-select" id="currency" name="currency" required style="max-width: 120px;">
+                                @if (Model.Currencies != null && Model.Currencies.Any())
+                                {
+                                    foreach (var currency in Model.Currencies.Where(c => c.IsActiveData))
+                                    {
+                                        <option value="@currency.Value" selected="@(Model.JobCode?.Currency == currency.Value ? "selected" : null)">@currency.Label</option>
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="IDR" selected>IDR</option>
+                                }
+                            </select>
+                            <input type="number" class="form-control" id="unitPrice" name="unitPrice" value="@Model.JobCode?.UnitPrice" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <div class="invalid-feedback">Please enter a unit price.</div>
+                    </div>
+
+                    <!-- Measurement Unit -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Measurement Unit</label>
+                        <select class="form-select" id="measurementUnit" name="measurementUnit" required>
+                            <option value="">Select Unit</option>
+                            @if (Model.MeasurementUnits != null && Model.MeasurementUnits.Any())
+                            {
+                                foreach (var unit in Model.MeasurementUnits.Where(u => u.IsActiveData))
+                                {
+                                    <option value="@unit.Value" selected="@(Model.JobCode?.MeasurementUnit == unit.Value ? "selected" : null)">@unit.Label</option>
+                                }
+                            }
+                        </select>
+                        <div class="invalid-feedback">Please select a measurement unit.</div>
+                    </div>
+
+                    <!-- Minimum Stock -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Minimum Stock</label>
+                        <input type="number" class="form-control" id="minimumStock" name="minimumStock" value="@(Model.JobCode?.MinimumStock ?? 0)" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-save" id="updateButton">
+                            <i class="ti ti-device-floppy me-2"></i>Update Job Code
+                        </button>
+                        <a href="@Url.Action("Index", "JobCode")" class="btn btn-secondary ms-2">
+                            <i class="ti ti-arrow-back-up me-2"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/assets/js/pages/job-code-edit.js"></script>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            showNotification('@Html.Raw(TempData["ErrorMessage"])', 'error', 'Error');
+        </script>
+    }
+}

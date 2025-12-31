@@ -1,0 +1,166 @@
+.detail-card {
+    background: #1e1e2d;
+    border: 1px solid #2d2d3f;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.detail-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 30px;
+}
+
+.detail-header h4 {
+    margin: 0;
+    font-weight: 600;
+    color: white;
+}
+
+.detail-body {
+    padding: 30px;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: #6c6c7e;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.detail-value {
+    font-size: 15px;
+    color: #fff;
+    font-weight: 500;
+    margin-bottom: 0;
+    word-break: break-word;
+}
+
+.price-badge {
+    background: linear-gradient(135deg, #04a9f5 0%, #0288d1 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-block;
+}
+
+.history-card {
+    background: #1e1e2d;
+    border: 1px solid #2d2d3f;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.history-header {
+    background: linear-gradient(135deg, #04a9f5 0%, #0288d1 100%);
+    color: white;
+    padding: 15px 30px;
+}
+
+.history-header h5 {
+    margin: 0;
+    font-weight: 600;
+    color: white;
+}
+
+.history-card .table {
+    margin-bottom: 0;
+}
+
+.history-card .table thead th {
+    background-color: #16161f;
+    border-color: #2d2d3f;
+    color: #a5a5ba;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    padding: 15px;
+    border-bottom: 2px solid #2d2d3f;
+}
+
+.history-card .table tbody {
+    background-color: #1e1e2d;
+}
+
+.history-card .table tbody td {
+    border-color: #2d2d3f;
+    color: #fff;
+    padding: 15px;
+    vertical-align: middle;
+}
+
+.history-card .table tbody tr:hover {
+    background-color: #16161f;
+}
+
+.change-from {
+    background-color: #2d2d3f;
+    color: #f5576c;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.change-to {
+    background-color: #2d2d3f;
+    color: #04a9f5;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.badge {
+    padding: 6px 12px;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.badge.bg-success {
+    background-color: #2ed8b6 !important;
+}
+
+.badge.bg-danger {
+    background-color: #f5576c !important;
+}
+
+.badge.bg-info {
+    background-color: #04a9f5 !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background-color: #2d2d3f;
+    border: 1px solid #4a4a5e;
+    color: #a5a5ba;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #3a3a4f;
+    border-color: #5a5a6e;
+    color: #fff;
+}

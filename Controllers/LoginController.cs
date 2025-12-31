@@ -52,15 +52,20 @@ namespace cfm_frontend.Controllers
             {
                 // IMPORTANT: Use plain HttpClient (NOT "BackendAPI") during login flow
                 // The "BackendAPI" client has AuthTokenHandler which requires an authenticated session cookie
-                // Before HttpContext.SignInAsync() is called (line 136), the cookie doesn't exist yet
+                // Before HttpContext.SignInAsync() is called , the cookie doesn't exist yet
                 var client = _httpClientFactory.CreateClient();
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var payload = new { username = model.Username, password = model.Password };
-                var jsonPayload = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                // Create Basic Authentication header: "Basic base64(username:password)"
+                var credentials = $"{model.Username}:{model.Password}";
+                var credentialsBytes = Encoding.UTF8.GetBytes(credentials);
+                var base64Credentials = Convert.ToBase64String(credentialsBytes);
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64Credentials);
 
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.Login}", content);
+                // POST request with empty body (credentials are in Authorization header)
+                //var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Auth.Login}");
 
                 if (response.IsSuccessStatusCode)
                 {

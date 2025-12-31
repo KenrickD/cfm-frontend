@@ -1,0 +1,177 @@
+@model cfm_frontend.ViewModels.JobCodeAddViewModel
+@{
+    ViewBag.Title = "Add Job Code";
+    ViewBag.pTitle = "Job Code Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/pages/job-code-form.css">
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="form-card">
+            <div class="form-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h4><i class="ti ti-plus me-2"></i>Add New Job Code</h4>
+                    <i class="ti ti-info-circle info-icon"></i>
+                </div>
+            </div>
+
+            <form id="addJobCodeForm">
+                <div class="row">
+                    <!-- Name -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter job code name" required>
+                        <div class="invalid-feedback">Please enter a job code name.</div>
+                    </div>
+
+                    <!-- Group -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Group</label>
+                        <select class="form-select" id="group" name="group" required>
+                            <option value="">Select Group</option>
+                            @if (Model.Groups != null && Model.Groups.Any())
+                            {
+                                foreach (var group in Model.Groups.Where(g => g.IsActiveData))
+                                {
+                                    <option value="@group.Name">@group.Name</option>
+                                }
+                            }
+                        </select>
+                        <div class="invalid-feedback">Please select a group.</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter description (optional)"></textarea>
+                    </div>
+
+                    <!-- Labor/Material -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label required-field">Labor/Material?</label>
+                        <div class="radio-group">
+                            @if (Model.MaterialLabels != null && Model.MaterialLabels.Any())
+                            {
+                                var index = 0;
+                                foreach (var label in Model.MaterialLabels.Where(l => l.IsActiveData))
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial@(index)" value="@label.Value" @(index == 0 ? "checked" : "")>
+                                        <label class="form-check-label" for="laborMaterial@(index)">
+                                            @label.Label
+                                        </label>
+                                    </div>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial0" value="Labor" checked>
+                                    <label class="form-check-label" for="laborMaterial0">Labor</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial1" value="Labor & Material">
+                                    <label class="form-check-label" for="laborMaterial1">Labor & Material</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial2" value="Material">
+                                    <label class="form-check-label" for="laborMaterial2">Material</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Estimation Time -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Estimation Time</label>
+                        <div class="time-input-group">
+                            <div class="time-input-item">
+                                <label>Days</label>
+                                <input type="number" class="form-control" id="estimationTimeDays" name="estimationTimeDays" value="0" min="0">
+                            </div>
+                            <div class="time-input-item">
+                                <label>Hours</label>
+                                <input type="number" class="form-control" id="estimationTimeHours" name="estimationTimeHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="time-input-item">
+                                <label>Minutes</label>
+                                <input type="number" class="form-control" id="estimationTimeMinutes" name="estimationTimeMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unit Price -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Unit Price</label>
+                        <div class="input-group">
+                            <select class="form-select" id="currency" name="currency" required style="max-width: 120px;">
+                                @if (Model.Currencies != null && Model.Currencies.Any())
+                                {
+                                    foreach (var currency in Model.Currencies.Where(c => c.IsActiveData))
+                                    {
+                                        <option value="@currency.Value" selected="@(currency.Value == "IDR" ? "selected" : null)">@currency.Label</option>
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="IDR" selected>IDR</option>
+                                }
+                            </select>
+                            <input type="number" class="form-control" id="unitPrice" name="unitPrice" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <div class="invalid-feedback">Please enter a unit price.</div>
+                    </div>
+
+                    <!-- Measurement Unit -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Measurement Unit</label>
+                        <select class="form-select" id="measurementUnit" name="measurementUnit" required>
+                            <option value="">Select Unit</option>
+                            @if (Model.MeasurementUnits != null && Model.MeasurementUnits.Any())
+                            {
+                                foreach (var unit in Model.MeasurementUnits.Where(u => u.IsActiveData))
+                                {
+                                    <option value="@unit.Value">@unit.Label</option>
+                                }
+                            }
+                        </select>
+                        <div class="invalid-feedback">Please select a measurement unit.</div>
+                    </div>
+
+                    <!-- Minimum Stock -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Minimum Stock</label>
+                        <input type="number" class="form-control" id="minimumStock" name="minimumStock" placeholder="0.00" step="0.01" min="0" value="0">
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-save" id="saveButton">
+                            <i class="ti ti-device-floppy me-2"></i>Save Job Code
+                        </button>
+                        <a href="@Url.Action("Index", "JobCode")" class="btn btn-secondary ms-2">
+                            <i class="ti ti-x me-2"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/assets/js/pages/job-code-add.js"></script>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            showNotification('@Html.Raw(TempData["ErrorMessage"])', 'error', 'Error');
+        </script>
+    }
+}

@@ -1,0 +1,202 @@
+@using cfm_frontend.Extensions
+@model cfm_frontend.ViewModels.JobCodeDetailViewModel
+@{
+    ViewBag.Title = "Job Code Details";
+    ViewBag.pTitle = "Job Code Management";
+    ViewBag.pTitleUrl = Url.Action("Index", "JobCode");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/pages/job-code-detail.css">
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="detail-card">
+            <div class="detail-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h4><i class="ti ti-info-circle me-2"></i>Job Code Details</h4>
+                    @if (Context.Session.CanEdit("Helpdesk", "Job Code Management"))
+                    {
+                        <a href="@Url.Action("Edit", "JobCode", new { id = Model.JobCode?.IdJobCode })" class="btn btn-primary btn-sm">
+                            <i class="ti ti-edit me-2"></i>Edit This Job Code
+                        </a>
+                    }
+                </div>
+            </div>
+
+            @if (Model.JobCode != null)
+            {
+                <div class="detail-body">
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Name</label>
+                            <p class="detail-value">@Model.JobCode.Name</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Group</label>
+                            <p class="detail-value">@Model.JobCode.Group</p>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="detail-label">Description</label>
+                            <p class="detail-value">@(string.IsNullOrEmpty(Model.JobCode.Description) ? "-" : Model.JobCode.Description)</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Labor/Material</label>
+                            <p class="detail-value">
+                                <span class="badge bg-info">@Model.JobCode.LaborOrMaterial</span>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Material Type</label>
+                            <p class="detail-value">@(string.IsNullOrEmpty(Model.JobCode.MaterialType) ? "-" : Model.JobCode.MaterialType)</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Estimation Time</label>
+                            <p class="detail-value">@(string.IsNullOrEmpty(Model.JobCode.EstimationTime) ? "Not specified" : Model.JobCode.EstimationTime)</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Unit Price</label>
+                            <p class="detail-value">
+                                <span class="price-badge">@Model.JobCode.Currency @Model.JobCode.UnitPrice?.ToString("N2")</span>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Measurement Unit</label>
+                            <p class="detail-value">@Model.JobCode.MeasurementUnit</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Minimum Stock</label>
+                            <p class="detail-value">@Model.JobCode.MinimumStock?.ToString("N2")</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Status</label>
+                            <p class="detail-value">
+                                @if (Model.JobCode.IsActiveData)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactive</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Created At</label>
+                            <p class="detail-value">@Model.JobCode.CreatedAt?.ToString("dd MMM yyyy HH:mm")</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Created By</label>
+                            <p class="detail-value">@Model.JobCode.CreatedBy</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Updated At</label>
+                            <p class="detail-value">@(Model.JobCode.UpdatedAt?.ToString("dd MMM yyyy HH:mm") ?? "-")</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="detail-label">Updated By</label>
+                            <p class="detail-value">@(Model.JobCode.UpdatedBy ?? "-")</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (Model.ChangeHistory != null && Model.ChangeHistory.Any())
+        {
+            <div class="history-card mt-4">
+                <div class="history-header">
+                    <h5><i class="ti ti-history me-2"></i>Change History</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Updated By</th>
+                                <th>Updated At</th>
+                                <th>Changed Information</th>
+                                <th>From</th>
+                                <th>To</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var history in Model.ChangeHistory)
+                            {
+                                <tr>
+                                    <td>@history.UpdatedBy</td>
+                                    <td>@history.UpdatedAt?.ToString("dd MMM yyyy HH:mm")</td>
+                                    <td>@history.ChangedInformation</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(history.From))
+                                        {
+                                            <span class="change-from">@history.From</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(history.To))
+                                        {
+                                            <span class="change-to">@history.To</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="history-card mt-4">
+                <div class="history-header">
+                    <h5><i class="ti ti-history me-2"></i>Change History</h5>
+                </div>
+                <div class="p-4 text-center">
+                    <i class="ti ti-info-circle" style="font-size: 48px; color: #6c6c7e;"></i>
+                    <p class="mt-3 mb-0" style="color: #a5a5ba;">No change history available for this job code.</p>
+                </div>
+            </div>
+        }
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="@Url.Action("Index", "JobCode")" class="btn btn-secondary">
+                    <i class="ti ti-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            showNotification('@Html.Raw(TempData["ErrorMessage"])', 'error', 'Error');
+        </script>
+    }
+}

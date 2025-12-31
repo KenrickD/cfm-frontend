@@ -1,5 +1,4 @@
 ﻿using cfm_frontend.Constants;
-using cfm_frontend.Controllers;
 using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Extensions;
 using cfm_frontend.Models;
@@ -13,7 +12,7 @@ using System.Text;
 using System.Text.Json;
 using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
 
-namespace Mvc.Controllers
+namespace cfm_frontend.Controllers.Helpdesk
 {
     public class HelpdeskController : BaseController
     {

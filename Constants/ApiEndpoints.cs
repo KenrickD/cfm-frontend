@@ -519,6 +519,56 @@ namespace cfm_frontend.Constants
 
         #endregion
 
+        #region Job Code
+
+        /// <summary>
+        /// Job code management endpoints
+        /// </summary>
+        public static class JobCode
+        {
+            private const string Base = ApiBase + "/jobcode";
+
+            /// <summary>
+            /// GET: Get all job codes
+            /// Query params: idClient, isActiveData (optional), keyword (optional), group (optional), page (optional)
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get job code by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Job code ID</param>
+            /// <returns>Get by ID endpoint URL</returns>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new job code
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// PUT: Update existing job code
+            /// </summary>
+            public const string Update = Base + "/update";
+
+            /// <summary>
+            /// DELETE: Delete job code by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Job code ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/delete/{id}";
+
+            /// <summary>
+            /// GET: Get change history for job code
+            /// Query params: id, pageReference, module
+            /// </summary>
+            public const string ChangeHistory = Base + "/change-history";
+        }
+
+        #endregion
+
         #region Email Distribution
 
         /// <summary>
