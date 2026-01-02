@@ -24,6 +24,7 @@
             priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
             feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypes,
             importantChecklist: MvcEndpoints.Helpdesk.WorkRequest.GetImportantChecklist,
+            getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
 
             // Radio buttons
             requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethods,
@@ -79,7 +80,9 @@
         selectedRequestor: null,
         selectedWorker: null,
         laborMaterialItems: [],
-        targetOverrides: {}
+        targetOverrides: {},
+        workers: [],
+        importantChecklistData: []
     };
 
     /**
@@ -95,6 +98,7 @@
         loadServiceProviders();
         loadPriorityLevels();
         loadFeedbackTypes();
+        loadCurrencies();
         loadRequestMethods();
         loadStatuses();
         loadImportantChecklist();
@@ -109,6 +113,7 @@
         initializePriorityLevel();
         initializeTargetOverrides();
         initializeLaborMaterial();
+        initializeWorkers();
         initializeFormSubmission();
         setCurrentDateTime();
 
@@ -324,6 +329,32 @@
     }
 
     /**
+     * Load currencies from API
+     */
+    function loadCurrencies() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.getCurrencies,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#costEstimationCurrencySelect');
+                    $select.empty().append('<option value="">Select Currency</option>');
+                    $.each(response.data, function(index, currency) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(currency.id || currency.value)
+                                .text(currency.code || currency.name)
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading currencies:', error);
+            }
+        });
+    }
+
+    /**
      * Load request methods from API (replaces hardcoded radio buttons)
      */
     function loadRequestMethods() {
@@ -403,17 +434,20 @@
             method: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    const $container = $('#checkPermit').closest('.row');
+                    state.importantChecklistData = response.data;
+                    const $container = $('#importantChecklistContainer');
                     $container.empty();
+
                     $.each(response.data, function(index, item) {
                         $container.append(`
                             <div class="col-md-4 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           id="check${item.id || index}"
-                                           name="${item.name || ('checklist_' + index)}"
-                                           value="true">
-                                    <label class="form-check-label" for="check${item.id || index}">
+                                    <input class="form-check-input important-checklist-item"
+                                           type="checkbox"
+                                           id="checklist${item.id}"
+                                           data-type-id="${item.id}"
+                                           value="false">
+                                    <label class="form-check-label" for="checklist${item.id}">
                                         ${item.label || item.name}
                                     </label>
                                 </div>
@@ -1163,6 +1197,173 @@
     }
 
     /**
+     * Initialize workers management
+     */
+    function initializeWorkers() {
+        $('#addWorkerBtn').on('click', function() {
+            resetWorkerModal();
+            $('#addWorkerModal').modal('show');
+        });
+
+        $('input[name="workerSource"]').on('change', function() {
+            $('#workerSearchModal').val('');
+            $('#selectedWorkerId').val('');
+            $('#selectedWorkerSide').val('');
+        });
+
+        let workerSearchTimeout;
+        $('#workerSearchModal').on('keyup', function() {
+            clearTimeout(workerSearchTimeout);
+            const term = $(this).val().trim();
+            const source = $('input[name="workerSource"]:checked').val();
+
+            if (term.length < CONFIG.minSearchLength) {
+                $('#workerSearchDropdownModal').removeClass('show').empty();
+                return;
+            }
+
+            workerSearchTimeout = setTimeout(() => searchWorkersForModal(term, source), CONFIG.debounceDelay);
+        });
+
+        $('#saveWorkerBtn').on('click', saveWorker);
+
+        window.removeWorkerRow = function(button) {
+            const $row = $(button).closest('tr');
+            const index = $row.data('worker-index');
+            state.workers = state.workers.filter((_, i) => i !== index);
+            $row.remove();
+
+            $('#workersTable tbody tr').each(function(i) {
+                $(this).attr('data-worker-index', i);
+            });
+
+            if ($('#workersTable tbody tr').length === 0) {
+                $('#workersTable tbody').html(`
+                    <tr><td colspan="4" class="text-center text-muted"><em>No workers added yet</em></td></tr>
+                `);
+            }
+            showNotification('Worker removed', 'info');
+        };
+    }
+
+    function searchWorkersForModal(term, source) {
+        const idLocation = state.selectedLocation;
+        if (!idLocation) {
+            showNotification('Please select a location first', 'warning');
+            return;
+        }
+
+        const endpoint = source === 'company'
+            ? CONFIG.apiEndpoints.searchWorkersByCompany
+            : CONFIG.apiEndpoints.searchWorkersByServiceProvider;
+
+        const params = { term, idLocation };
+        if (source === 'serviceProvider') {
+            params.idServiceProvider = $('#serviceProviderSelect').val();
+            if (!params.idServiceProvider) {
+                showNotification('Please select a service provider first', 'warning');
+                return;
+            }
+        }
+
+        $.ajax({
+            url: endpoint,
+            method: 'GET',
+            data: params,
+            success: function(response) {
+                const $dropdown = $('#workerSearchDropdownModal');
+                $dropdown.empty();
+
+                if (response.success && response.data?.length > 0) {
+                    $.each(response.data, function(index, worker) {
+                        $dropdown.append(
+                            $('<div></div>')
+                                .addClass('typeahead-item')
+                                .html(`<strong>${worker.fullName || worker.name}</strong>
+                                       ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}`)
+                                .on('click', () => selectWorkerForModal(worker, source))
+                        );
+                    });
+                    $dropdown.addClass('show');
+                } else {
+                    $dropdown.append($('<div></div>').addClass('typeahead-item text-muted').text('No workers found'));
+                    $dropdown.addClass('show');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error searching workers:', error);
+                showNotification('Failed to search workers', 'error');
+            }
+        });
+    }
+
+    function selectWorkerForModal(worker, source) {
+        $('#workerSearchModal').val(worker.fullName || worker.name);
+        $('#selectedWorkerId').val(worker.id || worker.Employee_idEmployee);
+        $('#selectedWorkerSide').val(worker.side_Enum_idEnum || (source === 'company' ? 1 : 2));
+        $('#workerSearchDropdownModal').removeClass('show').empty();
+    }
+
+    function resetWorkerModal() {
+        $('#sourceCompany').prop('checked', true);
+        $('#workerSearchModal').val('');
+        $('#selectedWorkerId').val('');
+        $('#selectedWorkerSide').val('');
+        $('#joinChatRoomCheck').prop('checked', false);
+        $('#workerSearchDropdownModal').removeClass('show').empty();
+    }
+
+    function saveWorker() {
+        const workerId = $('#selectedWorkerId').val();
+        const workerName = $('#workerSearchModal').val();
+        const workerSide = $('#selectedWorkerSide').val();
+        const joinChatRoom = $('#joinChatRoomCheck').is(':checked');
+        const source = $('input[name="workerSource"]:checked').val();
+
+        if (!workerId || !workerName) {
+            showNotification('Please select a worker', 'error');
+            return;
+        }
+
+        const worker = {
+            Employee_idEmployee: parseInt(workerId),
+            name: workerName,
+            side_Enum_idEnum: parseInt(workerSide),
+            source: source === 'company' ? 'Company' : 'Service Provider',
+            isJoinToExternalChatRoom: joinChatRoom
+        };
+
+        state.workers.push(worker);
+        addWorkerToTable(worker);
+
+        $('#addWorkerModal').modal('hide');
+        showNotification('Worker added successfully', 'success');
+    }
+
+    function addWorkerToTable(worker) {
+        const $tbody = $('#workersTable tbody');
+        if ($tbody.find('td[colspan]').length > 0) $tbody.empty();
+
+        const rowIndex = state.workers.length - 1;
+        $tbody.append(`
+            <tr data-worker-index="${rowIndex}">
+                <td>${worker.name}</td>
+                <td>${worker.source}</td>
+                <td class="text-center">
+                    <input type="checkbox" class="form-check-input"
+                           ${worker.isJoinToExternalChatRoom ? 'checked' : ''} disabled>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-danger"
+                            onclick="removeWorkerRow(this)">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+    }
+
+    /**
      * Initialize form submission handling
      */
     function initializeFormSubmission() {
@@ -1212,6 +1413,38 @@
                 }
                 $form.find('input[name="LaborMaterialJson"]').val(JSON.stringify(laborMaterialItems));
             }
+
+            // Important Checklist
+            const importantChecklist = [];
+            $('.important-checklist-item').each(function() {
+                importantChecklist.push({
+                    Type_idType: $(this).data('type-id'),
+                    value: $(this).is(':checked')
+                });
+            });
+
+            if (importantChecklist.length > 0) {
+                if ($form.find('input[name="ImportantChecklistJson"]').length === 0) {
+                    $('<input>').attr({ type: 'hidden', name: 'ImportantChecklistJson' }).appendTo($form);
+                }
+                $form.find('input[name="ImportantChecklistJson"]').val(JSON.stringify(importantChecklist));
+            }
+
+            // Workers
+            if (state.workers.length > 0) {
+                if ($form.find('input[name="WorkersJson"]').length === 0) {
+                    $('<input>').attr({ type: 'hidden', name: 'WorkersJson' }).appendTo($form);
+                }
+                $form.find('input[name="WorkersJson"]').val(JSON.stringify(state.workers));
+            }
+
+            // Target Change Notes - map to hidden fields
+            $('#helpdeskResponseTargetChangeNote').val(state.targetOverrides.helpdesk?.remark || '');
+            $('#onsiteResponseTargetChangeNote').val(state.targetOverrides.initialFollowUp?.remark || '');
+            $('#quotationSubmissionTargetChangeNote').val(state.targetOverrides.quotation?.remark || '');
+            $('#costApprovalTargetChangeNote').val(state.targetOverrides.costApproval?.remark || '');
+            $('#workCompletionTargetChangeNote').val(state.targetOverrides.workCompletion?.remark || '');
+            $('#followUpTargetChangeNote').val(state.targetOverrides.afterWork?.remark || '');
 
             // Add target overrides to form
             $.each(state.targetOverrides, function (targetType, override) {

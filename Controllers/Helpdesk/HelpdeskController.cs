@@ -198,7 +198,9 @@ namespace cfm_frontend.Controllers.Helpdesk
             WorkRequestCreateRequest model,
             string Material_JobcodeJson = null,
             string Material_AdhocJson = null,
-            string AssetsJson = null)
+            string AssetsJson = null,
+            string ImportantChecklistJson = null,
+            string WorkersJson = null)
         {
             // Check if user has permission to add Work Requests
             var accessCheck = this.CheckAddAccess("Helpdesk", "Work Request Management");
@@ -242,6 +244,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 // Set system fields from session
                 model.Client_idClient = idClient;
                 model.IdEmployee = 1; // TODO: Get from session/authentication
+                model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
 
                 // Parse JSON fields if provided
                 if (!string.IsNullOrEmpty(Material_JobcodeJson))
@@ -289,6 +292,38 @@ namespace cfm_frontend.Controllers.Helpdesk
                     {
                         _logger.LogWarning(ex, "Failed to parse AssetsJson");
                         model.Assets = new List<AssetDto>();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(ImportantChecklistJson))
+                {
+                    try
+                    {
+                        model.ImportantChecklist = JsonSerializer.Deserialize<List<AdditionalInformationDto>>(
+                            ImportantChecklistJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<AdditionalInformationDto>();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse ImportantChecklistJson");
+                        model.ImportantChecklist = new List<AdditionalInformationDto>();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(WorkersJson))
+                {
+                    try
+                    {
+                        model.Workers = JsonSerializer.Deserialize<List<WorkerDto>>(
+                            WorkersJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<WorkerDto>();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse WorkersJson");
+                        model.Workers = new List<WorkerDto>();
                     }
                 }
 
@@ -345,6 +380,52 @@ namespace cfm_frontend.Controllers.Helpdesk
             failViewModel.OtherCategories = await GetOtherCategoriesAsync(failClient, failBackendUrl);
 
             return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", failViewModel);
+        }
+
+        /// <summary>
+        /// POST: Create Ad-hoc Job Code
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateAdHocJobCode([FromBody] AdHocJobCodeRequest request)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                    return Json(new { success = false, message = "Session expired" });
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                request.Client_idClient = userInfo.PreferredClientId;
+
+                var jsonPayload = JsonSerializer.Serialize(request,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.JobCode.Create}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<AdHocJobCodeResponse>(
+                        responseStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return Json(new { success = true, data = result });
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to create ad-hoc job code. Status: {StatusCode}, Content: {Content}",
+                    response.StatusCode, errorContent);
+                return Json(new { success = false, message = "Failed to create job code" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating ad-hoc job code");
+                return Json(new { success = false, message = "An error occurred" });
+            }
         }
 
         /// <summary>

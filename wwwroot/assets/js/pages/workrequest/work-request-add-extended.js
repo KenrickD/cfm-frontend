@@ -351,27 +351,51 @@
             return;
         }
 
-        const measurementUnit = extendedState.measurementUnits.find(u => u.id == measurementUnitId);
-        const currency = extendedState.currencies.find(c => c.id == currencyId);
+        showNotification('Saving ad-hoc job code...', 'info', 'Please wait');
 
-        const item = {
-            type: 'adHoc',
-            name: name,
-            label_Enum_idEnum: labelId,
-            labelText: labelValue,
-            unitPriceCurrency_Enum_idEnum: currencyId || 1,
-            currencyCode: currency ? (currency.code || currency.name) : 'IDR',
-            unitPrice: unitPrice,
-            quantity: quantity,
-            measurementUnit_Enum_idEnum: measurementUnitId,
-            unitText: measurementUnit ? (measurementUnit.code || measurementUnit.name) : 'UNIT'
-        };
+        // Save ad-hoc job code to backend immediately
+        $.ajax({
+            url: '/Helpdesk/CreateAdHocJobCode',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: name,
+                label_Enum_idEnum: labelId,
+                unitPriceCurrency_Enum_idEnum: currencyId || 1,
+                unitPrice: unitPrice,
+                measurementUnit_Enum_idEnum: measurementUnitId
+            }),
+            success: function(response) {
+                if (response.success && response.data) {
+                    const measurementUnit = extendedState.measurementUnits.find(u => u.id == measurementUnitId);
+                    const currency = extendedState.currencies.find(c => c.id == currencyId);
 
-        extendedState.laborMaterialItems.adHoc.push(item);
-        addLaborMaterialToTable(item);
+                    // Create item with returned job code ID
+                    const item = {
+                        type: 'jobCode',
+                        idJobCode: response.data.id,
+                        name: name,
+                        quantity: quantity,
+                        unitPrice: unitPrice,
+                        unit: measurementUnit ? (measurementUnit.code || measurementUnit.name) : 'UNIT',
+                        currencyCode: currency ? (currency.code || currency.name) : 'IDR',
+                        transactionDate: new Date().toISOString().split('T')[0]
+                    };
 
-        $('#laborMaterialModal').modal('hide');
-        showNotification('Labor/Material added successfully', 'success', 'Success');
+                    extendedState.laborMaterialItems.jobCode.push(item);
+                    addLaborMaterialToTable(item);
+
+                    $('#laborMaterialModal').modal('hide');
+                    showNotification('Labor/Material saved and added successfully', 'success', 'Success');
+                } else {
+                    showNotification(response.message || 'Failed to save job code', 'error', 'Error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error saving ad-hoc job code:', error);
+                showNotification('Failed to save job code. Please try again.', 'error', 'Error');
+            }
+        });
     }
 
     /**
@@ -953,7 +977,8 @@
         // Prepare Material_Jobcode array
         const materialJobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
             idJobCode: item.idJobCode,
-            quantity: item.quantity
+            quantity: item.quantity,
+            unitPrice: item.unitPrice || 0
         }));
 
         // Prepare Material_Adhoc array
@@ -1007,7 +1032,8 @@
         // Add JSON data
         const materialJobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
             idJobCode: item.idJobCode,
-            quantity: item.quantity
+            quantity: item.quantity,
+            unitPrice: item.unitPrice || 0
         }));
 
         const materialAdhoc = extendedState.laborMaterialItems.adHoc.map(item => ({

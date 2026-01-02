@@ -386,17 +386,33 @@
                             </select>
                         </div>
 
-                        <!-- Worker from Company -->
+                        <!-- Workers Table -->
                         <div class="col-md-12 mb-3">
-                            <label class="form-label fw-semibold">Worker from Company</label>
-                            <input type="text"
-                                   class="form-control form-control-sm"
-                                   id="workerSearch"
-                                   name="WorkerName"
-                                   placeholder="Type to search worker..."
-                                   autocomplete="off">
-                            <div id="workerDropdown" class="typeahead-dropdown"></div>
-                            <input type="hidden" id="workerId" name="IdWorker">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold">Workers</label>
+                                <button type="button" class="btn btn-sm btn-primary" id="addWorkerBtn">
+                                    <i class="ti ti-plus me-1"></i>Add Worker
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm" id="workersTable">
+                                    <thead>
+                                        <tr>
+                                            <th width="40%">Worker Name</th>
+                                            <th width="30%">Source</th>
+                                            <th width="20%">Join Chat Room</th>
+                                            <th width="10%">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">
+                                                <em>No workers added yet</em>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -409,8 +425,8 @@
                     <p class="text-muted mb-0 small">Safety and operational requirements</p>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <!-- Checklist items loaded dynamically via JavaScript -->
+                    <div class="row" id="importantChecklistContainer">
+                        <!-- Checklist items loaded dynamically with data-type-id attributes -->
                     </div>
                 </div>
             </div>
@@ -459,12 +475,23 @@
             <div class="card mb-3">
                 <div class="card-header">
                     <h5 class="mb-1">Cost Estimation</h5>
-                    <p class="text-muted mb-0 small">Estimated cost in local currency</p>
+                    <p class="text-muted mb-0 small">Estimated cost with currency selection</p>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Cost Estimation (IDR)</label>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Currency</label>
+                            <select class="form-select form-select-sm"
+                                    id="costEstimationCurrencySelect"
+                                    name="CostEstimationCurrency"
+                                    data-searchable="true"
+                                    data-placeholder="Select Currency"
+                                    data-search-placeholder="Search currency...">
+                                <option value="">Select Currency</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Cost Estimation</label>
                             <input type="number"
                                    class="form-control form-control-sm"
                                    id="costEstimation"
@@ -832,6 +859,14 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Hidden fields for target change notes -->
+            <input type="hidden" id="helpdeskResponseTargetChangeNote" name="HelpdeskResponseTargetChangeNote">
+            <input type="hidden" id="onsiteResponseTargetChangeNote" name="OnsiteResponseTargetChangeNote">
+            <input type="hidden" id="quotationSubmissionTargetChangeNote" name="QuotationSubmissionTargetChangeNote">
+            <input type="hidden" id="costApprovalTargetChangeNote" name="CostApprovalTargetChangeNote">
+            <input type="hidden" id="workCompletionTargetChangeNote" name="WorkCompletionTargetChangeNote">
+            <input type="hidden" id="followUpTargetChangeNote" name="FollowUpTargetChangeNote">
         </form>
     </div>
 </div>
@@ -1024,6 +1059,58 @@
                     <i class="ti ti-refresh"></i> Cancel
                 </button>
                 <button type="button" class="btn btn-primary btn-sm" id="saveAssetBtn">
+                    <i class="ti ti-device-floppy"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Worker Modal -->
+<div class="modal fade" id="addWorkerModal" tabindex="-1" aria-labelledby="addWorkerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addWorkerModalLabel">Add Worker</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold required-field">Worker Source</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="workerSource" id="sourceCompany" value="company" checked>
+                            <label class="form-check-label" for="sourceCompany">Company Worker</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="workerSource" id="sourceServiceProvider" value="serviceProvider">
+                            <label class="form-check-label" for="sourceServiceProvider">Service Provider Worker</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold required-field">Worker Name</label>
+                    <input type="text" class="form-control form-control-sm" id="workerSearchModal" placeholder="Type to search worker..." autocomplete="off">
+                    <div id="workerSearchDropdownModal" class="typeahead-dropdown"></div>
+                    <input type="hidden" id="selectedWorkerId">
+                    <input type="hidden" id="selectedWorkerSide">
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="joinChatRoomCheck" value="true">
+                        <label class="form-check-label" for="joinChatRoomCheck">
+                            Join to External Chat Room
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="ti ti-refresh"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveWorkerBtn">
                     <i class="ti ti-device-floppy"></i> Save
                 </button>
             </div>

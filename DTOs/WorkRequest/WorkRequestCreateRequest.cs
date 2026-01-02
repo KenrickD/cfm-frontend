@@ -28,13 +28,7 @@
         public int? ServiceProvider_idServiceProvider { get; set; }
 
         // Important Checklist
-        public bool IsPermitRequired { get; set; }
-        public bool HasHazardousMaterial { get; set; }
-        public bool RequiresIsolation { get; set; }
-        public bool WorkAtHeight { get; set; }
-        public bool RequiresLifting { get; set; }
-        public bool RequiresSafeguarding { get; set; }
-        public bool RequiresJSA { get; set; }
+        public List<AdditionalInformationDto> ImportantChecklist { get; set; } = new List<AdditionalInformationDto>();
 
 
         // Cost Estimation
@@ -105,7 +99,7 @@
     {
         public int idJobCode { get; set; }
         public float quantity { get; set; }
-        //public string jobCodeName { get; set; }
+        public float unitPrice { get; set; }
     }
 
     public class MaterialAdhocDto

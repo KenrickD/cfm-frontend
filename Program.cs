@@ -1,4 +1,5 @@
 using cfm_frontend.Handlers;
+using cfm_frontend.Middleware;
 using cfm_frontend.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -49,6 +50,9 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Auto-restore session when expired but tokens still valid
+app.UseSessionRestore();
 
 app.MapControllerRoute(
     name: "default",
