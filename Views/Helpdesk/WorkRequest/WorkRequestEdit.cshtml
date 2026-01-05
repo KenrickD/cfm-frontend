@@ -8,6 +8,8 @@ Layout = "~/Views/Shared/_Layout.cshtml";
 @section styles {
     <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
     <link rel="stylesheet" href="~/assets/css/uikit.css">
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+    <link rel="stylesheet" href="~/assets/css/pages/work-request.css">
 }
 
 <div class="row">
@@ -93,19 +95,6 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Request Date</label>
-                            <input type="text" class="form-control form-control-sm" id="requestDate"
-                                   placeholder="Request date">
-                        </div>
-                        <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Priority Level</label>
-                            <select class="form-select form-select-sm" data-placeholder="Priority">
-                                <option class="text-sm">High</option>
-                                <option class="text-sm">Medium</option>
-                                <option class="text-sm">Low</option>
-                            </select>
-                        </div>
                         <div class="mb-3 col-md-4">
                             <label class="form-label fw-semibold" for="inputEmail4">Status</label>
                             <select class="form-select form-select-sm" data-placeholder="Priority">
@@ -214,6 +203,220 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                     </div>
                 </div>
             </div>
+
+            <!-- Timeline and Dates -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Timeline and Dates</h5>
+                    <p class="text-muted mb-0 small">Schedule and target dates for this work request</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Priority Level -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Priority Level</label>
+                            <select class="form-select form-select-sm"
+                                    id="priorityLevelSelect"
+                                    name="PriorityLevel"
+                                    data-searchable="true"
+                                    data-placeholder="Select Priority Level"
+                                    data-search-placeholder="Search priority..."
+                                    required>
+                                <option value="">Select Priority Level</option>
+                                <!-- Options loaded dynamically via JavaScript -->
+                            </select>
+                        </div>
+
+                        <!-- Request Date -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Request Date</label>
+                            <div class="datetime-group">
+                                <input type="date"
+                                       class="form-control form-control-sm"
+                                       id="requestDate"
+                                       name="RequestDate"
+                                       required>
+                                <input type="time"
+                                       class="form-control form-control-sm"
+                                       id="requestTime"
+                                       name="RequestTime"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder for alignment -->
+                        </div>
+
+                        <!-- Helpdesk Response -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Helpdesk Response</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="helpdeskResponseDate" name="HelpdeskResponseDate">
+                                <input type="time" class="form-control form-control-sm" id="helpdeskResponseTime" name="HelpdeskResponseTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">New Target</label>
+                            <div id="helpdeskTarget" class="target-time-display" data-target-type="helpdesk">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="helpdeskTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="helpdeskNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="helpdeskRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('helpdesk')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('helpdesk')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Remark</label>
+                            <input type="text" class="form-control form-control-sm" id="helpdeskRemarkDisplay" readonly>
+                        </div>
+
+                        <!-- Initial Follow Up -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Initial Follow Up</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="initialFollowUpDate" name="InitialFollowUpDate">
+                                <input type="time" class="form-control form-control-sm" id="initialFollowUpTime" name="InitialFollowUpTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="initialFollowUpTarget" class="target-time-display" data-target-type="initialFollowUp">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="initialFollowUpTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="initialFollowUpNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="initialFollowUpRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('initialFollowUp')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('initialFollowUp')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Quotation Submission -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Quotation Submission</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="quotationSubmissionDate" name="QuotationSubmissionDate">
+                                <input type="time" class="form-control form-control-sm" id="quotationSubmissionTime" name="QuotationSubmissionTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="quotationTarget" class="target-time-display" data-target-type="quotation">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="quotationTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="quotationNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="quotationRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('quotation')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('quotation')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Cost Approval -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Cost Approval</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="costApprovalDate" name="CostApprovalDate">
+                                <input type="time" class="form-control form-control-sm" id="costApprovalTime" name="CostApprovalTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="costApprovalTarget" class="target-time-display" data-target-type="costApproval">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="costApprovalTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="costApprovalNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="costApprovalRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('costApproval')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('costApproval')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- Work Completion -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Work Completion</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="workCompletionDate" name="WorkCompletionDate">
+                                <input type="time" class="form-control form-control-sm" id="workCompletionTime" name="WorkCompletionTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="workCompletionTarget" class="target-time-display" data-target-type="workCompletion">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="workCompletionTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="workCompletionNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="workCompletionRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('workCompletion')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('workCompletion')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
+                        </div>
+
+                        <!-- After Work Follow Up -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">After Work Follow Up</label>
+                            <div class="datetime-group">
+                                <input type="date" class="form-control form-control-sm" id="afterWorkFollowUpDate" name="AfterWorkFollowUpDate">
+                                <input type="time" class="form-control form-control-sm" id="afterWorkFollowUpTime" name="AfterWorkFollowUpTime">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Target</label>
+                            <div id="afterWorkTarget" class="target-time-display" data-target-type="afterWork">
+                                <i class="ti ti-target me-1"></i>
+                                <span class="target-date">-</span>
+                            </div>
+                            <div class="target-change-form" id="afterWorkTargetForm">
+                                <input type="datetime-local" class="form-control form-control-sm mb-2" id="afterWorkNewTarget">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Remark" id="afterWorkRemark">
+                                <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('afterWork')">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('afterWork')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden fields for target change notes -->
+            <input type="hidden" id="helpdeskResponseTargetChangeNote" name="HelpdeskResponseTargetChangeNote">
+            <input type="hidden" id="onsiteResponseTargetChangeNote" name="OnsiteResponseTargetChangeNote">
+            <input type="hidden" id="quotationSubmissionTargetChangeNote" name="QuotationSubmissionTargetChangeNote">
+            <input type="hidden" id="costApprovalTargetChangeNote" name="CostApprovalTargetChangeNote">
+            <input type="hidden" id="workCompletionTargetChangeNote" name="WorkCompletionTargetChangeNote">
+            <input type="hidden" id="followUpTargetChangeNote" name="FollowUpTargetChangeNote">
         </div>
         <!-- [ sample-page ] end -->
     </form>
@@ -223,13 +426,8 @@ Layout = "~/Views/Shared/_Layout.cshtml";
 @section scripts {
     <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
     <script src="~/assets/js/pages/ac-datepicker.js"></script>
-    <script>
-        $('#select-location, #select-floor, #select-room, #select-requestor, #select-request-method').select2({});
-        $(document).ready(function () {
-            const requestDate = new Datepicker($('#requestDate')[0], {
-                buttonClass: 'btn',
-                autohide: true
-            });
-        });
-    </script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+    <script src="~/assets/js/utilities/business-date-calculator.js"></script>
+    <script src="~/assets/js/mvc-endpoints.js"></script>
+    <script src="~/assets/js/pages/workrequest/work-request-edit.js"></script>
 }
