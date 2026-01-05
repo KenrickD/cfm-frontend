@@ -96,6 +96,12 @@ namespace cfm_frontend.Constants
             /// GET: Get all work request statuses
             /// </summary>
             public const string Statuses = Base + "/statuses";
+
+            /// <summary>
+            /// GET: Get all filter options for work requests
+            /// Query params: idClient
+            /// </summary>
+            public const string GetFilterOptions = Base + "/GetFilterOptions";
         }
 
         #endregion
@@ -258,6 +264,38 @@ namespace cfm_frontend.Constants
                 public const string Currency = "currency";
                 public const string MeasurementUnit = "measurementUnit";
             }
+        }
+
+        #endregion
+
+        #region Office Hour & Public Holiday
+
+        /// <summary>
+        /// Office Hour management endpoints
+        /// </summary>
+        public static class OfficeHour
+        {
+            private const string Base = ApiBase + "/officehour";
+
+            /// <summary>
+            /// GET: Get office hours for client
+            /// Query params: idClient
+            /// </summary>
+            public const string List = Base + "/list";
+        }
+
+        /// <summary>
+        /// Public Holiday management endpoints
+        /// </summary>
+        public static class PublicHoliday
+        {
+            private const string Base = ApiBase + "/publicholiday";
+
+            /// <summary>
+            /// GET: Get public holidays for client
+            /// Query params: idClient, year (optional), isActiveData (optional)
+            /// </summary>
+            public const string List = Base + "/list";
         }
 
         #endregion

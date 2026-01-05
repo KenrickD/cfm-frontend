@@ -3,10 +3,21 @@
     public class WorkRequestBodyModel {
         public int Client_idClient { get; set; }
         public string searchTag { get; set; } = "";
-        
+
         public int page { get; set; }
         public string keyWordSearch {  get; set; } = string.Empty;
-        // for the filter function
+
+        // Filter properties
+        public List<int> LocationIds { get; set; } = new List<int>();
+        public List<int> ServiceProviderIds { get; set; } = new List<int>();
+        public List<int> WorkCategoryIds { get; set; } = new List<int>();
+        public List<int> OtherCategoryIds { get; set; } = new List<int>();
+        public List<string> PriorityLevels { get; set; } = new List<string>();
+        public List<string> Statuses { get; set; } = new List<string>();
+        public List<string> ImportantChecklists { get; set; } = new List<string>();
+        public List<string> FeedbackTypes { get; set; } = new List<string>();
+
+        // Legacy filter properties (keep for backward compatibility)
         public int idPropertyType { get; set; } = -1;
         public int RoomZone_idRoomZone { get; set; } = -1;
         public bool showDeleted { get; set; } = false;

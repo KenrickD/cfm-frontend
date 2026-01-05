@@ -327,9 +327,9 @@
                                         data-placeholder="All Property Groups"
                                         data-search-placeholder="Search property group...">
                                     <option value="">All</option>
-                                    @if (Model?.PropertyGroups != null)
+                                    @if (Model?.FilterOptions?.PropertyGroups != null)
                                     {
-                                        @foreach (var group in Model.PropertyGroups)
+                                        @foreach (var group in Model.FilterOptions.PropertyGroups)
                                         {
                                             <option value="@group.propertyGroupId">@group.propertyGroupName</option>
                                         }
@@ -341,9 +341,9 @@
                             <div class="filter-section">
                                 <label class="filter-section-title">Location</label>
                                 <div class="filter-checkbox-group">
-                                    @if (Model?.Locations != null && Model.Locations.Any())
+                                    @if (Model?.FilterOptions?.Locations != null && Model.FilterOptions.Locations.Any())
                                     {
-                                        @foreach (var location in Model.Locations)
+                                        @foreach (var location in Model.FilterOptions.Locations)
                                         {
                                             <div class="filter-checkbox-item form-check">
                                                 <input class="form-check-input" type="checkbox" value="@location.id" id="loc_@location.id" name="locations">
@@ -366,9 +366,9 @@
                             <div class="filter-section">
                                 <label class="filter-section-title">Service Provider</label>
                                 <div class="filter-checkbox-group">
-                                    @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
+                                    @if (Model?.FilterOptions?.ServiceProviders != null && Model.FilterOptions.ServiceProviders.Any())
                                     {
-                                        @foreach (var provider in Model.ServiceProviders)
+                                        @foreach (var provider in Model.FilterOptions.ServiceProviders)
                                         {
                                             <div class="filter-checkbox-item form-check">
                                                 <input class="form-check-input" type="checkbox" value="@provider.id" id="sp_@provider.id" name="serviceProviders">
@@ -387,7 +387,7 @@
                                 </div>
                             </div>
 
-                            <!-- Room Zone -->
+                            <!-- Room Zone - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Room Zone</label>
                                 <select class="form-select"
@@ -397,7 +397,13 @@
                                         data-placeholder="All Room Zones"
                                         data-search-placeholder="Search room zone...">
                                     <option value="">All</option>
-                                    <!-- Room zones can be added here if available in model -->
+                                    @if (Model?.FilterOptions?.RoomZones != null)
+                                    {
+                                        @foreach (var zone in Model.FilterOptions.RoomZones)
+                                        {
+                                            <option value="@zone.Id">@zone.Name</option>
+                                        }
+                                    }
                                 </select>
                             </div>
                         </div>
@@ -408,9 +414,9 @@
                             <div class="filter-section">
                                 <label class="filter-section-title">Work Category</label>
                                 <div class="filter-checkbox-group">
-                                    @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                                    @if (Model?.FilterOptions?.WorkCategories != null && Model.FilterOptions.WorkCategories.Any())
                                     {
-                                        @foreach (var category in Model.WorkCategories)
+                                        @foreach (var category in Model.FilterOptions.WorkCategories)
                                         {
                                             <div class="filter-checkbox-item form-check">
                                                 <input class="form-check-input" type="checkbox" value="@category.id" id="wc_@category.id" name="workCategories">
@@ -433,9 +439,9 @@
                             <div class="filter-section">
                                 <label class="filter-section-title">Other Category</label>
                                 <div class="filter-checkbox-group">
-                                    @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
+                                    @if (Model?.FilterOptions?.OtherCategories != null && Model.FilterOptions.OtherCategories.Any())
                                     {
-                                        @foreach (var category in Model.OtherCategories)
+                                        @foreach (var category in Model.FilterOptions.OtherCategories)
                                         {
                                             <div class="filter-checkbox-item form-check">
                                                 <input class="form-check-input" type="checkbox" value="@category.id" id="oc_@category.id" name="otherCategories">
@@ -454,38 +460,22 @@
                                 </div>
                             </div>
 
-                            <!-- Priority Level - STATIC -->
+                            <!-- Priority Level - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Priority Level</label>
                                 <div class="filter-checkbox-group">
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="high" id="priorityHigh" name="priorities">
-                                        <label class="form-check-label" for="priorityHigh">High</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="high_with_cost" id="priorityHighCost" name="priorities">
-                                        <label class="form-check-label" for="priorityHighCost">High With Cost</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="low" id="priorityLow" name="priorities">
-                                        <label class="form-check-label" for="priorityLow">Low</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium" id="priorityMedium" name="priorities">
-                                        <label class="form-check-label" for="priorityMedium">Medium</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium_with_cost" id="priorityMediumCost" name="priorities">
-                                        <label class="form-check-label" for="priorityMediumCost">Medium With Cost</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="medium_with_cost_ready" id="priorityMediumCostReady" name="priorities">
-                                        <label class="form-check-label" for="priorityMediumCostReady">Medium With Cost - Ready Stock - Ready Stoc assa8l4</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="test_priority" id="priorityTest" name="priorities">
-                                        <label class="form-check-label" for="priorityTest">test priority</label>
-                                    </div>
+                                    @if (Model?.FilterOptions?.PriorityLevels != null && Model.FilterOptions.PriorityLevels.Any())
+                                    {
+                                        @foreach (var priority in Model.FilterOptions.PriorityLevels)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@priority.Value" id="priority_@priority.Value" name="priorities">
+                                                <label class="form-check-label" for="priority_@priority.Value">
+                                                    @priority.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -498,22 +488,18 @@
                             <div class="filter-section">
                                 <label class="filter-section-title">Status</label>
                                 <div class="filter-checkbox-group">
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="new" id="statusNew" name="status">
-                                        <label class="form-check-label" for="statusNew">New</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="ongoing" id="statusOngoing" name="status">
-                                        <label class="form-check-label" for="statusOngoing">Ongoing</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="cancelled" id="statusCancelled" name="status">
-                                        <label class="form-check-label" for="statusCancelled">Cancelled</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="complete" id="statusComplete" name="status">
-                                        <label class="form-check-label" for="statusComplete">Complete</label>
-                                    </div>
+                                    @if (Model?.FilterOptions?.Statuses != null && Model.FilterOptions.Statuses.Any())
+                                    {
+                                        @foreach (var status in Model.FilterOptions.Statuses)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@status.Value" id="status_@status.Value" name="statuses">
+                                                <label class="form-check-label" for="status_@status.Value">
+                                                    @status.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             </div>
 
@@ -555,61 +541,41 @@
                                 </div>
                             </div>
 
-                            <!-- Important Checklist - STATIC -->
+                            <!-- Important Checklist - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Important Checklist</label>
                                 <div class="filter-checkbox-group">
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="permit_approved" id="checkPermit" name="checklist">
-                                        <label class="form-check-label" for="checkPermit">Is Permit to Work approved?</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="hazardous_material" id="checkHazardous" name="checklist">
-                                        <label class="form-check-label" for="checkHazardous">Hazardous material</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="isolation" id="checkIsolation" name="checklist">
-                                        <label class="form-check-label" for="checkIsolation">Isolation</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="work_at_height" id="checkHeight" name="checklist">
-                                        <label class="form-check-label" for="checkHeight">Work at height</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="lifting_operations" id="checkLifting" name="checklist">
-                                        <label class="form-check-label" for="checkLifting">Lifting operations</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="equipment_safeguarding" id="checkEquipment" name="checklist">
-                                        <label class="form-check-label" for="checkEquipment">Equipment safeguarding</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="jsa_required" id="checkJSA" name="checklist">
-                                        <label class="form-check-label" for="checkJSA">Is JSA required?</label>
-                                    </div>
+                                    @if (Model?.FilterOptions?.ImportantChecklists != null && Model.FilterOptions.ImportantChecklists.Any())
+                                    {
+                                        @foreach (var item in Model.FilterOptions.ImportantChecklists)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@item.Value" id="checklist_@item.Value" name="checklist">
+                                                <label class="form-check-label" for="checklist_@item.Value">
+                                                    @item.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             </div>
 
-                            <!-- Feedback Type - STATIC -->
+                            <!-- Feedback Type - FROM SERVER -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Feedback Type</label>
                                 <div class="filter-checkbox-group">
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="no_feedback" id="feedbackNone" name="feedback">
-                                        <label class="form-check-label" for="feedbackNone">No Feedback</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="good" id="feedbackGood" name="feedback">
-                                        <label class="form-check-label" for="feedbackGood">Good</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="need_improvement" id="feedbackImprovement" name="feedback">
-                                        <label class="form-check-label" for="feedbackImprovement">Need Improvement</label>
-                                    </div>
-                                    <div class="filter-checkbox-item form-check">
-                                        <input class="form-check-input" type="checkbox" value="excellent" id="feedbackExcellent" name="feedback">
-                                        <label class="form-check-label" for="feedbackExcellent">Excellent</label>
-                                    </div>
+                                    @if (Model?.FilterOptions?.FeedbackTypes != null && Model.FilterOptions.FeedbackTypes.Any())
+                                    {
+                                        @foreach (var fb in Model.FilterOptions.FeedbackTypes)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@fb.Value" id="feedback_@fb.Value" name="feedback">
+                                                <label class="form-check-label" for="feedback_@fb.Value">
+                                                    @fb.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             </div>
 
@@ -725,6 +691,14 @@
                 $('#filterForm input[type="checkbox"]').prop('checked', false);
                 $('#filterPropertyGroup').val('');
                 $('#filterRoomZone').val('');
+
+                // Redirect to clean URL (preserving search if exists)
+                var searchTerm = $('#mainSearchInput').val();
+                var url = new URL(window.location.origin + '/Helpdesk/Index');
+                if (searchTerm && searchTerm.trim() !== '') {
+                    url.searchParams.set('search', searchTerm.trim());
+                }
+                window.location.href = url.toString();
             });
 
             // Apply filters
@@ -749,10 +723,40 @@
                     showDeleted: $('#showDeleted').is(':checked')
                 };
 
-                console.log('Applying filters:', filters);
+                // Build query string from filters
+                var url = new URL(window.location.origin + '/Helpdesk/Index');
 
-                // TODO: Build query string and redirect OR make AJAX call to refresh table
-                $('#filterModal').modal('hide');
+                // Add single-value filters
+                if (filters.propertyGroup) url.searchParams.set('propertyGroup', filters.propertyGroup);
+                if (filters.roomZone) url.searchParams.set('roomZone', filters.roomZone);
+                if (filters.requestDateFrom) url.searchParams.set('requestDateFrom', filters.requestDateFrom);
+                if (filters.requestDateTo) url.searchParams.set('requestDateTo', filters.requestDateTo);
+                if (filters.workCompletionDateFrom) url.searchParams.set('workCompletionDateFrom', filters.workCompletionDateFrom);
+                if (filters.workCompletionDateTo) url.searchParams.set('workCompletionDateTo', filters.workCompletionDateTo);
+                if (filters.hasSentEmail) url.searchParams.set('hasSentEmail', 'true');
+                if (filters.showDeleted) url.searchParams.set('showDeleted', 'true');
+
+                // Add multi-value filters (arrays)
+                filters.locations.forEach(id => url.searchParams.append('locations', id));
+                filters.serviceProviders.forEach(id => url.searchParams.append('serviceProviders', id));
+                filters.workCategories.forEach(id => url.searchParams.append('workCategories', id));
+                filters.otherCategories.forEach(id => url.searchParams.append('otherCategories', id));
+                filters.priorities.forEach(p => url.searchParams.append('priorities', p));
+                filters.statuses.forEach(s => url.searchParams.append('statuses', s));
+                filters.checklist.forEach(c => url.searchParams.append('checklist', c));
+                filters.feedback.forEach(f => url.searchParams.append('feedback', f));
+
+                // Preserve search term if exists
+                var searchTerm = $('#mainSearchInput').val();
+                if (searchTerm && searchTerm.trim() !== '') {
+                    url.searchParams.set('search', searchTerm.trim());
+                }
+
+                // Reset to page 1 when filters change
+                url.searchParams.set('page', '1');
+
+                // Navigate to filtered URL
+                window.location.href = url.toString();
             });
 
             // Main search button
@@ -787,6 +791,64 @@
                 currentUrl.searchParams.delete('page');
                 window.location.href = currentUrl.toString();
             });
+
+            // Restore filter state from URL query string
+            function getQueryParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.getAll(name);
+            }
+
+            // Restore single-value dropdowns
+            const propertyGroup = getQueryParam('propertyGroup')[0];
+            if (propertyGroup) $('#filterPropertyGroup').val(propertyGroup);
+
+            const roomZone = getQueryParam('roomZone')[0];
+            if (roomZone) $('#filterRoomZone').val(roomZone);
+
+            // Restore multi-select checkboxes
+            const locations = getQueryParam('locations');
+            locations.forEach(id => $(`input[name="locations"][value="${id}"]`).prop('checked', true));
+
+            const serviceProviders = getQueryParam('serviceProviders');
+            serviceProviders.forEach(id => $(`input[name="serviceProviders"][value="${id}"]`).prop('checked', true));
+
+            const workCategories = getQueryParam('workCategories');
+            workCategories.forEach(id => $(`input[name="workCategories"][value="${id}"]`).prop('checked', true));
+
+            const otherCategories = getQueryParam('otherCategories');
+            otherCategories.forEach(id => $(`input[name="otherCategories"][value="${id}"]`).prop('checked', true));
+
+            const priorities = getQueryParam('priorities');
+            priorities.forEach(p => $(`input[name="priorities"][value="${p}"]`).prop('checked', true));
+
+            const statuses = getQueryParam('statuses');
+            statuses.forEach(s => $(`input[name="statuses"][value="${s}"]`).prop('checked', true));
+
+            const checklist = getQueryParam('checklist');
+            checklist.forEach(c => $(`input[name="checklist"][value="${c}"]`).prop('checked', true));
+
+            const feedback = getQueryParam('feedback');
+            feedback.forEach(f => $(`input[name="feedback"][value="${f}"]`).prop('checked', true));
+
+            // Restore date inputs
+            const requestDateFrom = getQueryParam('requestDateFrom')[0];
+            if (requestDateFrom) $('#requestDateFrom').val(requestDateFrom);
+
+            const requestDateTo = getQueryParam('requestDateTo')[0];
+            if (requestDateTo) $('#requestDateTo').val(requestDateTo);
+
+            const workCompletionDateFrom = getQueryParam('workCompletionDateFrom')[0];
+            if (workCompletionDateFrom) $('#workCompletionDateFrom').val(workCompletionDateFrom);
+
+            const workCompletionDateTo = getQueryParam('workCompletionDateTo')[0];
+            if (workCompletionDateTo) $('#workCompletionDateTo').val(workCompletionDateTo);
+
+            // Restore single checkboxes
+            const hasSentEmail = getQueryParam('hasSentEmail')[0];
+            if (hasSentEmail === 'true') $('#emailYes').prop('checked', true);
+
+            const showDeleted = getQueryParam('showDeleted')[0];
+            if (showDeleted === 'true') $('#showDeleted').prop('checked', true);
         });
     </script>
 }

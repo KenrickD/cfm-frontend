@@ -80,7 +80,9 @@
             Extended: {
                 GetCurrencies: '/Helpdesk/GetCurrencies',
                 GetMeasurementUnits: '/Helpdesk/GetMeasurementUnits',
-                GetLaborMaterialLabels: '/Helpdesk/GetLaborMaterialLabels'
+                GetLaborMaterialLabels: '/Helpdesk/GetLaborMaterialLabels',
+                GetOfficeHours: '/Helpdesk/GetOfficeHours',
+                GetPublicHolidays: '/Helpdesk/GetPublicHolidays'
             },
 
             /**

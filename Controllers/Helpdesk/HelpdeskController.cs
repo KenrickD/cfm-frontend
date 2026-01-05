@@ -37,7 +37,25 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Work Request List page
         /// </summary>
-        public async Task<IActionResult> Index(int page = 1, string search = "")
+        public async Task<IActionResult> Index(
+            int page = 1,
+            string search = "",
+            int? propertyGroup = null,
+            List<int>? locations = null,
+            List<int>? serviceProviders = null,
+            int? roomZone = null,
+            List<int>? workCategories = null,
+            List<int>? otherCategories = null,
+            List<string>? priorities = null,
+            List<string>? statuses = null,
+            DateTime? requestDateFrom = null,
+            DateTime? requestDateTo = null,
+            DateTime? workCompletionDateFrom = null,
+            DateTime? workCompletionDateTo = null,
+            List<string>? checklist = null,
+            List<string>? feedback = null,
+            bool? hasSentEmail = null,
+            bool showDeleted = false)
         {
             // Check if user has permission to view Work Request Management
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
@@ -64,28 +82,36 @@ namespace cfm_frontend.Controllers.Helpdesk
                 }
 
                 var idClient = userInfo.PreferredClientId;
-                var idActor = 1; //currently unused
-                var idEmployee = userInfo.IdWebUser;
 
-                // Load all data in parallel for better performance
-                var workRequestTask = GetWorkRequestsAsync(client, backendUrl, page, idClient, idActor, idEmployee, search);
-                var propertyGroupsTask = GetPropertyGroupsAsync(client, backendUrl, idClient);
-                var statusesTask = GetStatusesAsync(client, backendUrl);
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
-                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
-                var workCategoriesTask = GetWorkCategoriesAsync(client, backendUrl);
-                var otherCategoriesTask = GetOtherCategoriesAsync(client, backendUrl);
+                // Build request body with all filters (using backend API naming convention)
+                var requestBody = new WorkRequestBodyModel
+                {
+                    Client_idClient = idClient,
+                    page = page,
+                    keyWordSearch = search,
+                    idPropertyType = propertyGroup ?? -1,
+                    LocationIds = locations ?? new List<int>(),
+                    ServiceProviderIds = serviceProviders ?? new List<int>(),
+                    RoomZone_idRoomZone = roomZone ?? -1,
+                    WorkCategoryIds = workCategories ?? new List<int>(),
+                    OtherCategoryIds = otherCategories ?? new List<int>(),
+                    PriorityLevels = priorities ?? new List<string>(),
+                    Statuses = statuses ?? new List<string>(),
+                    requestDateFrom = requestDateFrom,
+                    requestDateTo = requestDateTo,
+                    workCompletionFrom = workCompletionDateFrom,
+                    workCompletionTo = workCompletionDateTo,
+                    ImportantChecklists = checklist ?? new List<string>(),
+                    FeedbackTypes = feedback ?? new List<string>(),
+                    isSendEmail = hasSentEmail ?? false,
+                    showDeleted = showDeleted
+                };
 
-                // Wait for all tasks to complete
-                await Task.WhenAll(
-                    workRequestTask,
-                    propertyGroupsTask,
-                    statusesTask,
-                    locationsTask,
-                    serviceProvidersTask,
-                    workCategoriesTask,
-                    otherCategoriesTask
-                );
+                // Load work requests and filter options in parallel
+                var workRequestTask = GetWorkRequestsAsync(client, backendUrl, requestBody);
+                var filterOptionsTask = GetFilterOptionsAsync(client, backendUrl, idClient);
+
+                await Task.WhenAll(workRequestTask, filterOptionsTask);
 
                 // Populate ViewModel with results
                 var workRequestResponse = await workRequestTask;
@@ -105,22 +131,12 @@ namespace cfm_frontend.Controllers.Helpdesk
                     };
                 }
 
-                viewmodel.PropertyGroups = await propertyGroupsTask;
-                viewmodel.Status = await statusesTask;
-                viewmodel.Locations = await locationsTask;
-                viewmodel.ServiceProviders = await serviceProvidersTask;
-                viewmodel.WorkCategories = await workCategoriesTask;
-                viewmodel.OtherCategories = await otherCategoriesTask;
+                viewmodel.FilterOptions = await filterOptionsTask;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading work request index page");
-                viewmodel.PropertyGroups = new List<PropertyGroupModel>();
-                viewmodel.Status = new List<WRStatusModel>();
-                viewmodel.Locations = new List<LocationModel>();
-                viewmodel.ServiceProviders = new List<ServiceProviderModel>();
-                viewmodel.WorkCategories = new List<WorkCategoryModel>();
-                viewmodel.OtherCategories = new List<OtherCategoryModel>();
+                viewmodel.FilterOptions = new FilterOptionsModel();
             }
 
             return View("~/Views/Helpdesk/WorkRequest/Index.cshtml", viewmodel);
@@ -530,7 +546,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                     workTitle = $"Work Request - {RequestDetail.Substring(0, Math.Min(50, RequestDetail.Length))}...",
                     requestMethod_Enum_idEnum = 1,
                     status_Enum_idEnum = 1,
-                    PriorityLevel_idPriorityLevel = 1, 
+                    PriorityLevel_idPriorityLevel = 1,
                     requestDate = DateTime.UtcNow,
                     requestor_Employee_idEmployee = userInfo.IdWebUser
                 };
@@ -1451,6 +1467,142 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
+        /// API: Get office hours for target date calculations
+        /// idClient is retrieved from session
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetOfficeHours()
+        {
+            try
+            {
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.OfficeHour.List}?idClient={idClient}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var officeHours = await JsonSerializer.DeserializeAsync<List<OfficeHourModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = officeHours ?? new List<OfficeHourModel>() });
+                }
+
+                _logger.LogWarning("Failed to load office hours. Status: {StatusCode}", response.StatusCode);
+                return Json(new { success = false, message = "Failed to load office hours" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching office hours");
+                return Json(new { success = false, message = "Error loading office hours" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get public holidays for target date calculations
+        /// idClient is retrieved from session
+        /// Loads current year and next year for 2-year window
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPublicHolidays()
+        {
+            try
+            {
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Load 2-year window (current year + next year) to handle year boundaries
+                var currentYear = DateTime.Now.Year;
+                var nextYear = currentYear + 1;
+
+                // Fetch both years in parallel
+                var currentYearTask = client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.PublicHoliday.List}?idClient={idClient}&year={currentYear}&isActiveData=true"
+                );
+                var nextYearTask = client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.PublicHoliday.List}?idClient={idClient}&year={nextYear}&isActiveData=true"
+                );
+
+                await Task.WhenAll(currentYearTask, nextYearTask);
+
+                var currentYearResponse = await currentYearTask;
+                var nextYearResponse = await nextYearTask;
+
+                var allPublicHolidays = new List<PublicHolidayModel>();
+
+                if (currentYearResponse.IsSuccessStatusCode)
+                {
+                    var responseStream = await currentYearResponse.Content.ReadAsStreamAsync();
+                    var holidays = await JsonSerializer.DeserializeAsync<List<PublicHolidayModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (holidays != null)
+                    {
+                        allPublicHolidays.AddRange(holidays);
+                    }
+                }
+
+                if (nextYearResponse.IsSuccessStatusCode)
+                {
+                    var responseStream = await nextYearResponse.Content.ReadAsStreamAsync();
+                    var holidays = await JsonSerializer.DeserializeAsync<List<PublicHolidayModel>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (holidays != null)
+                    {
+                        allPublicHolidays.AddRange(holidays);
+                    }
+                }
+
+                return Json(new { success = true, data = allPublicHolidays });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching public holidays");
+                return Json(new { success = false, message = "Error loading public holidays" });
+            }
+        }
+
+        /// <summary>
         /// GET: Priority Level Add page
         /// </summary>
         public IActionResult PriorityLevelAdd()
@@ -1893,22 +2045,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(
             HttpClient client,
             string backendUrl,
-            int page,
-            int idClient,
-            int idActor,
-            int idEmployee,
-            string keyWordSearch = "")
+            WorkRequestBodyModel requestBody)
         {
             try
             {
-                var requestBody = new WorkRequestBodyModel
+                var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
                 {
-                    Client_idClient = idClient,
-                    page = page,
-                    keyWordSearch = keyWordSearch
-                };
-
-                var jsonPayload = JsonSerializer.Serialize(requestBody);
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync(
@@ -1935,58 +2079,34 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
         }
 
-        private async Task<List<PropertyGroupModel>> GetPropertyGroupsAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<FilterOptionsModel?> GetFilterOptionsAsync(HttpClient client, string backendUrl, int idClient)
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.PropertyGroup.List}?idClient={idClient}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.GetFilterOptions}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<PropertyGroupModel>>(
+                    var filterOptions = await JsonSerializer.DeserializeAsync<FilterOptionsModel>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
-                    return result ?? new List<PropertyGroupModel>();
+
+                    return filterOptions;
                 }
 
-                _logger.LogWarning("Property Groups API returned status: {StatusCode}", response.StatusCode);
-                return new List<PropertyGroupModel>();
+                _logger.LogWarning("Filter Options API returned status: {StatusCode}", response.StatusCode);
+                return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching property groups");
-                return new List<PropertyGroupModel>();
+                _logger.LogError(ex, "Error fetching filter options");
+                return null;
             }
         }
 
-        private async Task<List<WRStatusModel>> GetStatusesAsync(HttpClient client, string backendUrl)
-        {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Statuses}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<WRStatusModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                    return result ?? new List<WRStatusModel>();
-                }
-
-                _logger.LogWarning("Statuses API returned status: {StatusCode}", response.StatusCode);
-                return new List<WRStatusModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching statuses");
-                return new List<WRStatusModel>();
-            }
-        }
-
+        // Legacy helper methods (still used by WorkRequestAdd, SendNewWorkRequest, etc.)
         private async Task<List<LocationModel>> GetLocationsAsync(HttpClient client, string backendUrl, int idClient)
         {
             try

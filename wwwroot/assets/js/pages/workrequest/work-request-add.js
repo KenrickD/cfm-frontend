@@ -34,41 +34,11 @@
             searchRequestors: MvcEndpoints.Helpdesk.Search.Requestors,
             searchWorkersByCompany: MvcEndpoints.Helpdesk.Search.WorkersByCompany,
             searchWorkersByServiceProvider: MvcEndpoints.Helpdesk.Search.WorkersByServiceProvider,
-            personsInCharge: MvcEndpoints.Helpdesk.WorkRequest.GetPersonsInChargeByFilters
-        },
-        priorityLevels: {
-            'Critical': {
-                helpdeskResponse: { hours: 0 },
-                initialFollowUp: { hours: 2 },
-                quotation: { hours: 4 },
-                costApproval: { hours: 6 },
-                workCompletion: { hours: 12 },
-                afterWorkFollowUp: { hours: 24 }
-            },
-            'High': {
-                helpdeskResponse: { hours: 4 },
-                initialFollowUp: { days: 1 },
-                quotation: { days: 2 },
-                costApproval: { days: 3 },
-                workCompletion: { days: 5 },
-                afterWorkFollowUp: { days: 7 }
-            },
-            'Medium': {
-                helpdeskResponse: { days: 1 },
-                initialFollowUp: { days: 2 },
-                quotation: { days: 4 },
-                costApproval: { days: 6 },
-                workCompletion: { days: 10 },
-                afterWorkFollowUp: { days: 14 }
-            },
-            'Low': {
-                helpdeskResponse: { days: 2 },
-                initialFollowUp: { days: 4 },
-                quotation: { days: 7 },
-                costApproval: { days: 10 },
-                workCompletion: { days: 21 },
-                afterWorkFollowUp: { days: 30 }
-            }
+            personsInCharge: MvcEndpoints.Helpdesk.WorkRequest.GetPersonsInChargeByFilters,
+
+            // Business day calculation
+            officeHours: MvcEndpoints.Helpdesk.Extended.GetOfficeHours,
+            publicHolidays: MvcEndpoints.Helpdesk.Extended.GetPublicHolidays
         }
     };
 
@@ -82,7 +52,8 @@
         laborMaterialItems: [],
         targetOverrides: {},
         workers: [],
-        importantChecklistData: []
+        importantChecklistData: [],
+        priorityLevelsCache: {} // Cache full priority level data by ID
     };
 
     /**
@@ -128,10 +99,10 @@
         const today = new Date().toISOString().split('T')[0];
         $('input[type="date"]').attr('min', today);
 
-        // Add change event listeners for date/time calculations
-        $('#requestDate, #requestTime, #priorityLevelSelect').on('change', function () {
-            calculateTargetDates();
-        });
+        // Setup real-time calculation triggers
+        $('#requestDate').on('change', triggerTargetDateCalculation);
+        $('#requestTime').on('change', triggerTargetDateCalculation);
+        $('#priorityLevelSelect').on('change', triggerTargetDateCalculation);
     }
 
     /**
@@ -153,11 +124,11 @@
         $.ajax({
             url: CONFIG.apiEndpoints.locations,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#locationSelect');
                     $select.empty().append('<option value="">Select Location</option>');
-                    $.each(response.data, function(index, location) {
+                    $.each(response.data, function (index, location) {
                         $select.append(
                             $('<option></option>')
                                 .val(location.id)
@@ -167,7 +138,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading locations:', error);
                 showNotification('Error loading locations', 'error');
             }
@@ -182,11 +153,11 @@
             url: CONFIG.apiEndpoints.workCategories,
             method: 'GET',
             data: { categoryType: 'workCategory' },
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#workCategorySelect');
                     $select.empty().append('<option value="">Select Work Category</option>');
-                    $.each(response.data, function(index, category) {
+                    $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
                                 .val(category.id)
@@ -195,7 +166,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading work categories:', error);
             }
         });
@@ -210,11 +181,11 @@
             url: CONFIG.apiEndpoints.otherCategories,
             method: 'GET',
             data: { categoryType: 'workRequestCustomCategory' },
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#otherCategorySelect');
                     $select.empty().append('<option value="">Select Other Category</option>');
-                    $.each(response.data, function(index, category) {
+                    $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
                                 .val(category.id)
@@ -230,11 +201,11 @@
             url: CONFIG.apiEndpoints.otherCategories,
             method: 'GET',
             data: { categoryType: 'workRequestCustomCategory2' },
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#otherCategory2Select');
                     $select.empty().append('<option value="">Select Other Category 2</option>');
-                    $.each(response.data, function(index, category) {
+                    $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
                                 .val(category.id)
@@ -253,13 +224,13 @@
         $.ajax({
             url: CONFIG.apiEndpoints.serviceProviders,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#serviceProviderSelect');
                     $select.empty()
                         .append('<option value="-1">Not Specified</option>')
                         .append('<option value="-2">Self-Performed</option>');
-                    $.each(response.data, function(index, provider) {
+                    $.each(response.data, function (index, provider) {
                         $select.append(
                             $('<option></option>')
                                 .val(provider.id)
@@ -268,38 +239,61 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading service providers:', error);
             }
         });
     }
 
     /**
-     * Load priority levels from API
+     * Load priority levels from API with full details
+     * Caches the full priority level data for target date calculations
      */
-    function loadPriorityLevels() {
-        $.ajax({
-            url: CONFIG.apiEndpoints.priorityLevels,
-            method: 'GET',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const $select = $('#priorityLevelSelect');
-                    $select.empty().append('<option value="">Select Priority Level</option>');
-                    $.each(response.data, function(index, priority) {
-                        $select.append(
-                            $('<option></option>')
-                                .val(priority.value || priority.name)
-                                .text(priority.label || priority.name)
-                                .attr('data-description', priority.description || '')
-                        );
-                    });
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading priority levels:', error);
-                showNotification('Error loading priority levels', 'error');
+    async function loadPriorityLevels() {
+        try {
+            // Fetch the list of priority levels first (for dropdown)
+            const listResponse = await fetch(CONFIG.apiEndpoints.priorityLevels);
+            const listData = await listResponse.json();
+
+            if (!listData.success || !listData.data) {
+                throw new Error('Failed to load priority levels list');
             }
-        });
+
+            // Populate the dropdown
+            const $select = $('#priorityLevelSelect');
+            $select.empty().append('<option value="">Select Priority Level</option>');
+
+            // Fetch full details for each priority level and cache
+            const detailPromises = listData.data.map(async (priority) => {
+                const priorityId = priority.value || priority.id;
+
+                // Fetch full priority level details
+                const detailResponse = await fetch(`/Helpdesk/GetPriorityLevelById?id=${priorityId}`);
+                const detailData = await detailResponse.json();
+
+                if (detailData.success && detailData.data) {
+                    // Cache the full priority level data
+                    state.priorityLevelsCache[priorityId] = detailData.data;
+
+                    // Add to dropdown
+                    $select.append(
+                        $('<option></option>')
+                            .val(priorityId)
+                            .text(priority.label || priority.name)
+                            .attr('data-description', priority.description || '')
+                    );
+                }
+            });
+
+            // Wait for all detail fetches to complete
+            await Promise.all(detailPromises);
+
+            console.log('Priority levels loaded and cached:', Object.keys(state.priorityLevelsCache).length);
+
+        } catch (error) {
+            console.error('Error loading priority levels:', error);
+            showNotification('Error loading priority levels', 'error');
+        }
     }
 
     /**
@@ -309,11 +303,11 @@
         $.ajax({
             url: CONFIG.apiEndpoints.feedbackTypes,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#feedbackStatus');
                     $select.empty().append('<option value="">No Feedback</option>');
-                    $.each(response.data, function(index, type) {
+                    $.each(response.data, function (index, type) {
                         $select.append(
                             $('<option></option>')
                                 .val(type.value || type.name)
@@ -322,7 +316,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading feedback types:', error);
             }
         });
@@ -335,11 +329,11 @@
         $.ajax({
             url: CONFIG.apiEndpoints.getCurrencies,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#costEstimationCurrencySelect');
                     $select.empty().append('<option value="">Select Currency</option>');
-                    $.each(response.data, function(index, currency) {
+                    $.each(response.data, function (index, currency) {
                         $select.append(
                             $('<option></option>')
                                 .val(currency.id || currency.value)
@@ -348,7 +342,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading currencies:', error);
             }
         });
@@ -361,11 +355,11 @@
         $.ajax({
             url: CONFIG.apiEndpoints.requestMethods,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $container = $('[name="RequestMethod"]').first().closest('.mt-2');
                     $container.empty();
-                    $.each(response.data, function(index, method) {
+                    $.each(response.data, function (index, method) {
                         const radioId = 'method' + (method.id || index);
                         const isFirst = index === 0;
                         $container.append(`
@@ -383,7 +377,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading request methods:', error);
             }
         });
@@ -396,11 +390,11 @@
         $.ajax({
             url: CONFIG.apiEndpoints.statuses,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     const $container = $('[name="Status"]').first().closest('.mt-2');
                     $container.empty();
-                    $.each(response.data, function(index, status) {
+                    $.each(response.data, function (index, status) {
                         const radioId = 'status' + (status.id || index);
                         const isNew = (status.value || status.name) === 'New';
                         $container.append(`
@@ -419,7 +413,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading statuses:', error);
             }
         });
@@ -432,13 +426,13 @@
         $.ajax({
             url: CONFIG.apiEndpoints.importantChecklist,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success && response.data) {
                     state.importantChecklistData = response.data;
                     const $container = $('#importantChecklistContainer');
                     $container.empty();
 
-                    $.each(response.data, function(index, item) {
+                    $.each(response.data, function (index, item) {
                         $container.append(`
                             <div class="col-md-4 mb-2">
                                 <div class="form-check">
@@ -456,7 +450,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading important checklist:', error);
             }
         });
@@ -797,7 +791,7 @@
      */
     function initializePersonInCharge() {
         // Load PIC when work category or location changes
-        $('#workCategorySelect, #locationSelect').on('change', function() {
+        $('#workCategorySelect, #locationSelect').on('change', function () {
             const idWorkCategory = $('#workCategorySelect').val();
             const idLocation = $('#locationSelect').val();
 
@@ -821,10 +815,10 @@
             url: CONFIG.apiEndpoints.personsInCharge,
             method: 'GET',
             data: params,
-            success: function(response) {
+            success: function (response) {
                 $select.empty().append('<option value="">Select Person in Charge</option>');
                 if (response.success && response.data && response.data.length > 0) {
-                    $.each(response.data, function(index, person) {
+                    $.each(response.data, function (index, person) {
                         $select.append(
                             $('<option></option>')
                                 .val(person.id)
@@ -833,7 +827,7 @@
                     });
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error loading persons in charge:', error);
             }
         });
@@ -843,7 +837,7 @@
      * Initialize service provider change to show/hide worker from service provider
      */
     function initializeServiceProviderChange() {
-        $('#serviceProviderSelect').on('change', function() {
+        $('#serviceProviderSelect').on('change', function () {
             const value = $(this).val();
             const idLocation = state.selectedLocation;
 
@@ -876,7 +870,7 @@
 
             // Setup autocomplete
             let timeout;
-            $('#workerServiceProviderSearch').on('keyup', function() {
+            $('#workerServiceProviderSearch').on('keyup', function () {
                 clearTimeout(timeout);
                 const term = $(this).val().trim();
 
@@ -891,7 +885,7 @@
                     return;
                 }
 
-                timeout = setTimeout(function() {
+                timeout = setTimeout(function () {
                     $.ajax({
                         url: CONFIG.apiEndpoints.searchWorkersByServiceProvider,
                         method: 'GET',
@@ -900,19 +894,19 @@
                             idLocation: idLocation,
                             idServiceProvider: idServiceProvider
                         },
-                        success: function(response) {
+                        success: function (response) {
                             const $dropdown = $('#workerServiceProviderDropdown');
                             $dropdown.empty();
 
                             if (response.success && response.data && response.data.length > 0) {
-                                $.each(response.data, function(index, worker) {
+                                $.each(response.data, function (index, worker) {
                                     const $item = $('<div></div>')
                                         .addClass('typeahead-item')
                                         .html(`
                                             <strong>${worker.fullName || worker.name}</strong>
                                             ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}
                                         `)
-                                        .on('click', function() {
+                                        .on('click', function () {
                                             $('#workerServiceProviderSearch').val(worker.fullName || worker.name);
                                             $('#workerServiceProviderId').val(worker.id);
                                             $dropdown.removeClass('show').empty();
@@ -929,7 +923,7 @@
                                 $dropdown.addClass('show');
                             }
                         },
-                        error: function(xhr, status, error) {
+                        error: function (xhr, status, error) {
                             console.error('Error searching workers from service provider:', error);
                             showNotification('Error searching workers. Please try again.', 'error');
                         }
@@ -938,7 +932,7 @@
             });
 
             // Close dropdown when clicking outside
-            $(document).on('click', function(e) {
+            $(document).on('click', function (e) {
                 if (!$(e.target).closest('#workerServiceProviderSearch, #workerServiceProviderDropdown').length) {
                     $('#workerServiceProviderDropdown').removeClass('show').empty();
                 }
@@ -954,65 +948,251 @@
     }
 
     /**
-     * Initialize priority level and target date calculation
+     * Initialize priority level dropdown (legacy compatibility)
      */
     function initializePriorityLevel() {
-        $('#priorityLevelSelect').on('change', function () {
-            calculateTargetDates();
+        // Priority level change is now handled by triggerTargetDateCalculation
+        // This function kept for backward compatibility
+    }
+
+    /**
+     * Trigger target date calculation (real-time on change)
+     * Uses cached priority data and fetches fresh office hours/holidays
+     */
+    async function triggerTargetDateCalculation() {
+        const requestDate = $('#requestDate').val();
+        const requestTime = $('#requestTime').val();
+        const priorityId = $('#priorityLevelSelect').val();
+
+        // Only calculate if all required fields are filled
+        if (!requestDate || !requestTime || !priorityId) {
+            clearAllTargetDates();
+            return;
+        }
+
+        // Check if priority level is cached
+        if (!state.priorityLevelsCache[priorityId]) {
+            console.error('Priority level not found in cache:', priorityId);
+            hideAllTargetDates();
+            showNotification('Priority level data not loaded. Please refresh the page.', 'error', 'Error');
+            return;
+        }
+
+        // Show loading state
+        showTargetDatesLoading();
+
+        try {
+            // Fetch fresh office hours and public holidays (per user requirement)
+            const [officeHoursResponse, publicHolidaysResponse] = await Promise.all([
+                fetch(CONFIG.apiEndpoints.officeHours),
+                fetch(CONFIG.apiEndpoints.publicHolidays)
+            ]);
+
+            const officeHoursData = await officeHoursResponse.json();
+            const publicHolidaysData = await publicHolidaysResponse.json();
+
+            // Check if data loaded successfully
+            if (!officeHoursData.success || !publicHolidaysData.success) {
+                hideAllTargetDates();
+                showNotification('Failed to load business day configuration. Cannot calculate target dates.', 'error', 'Error');
+                return;
+            }
+
+            // Initialize calculator with fresh data
+            const calculator = new BusinessDateCalculator(
+                officeHoursData.data,
+                publicHolidaysData.data
+            );
+
+            // Get cached priority level data
+            const priorityData = state.priorityLevelsCache[priorityId];
+
+            // Perform calculations
+            calculateAndDisplayTargets(priorityData, calculator, requestDate, requestTime);
+
+        } catch (error) {
+            console.error('Error calculating target dates:', error);
+            hideAllTargetDates();
+            showNotification('Error calculating target dates. Please try again.', 'error', 'Error');
+        }
+    }
+
+    /**
+     * Show loading state for target dates
+     */
+    function showTargetDatesLoading() {
+        $('.target-time-display .target-date').text('Calculating...');
+    }
+
+    /**
+     * Hide all target dates
+     */
+    function hideAllTargetDates() {
+        $('.target-time-display').hide();
+        $('.target-time-display .target-date').text('-');
+    }
+
+    /**
+     * Clear all target dates
+     */
+    function clearAllTargetDates() {
+        $('.target-time-display .target-date').text('-');
+    }
+
+    /**
+     * Calculate and display all 6 target dates
+     */
+    function calculateAndDisplayTargets(priorityLevel, calculator, requestDate, requestTime) {
+        const baseDate = new Date(`${requestDate}T${requestTime}`);
+
+        // Define all 6 target types with their priority level field mappings
+        const targets = [
+            {
+                type: 'helpdesk',
+                label: 'Helpdesk Response',
+                days: priorityLevel.helpdeskResponseTargetDays,
+                hours: priorityLevel.helpdeskResponseTargetHours,
+                minutes: priorityLevel.helpdeskResponseTargetMinutes,
+                withinOfficeHours: priorityLevel.helpdeskResponseTargetWithinOfficeHours,
+                reference: priorityLevel.helpdeskResponseTargetReference
+            },
+            {
+                type: 'initialFollowUp',
+                label: 'Initial Follow Up',
+                days: priorityLevel.initialFollowUpTargetDays,
+                hours: priorityLevel.initialFollowUpTargetHours,
+                minutes: priorityLevel.initialFollowUpTargetMinutes,
+                withinOfficeHours: priorityLevel.initialFollowUpTargetWithinOfficeHours,
+                reference: priorityLevel.initialFollowUpTargetReference
+            },
+            {
+                type: 'quotation',
+                label: 'Quotation Submission',
+                days: priorityLevel.quotationSubmissionTargetDays,
+                hours: priorityLevel.quotationSubmissionTargetHours,
+                minutes: priorityLevel.quotationSubmissionTargetMinutes,
+                withinOfficeHours: priorityLevel.quotationSubmissionTargetWithinOfficeHours,
+                reference: priorityLevel.quotationSubmissionTargetReference
+            },
+            {
+                type: 'costApproval',
+                label: 'Cost Approval',
+                days: priorityLevel.costApprovalTargetDays,
+                hours: priorityLevel.costApprovalTargetHours,
+                minutes: priorityLevel.costApprovalTargetMinutes,
+                withinOfficeHours: priorityLevel.costApprovalTargetWithinOfficeHours,
+                reference: priorityLevel.costApprovalTargetReference
+            },
+            {
+                type: 'workCompletion',
+                label: 'Work Completion',
+                days: priorityLevel.workCompletionTargetDays,
+                hours: priorityLevel.workCompletionTargetHours,
+                minutes: priorityLevel.workCompletionTargetMinutes,
+                withinOfficeHours: priorityLevel.workCompletionTargetWithinOfficeHours,
+                reference: priorityLevel.workCompletionTargetReference
+            },
+            {
+                type: 'afterWork',
+                label: 'After Work Follow Up',
+                days: priorityLevel.afterWorkFollowUpTargetDays,
+                hours: priorityLevel.afterWorkFollowUpTargetHours,
+                minutes: priorityLevel.afterWorkFollowUpTargetMinutes,
+                withinOfficeHours: priorityLevel.afterWorkFollowUpTargetWithinOfficeHours,
+                reference: priorityLevel.afterWorkFollowUpTargetReference
+            }
+        ];
+
+        // Calculate and display each target
+        targets.forEach(target => {
+            // Skip if there's a manual override
+            if (state.targetOverrides[target.type]) {
+                return;
+            }
+
+            // Check if this target has a defined duration
+            const hasDuration = target.days > 0 || target.hours > 0 || target.minutes > 0;
+
+            if (hasDuration) {
+                // Calculate target date using BusinessDateCalculator
+                const targetDate = calculator.calculateTargetDate(
+                    baseDate,
+                    target.days || 0,
+                    target.hours || 0,
+                    target.minutes || 0,
+                    target.withinOfficeHours || false
+                );
+
+                // Build tooltip text (matching legacy behavior)
+                const tooltip = buildTooltipText(target);
+
+                // Update display
+                updateTargetDateDisplay(target.type, targetDate, tooltip);
+
+                // Show the target date element
+                $(`#${target.type}Target`).show();
+            } else {
+                // No target defined - show "No Target"
+                $(`#${target.type}Target .target-date`).text('No Target');
+                $(`#${target.type}Target`).attr('title', '');
+                $(`#${target.type}Target`).show();
+            }
         });
     }
 
     /**
-     * Calculate target dates based on priority level and request date
+     * Build tooltip text for target date
      */
-    function calculateTargetDates() {
-        const priorityLevel = $('#priorityLevelSelect').val();
-        const requestDate = $('#requestDate').val();
-        const requestTime = $('#requestTime').val();
+    function buildTooltipText(target) {
+        let tooltip = 'Max ';
 
-        if (!priorityLevel || !requestDate || !requestTime) {
-            return;
+        if (target.days > 0) {
+            tooltip += `${target.days} ${target.days === 1 ? 'day' : 'days'} `;
+        }
+        if (target.hours > 0) {
+            tooltip += `${target.hours} ${target.hours === 1 ? 'hour' : 'hours'} `;
+        }
+        if (target.minutes > 0) {
+            tooltip += `${target.minutes} ${target.minutes === 1 ? 'minute' : 'minutes'} `;
         }
 
-        const baseDate = new Date(requestDate + 'T' + requestTime);
-        const targets = CONFIG.priorityLevels[priorityLevel];
+        tooltip += 'after Request Date';
 
-        if (!targets) {
-            return;
+        if (target.withinOfficeHours) {
+            tooltip += ' (within office hours only)';
         }
 
-        // Calculate and update each target
-        updateTargetDate('helpdesk', baseDate, targets.helpdeskResponse);
-        updateTargetDate('initialFollowUp', baseDate, targets.initialFollowUp);
-        updateTargetDate('quotation', baseDate, targets.quotation);
-        updateTargetDate('costApproval', baseDate, targets.costApproval);
-        updateTargetDate('workCompletion', baseDate, targets.workCompletion);
-        updateTargetDate('afterWork', baseDate, targets.afterWorkFollowUp);
+        tooltip += '. Click to change this target';
+
+        return tooltip;
     }
 
     /**
-     * Update target date display
+     * Update target date display element
      */
-    function updateTargetDate(targetType, baseDate, offset) {
-        // Check if there's a manual override
-        if (state.targetOverrides[targetType]) {
-            return; // Don't overwrite manual overrides
-        }
+    function updateTargetDateDisplay(type, targetDate, tooltip) {
+        const $targetElement = $(`#${type}Target`);
+        const formattedDate = formatDisplayDate(targetDate);
 
-        const targetDate = new Date(baseDate);
+        $targetElement.find('.target-date').text(formattedDate);
+        $targetElement.attr('title', tooltip);
+        $targetElement.data('calculated-target', targetDate.toISOString());
+    }
 
-        if (offset.hours !== undefined) {
-            targetDate.setHours(targetDate.getHours() + offset.hours);
-        }
-        if (offset.days !== undefined) {
-            targetDate.setDate(targetDate.getDate() + offset.days);
-        }
+    /**
+     * Format date for display (dd MMM yyyy hh:mm tt)
+     */
+    function formatDisplayDate(date) {
+        const options = {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
 
-        const formattedDate = formatDateTime(targetDate);
-        $(`#${targetType}Target .target-date`).text(formattedDate);
-
-        // Store the calculated target
-        $(`#${targetType}Target`).data('calculated-target', targetDate.toISOString());
+        return date.toLocaleString('en-US', options);
     }
 
     /**
@@ -1200,19 +1380,19 @@
      * Initialize workers management
      */
     function initializeWorkers() {
-        $('#addWorkerBtn').on('click', function() {
+        $('#addWorkerBtn').on('click', function () {
             resetWorkerModal();
             $('#addWorkerModal').modal('show');
         });
 
-        $('input[name="workerSource"]').on('change', function() {
+        $('input[name="workerSource"]').on('change', function () {
             $('#workerSearchModal').val('');
             $('#selectedWorkerId').val('');
             $('#selectedWorkerSide').val('');
         });
 
         let workerSearchTimeout;
-        $('#workerSearchModal').on('keyup', function() {
+        $('#workerSearchModal').on('keyup', function () {
             clearTimeout(workerSearchTimeout);
             const term = $(this).val().trim();
             const source = $('input[name="workerSource"]:checked').val();
@@ -1227,13 +1407,13 @@
 
         $('#saveWorkerBtn').on('click', saveWorker);
 
-        window.removeWorkerRow = function(button) {
+        window.removeWorkerRow = function (button) {
             const $row = $(button).closest('tr');
             const index = $row.data('worker-index');
             state.workers = state.workers.filter((_, i) => i !== index);
             $row.remove();
 
-            $('#workersTable tbody tr').each(function(i) {
+            $('#workersTable tbody tr').each(function (i) {
                 $(this).attr('data-worker-index', i);
             });
 
@@ -1270,12 +1450,12 @@
             url: endpoint,
             method: 'GET',
             data: params,
-            success: function(response) {
+            success: function (response) {
                 const $dropdown = $('#workerSearchDropdownModal');
                 $dropdown.empty();
 
                 if (response.success && response.data?.length > 0) {
-                    $.each(response.data, function(index, worker) {
+                    $.each(response.data, function (index, worker) {
                         $dropdown.append(
                             $('<div></div>')
                                 .addClass('typeahead-item')
@@ -1290,7 +1470,7 @@
                     $dropdown.addClass('show');
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('Error searching workers:', error);
                 showNotification('Failed to search workers', 'error');
             }
@@ -1416,7 +1596,7 @@
 
             // Important Checklist
             const importantChecklist = [];
-            $('.important-checklist-item').each(function() {
+            $('.important-checklist-item').each(function () {
                 importantChecklist.push({
                     Type_idType: $(this).data('type-id'),
                     value: $(this).is(':checked')
