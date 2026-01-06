@@ -55,6 +55,15 @@ namespace cfm_frontend.Controllers
                 }
             }
 
+            // FUTURE: Load user theme preference from database
+            // When implementing, add a ThemePreference field to UserInfo or create a UserPreferences table
+            // Example implementation:
+            // var userInfo = JsonSerializer.Deserialize<UserInfo>(HttpContext.Session.GetString("UserSession"));
+            // if (userInfo?.ThemePreference != null)
+            // {
+            //     ViewBag.UserThemePreference = userInfo.ThemePreference; // "light" or "dark"
+            // }
+
             base.OnActionExecuting(context);
         }
     }

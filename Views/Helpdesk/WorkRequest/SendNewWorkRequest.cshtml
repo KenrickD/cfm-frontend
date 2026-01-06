@@ -84,11 +84,12 @@
                             data-search-placeholder="Search location..."
                             required>
                         <option value="">Select Location</option>
+                        <option value="-1">Not Specified</option>
                         @if (Model?.Locations != null && Model.Locations.Any())
                         {
                             foreach (var location in Model.Locations)
                             {
-                                <option value="@location.id">@location.name</option>
+                                <option value="@location.idProperty">@location.propertyName</option>
                             }
                         }
                     </select>

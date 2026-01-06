@@ -50,6 +50,9 @@ class SearchableDropdown {
     }
 
     init() {
+        // Store reference to this instance on the select element
+        this.select._searchableDropdown = this;
+
         this.createStructure();
         this.loadInitialData();
         this.attachEvents();

@@ -4,9 +4,10 @@
     {
         public class LocationModel
         {
-            public int id { get; set; }
-            public string name { get; set; }
-            public int propertyGroupId { get; set; }
+            public int idProperty { get; set; }
+            public string propertyName { get; set; }
+            public string cityName { get; set; }
+            public int idPropertyType { get; set; }
         }
 
         public class ServiceProviderModel

@@ -6,8 +6,9 @@ namespace cfm_frontend.Constants
     /// </summary>
     public static class ApiEndpoints
     {
-        private const string ApiBase = "/api";
-
+        private const string Api = "/api";
+        private const string Version = "/v1";
+        private const string ApiBase = Api + Version;
         #region Authentication
 
         /// <summary>
@@ -15,7 +16,7 @@ namespace cfm_frontend.Constants
         /// </summary>
         public static class Auth
         {
-            private const string Base = ApiBase + "/Auth";
+            private const string Base = Api + "/Auth";
 
             /// <summary>
             /// POST: Authenticate user with credentials
@@ -37,7 +38,7 @@ namespace cfm_frontend.Constants
         #region SessionInfo
         public static class UserInfo
         {
-            private const string Base = ApiBase + "/WebUser";
+            private const string Base = Api + "/WebUser";
 
             /// <summary>
             /// GET: Get user details
@@ -80,7 +81,7 @@ namespace cfm_frontend.Constants
         /// </summary>
         public static class WorkRequest
         {
-            private const string Base = ApiBase + "/WorkRequest";
+            private const string Base = ApiBase + "/work-request";
 
             /// <summary>
             /// POST: Create new work request
@@ -106,48 +107,41 @@ namespace cfm_frontend.Constants
 
         #endregion
 
-        #region Location & Property
+        #region Property Management
 
         /// <summary>
-        /// Location management endpoints
+        /// Property management endpoints (includes locations, floors, and room zones)
+        /// API Version: 1.0
         /// </summary>
-        public static class Location
+        public static class Property
         {
-            private const string Base = ApiBase + "/location";
+            private const string Base = ApiBase + "/property";
 
             /// <summary>
-            /// GET: Get locations
-            /// Query params: idClient, userId (optional)
+            /// GET: Get properties (locations)
+            /// Query params: idClient (required), idPropertyType (optional)
+            /// API Version: 1.0
             /// </summary>
-            public const string List = Base + "/list";
-        }
-
-        /// <summary>
-        /// Floor management endpoints
-        /// </summary>
-        public static class Floor
-        {
-            private const string Base = ApiBase + "/floor";
+            public const string List = Base;
 
             /// <summary>
-            /// GET: Get floors for a specific location
-            /// Query params: locationId
+            /// GET: Get floors for a specific property
+            /// Path params: {idProperty}
+            /// API Version: 1.0
             /// </summary>
-            public const string List = Base + "/list";
-        }
-
-        /// <summary>
-        /// Room management endpoints
-        /// </summary>
-        public static class Room
-        {
-            private const string Base = ApiBase + "/room";
+            /// <param name="idProperty">Property ID</param>
+            /// <returns>Get floors endpoint URL</returns>
+            public static string GetFloors(int idProperty) => $"{Base}/{idProperty}/floors";
 
             /// <summary>
-            /// GET: Get rooms for a specific floor
-            /// Query params: floorId
+            /// GET: Get room zones for a specific property and floor
+            /// Path params: {idProperty}, {idFloor}
+            /// API Version: 1.0
             /// </summary>
-            public const string List = Base + "/list";
+            /// <param name="idProperty">Property ID</param>
+            /// <param name="idFloor">Floor ID</param>
+            /// <returns>Get room zones endpoint URL</returns>
+            public static string GetRoomZones(int idProperty, int idFloor) => $"{Base}/{idProperty}/floors/{idFloor}/roomzones";
         }
 
         /// <summary>

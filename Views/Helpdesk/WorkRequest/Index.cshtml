@@ -346,9 +346,9 @@
                                         @foreach (var location in Model.FilterOptions.Locations)
                                         {
                                             <div class="filter-checkbox-item form-check">
-                                                <input class="form-check-input" type="checkbox" value="@location.id" id="loc_@location.id" name="locations">
-                                                <label class="form-check-label" for="loc_@location.id">
-                                                    @location.name
+                                                <input class="form-check-input" type="checkbox" value="@location.idProperty" id="loc_@location.idProperty" name="locations">
+                                                <label class="form-check-label" for="loc_@location.idProperty">
+                                                    @location.propertyName
                                                 </label>
                                             </div>
                                         }

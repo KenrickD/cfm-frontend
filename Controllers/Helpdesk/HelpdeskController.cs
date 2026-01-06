@@ -146,62 +146,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Work Request Add page
         /// </summary>
         //[Authorize]
-        public async Task<IActionResult> WorkRequestAdd()
+        public IActionResult WorkRequestAdd()
         {
             // Check if user has permission to view Work Request Add page
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
             if (accessCheck != null) return accessCheck;
 
-            var viewmodel = new WorkRequestViewModel();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return RedirectToAction("Index", "Login");
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return RedirectToAction("Index", "Login");
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                // Load initial data for dropdowns
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
-                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
-                var workCategoriesTask = GetWorkCategoriesAsync(client, backendUrl);
-                var otherCategoriesTask = GetOtherCategoriesAsync(client, backendUrl);
-
-                await Task.WhenAll(
-                    locationsTask,
-                    serviceProvidersTask,
-                    workCategoriesTask,
-                    otherCategoriesTask
-                );
-
-                viewmodel.Locations = await locationsTask;
-                viewmodel.ServiceProviders = await serviceProvidersTask;
-                viewmodel.WorkCategories = await workCategoriesTask;
-                viewmodel.OtherCategories = await otherCategoriesTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading work request add page");
-                viewmodel.Locations = new List<LocationModel>();
-                viewmodel.ServiceProviders = new List<ServiceProviderModel>();
-                viewmodel.WorkCategories = new List<WorkCategoryModel>();
-                viewmodel.OtherCategories = new List<OtherCategoryModel>();
-            }
-
-            return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", viewmodel);
+            // Return view - all dropdown data is loaded client-side via JavaScript
+            return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml");
         }
 
         /// <summary>
@@ -238,18 +190,13 @@ namespace cfm_frontend.Controllers.Helpdesk
             var idClient = userInfo.PreferredClientId;
             if (!ModelState.IsValid)
             {
-                // Reload dropdown data
-                var viewmodel = new WorkRequestViewModel();
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                // Return validation errors as JSON for client-side handling
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
 
-
-                viewmodel.Locations = await GetLocationsAsync(client, backendUrl, idClient);
-                viewmodel.ServiceProviders = await GetServiceProvidersAsync(client, backendUrl, idClient);
-                viewmodel.WorkCategories = await GetWorkCategoriesAsync(client, backendUrl);
-                viewmodel.OtherCategories = await GetOtherCategoriesAsync(client, backendUrl);
-
-                return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", viewmodel);
+                return Json(new { success = false, errors });
             }
 
             try
@@ -384,18 +331,15 @@ namespace cfm_frontend.Controllers.Helpdesk
                 ModelState.AddModelError(string.Empty, "An error occurred while creating the work request.");
             }
 
-            // If we got here, something failed, reload the form
-            var failViewModel = new WorkRequestViewModel();
-            var failClient = _httpClientFactory.CreateClient("BackendAPI");
-            var failBackendUrl = _configuration["BackendBaseUrl"];
-            var failIdClient = idClient;
-
-            failViewModel.Locations = await GetLocationsAsync(failClient, failBackendUrl, failIdClient);
-            failViewModel.ServiceProviders = await GetServiceProvidersAsync(failClient, failBackendUrl, failIdClient);
-            failViewModel.WorkCategories = await GetWorkCategoriesAsync(failClient, failBackendUrl);
-            failViewModel.OtherCategories = await GetOtherCategoriesAsync(failClient, failBackendUrl);
-
-            return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", failViewModel);
+            // If we got here, something failed - return JSON error for JavaScript to handle
+            return Json(new
+            {
+                success = false,
+                message = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .FirstOrDefault() ?? "An error occurred while creating the work request."
+            });
         }
 
         /// <summary>
@@ -607,78 +551,22 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Work Request Detail page
         /// </summary>
         //[Authorize]
-        public async Task<IActionResult> WorkRequestDetail(int id)
+        public IActionResult WorkRequestDetail(int id)
         {
             // Check if user has permission to view Work Request Detail
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
             if (accessCheck != null) return accessCheck;
 
-            var viewmodel = new WorkRequestDetailViewModel();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return RedirectToAction("Index", "Login");
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return RedirectToAction("Index", "Login");
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                // TODO: Replace with actual API endpoints when backend is ready
-                // For now, load dropdown data and create empty change history
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
-                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
-                var workCategoriesTask = GetWorkCategoriesAsync(client, backendUrl);
-                var otherCategoriesTask = GetOtherCategoriesAsync(client, backendUrl);
-
-                await Task.WhenAll(
-                    locationsTask,
-                    serviceProvidersTask,
-                    workCategoriesTask,
-                    otherCategoriesTask
-                );
-
-                viewmodel.Locations = await locationsTask;
-                viewmodel.ServiceProviders = await serviceProvidersTask;
-                viewmodel.WorkCategories = await workCategoriesTask;
-                viewmodel.OtherCategories = await otherCategoriesTask;
-
-                // TODO: When backend is ready, fetch work request detail
-                // var workRequestResponse = await client.GetAsync($"{backendUrl}/api/workrequest/{id}");
-                // var changeHistoryResponse = await client.GetAsync($"{backendUrl}/api/workrequest/{id}/changehistory");
-
-                // For now, initialize empty change history list
-                viewmodel.ChangeHistories = new List<ChangeHistory>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading work request detail page");
-                viewmodel.Locations = new List<LocationModel>();
-                viewmodel.ServiceProviders = new List<ServiceProviderModel>();
-                viewmodel.WorkCategories = new List<WorkCategoryModel>();
-                viewmodel.OtherCategories = new List<OtherCategoryModel>();
-                viewmodel.ChangeHistories = new List<ChangeHistory>();
-            }
-
-            return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml", viewmodel);
+            // Return view - all dropdown data is loaded client-side via JavaScript
+            // TODO: When backend is ready, fetch work request detail and pass to view
+            return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml");
         }
 
 
         #region API Endpoints for Dynamic Data Loading
 
         /// <summary>
-        /// API: Get floors by location ID
+        /// API: Get floors by property ID
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetFloorsByLocation(int locationId)
@@ -688,7 +576,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Floor.List}?locationId={locationId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetFloors(locationId)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -705,23 +593,23 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching floors for location {LocationId}", locationId);
+                _logger.LogError(ex, "Error fetching floors for property {LocationId}", locationId);
                 return Json(new { success = false, message = "Error loading floors" });
             }
         }
 
         /// <summary>
-        /// API: Get rooms by floor ID
+        /// API: Get room zones by property ID and floor ID
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetRoomsByFloor(int floorId)
+        public async Task<IActionResult> GetRoomsByFloor(int propertyId, int floorId)
         {
             try
             {
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Room.List}?floorId={floorId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetRoomZones(propertyId, floorId)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -734,12 +622,12 @@ namespace cfm_frontend.Controllers.Helpdesk
                     return Json(new { success = true, data = rooms });
                 }
 
-                return Json(new { success = false, message = "Failed to load rooms" });
+                return Json(new { success = false, message = "Failed to load room zones" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching rooms for floor {FloorId}", floorId);
-                return Json(new { success = false, message = "Error loading rooms" });
+                _logger.LogError(ex, "Error fetching room zones for property {PropertyId} and floor {FloorId}", propertyId, floorId);
+                return Json(new { success = false, message = "Error loading room zones" });
             }
         }
 
@@ -879,7 +767,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Location.List}?idClient={idClient}&userId={userId}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -892,7 +780,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                     return Json(new { success = true, data = locations });
                 }
 
-                return Json(new { success = false, message = "Failed to load locations" });
+                return Json(new { success = false, message = "Failed to load properties" });
             }
             catch (Exception ex)
             {
@@ -2042,7 +1930,7 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         #region Helper Functions 
 
-        private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(
+        private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(   
             HttpClient client,
             string backendUrl,
             WorkRequestBodyModel requestBody)
@@ -2111,7 +1999,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Location.List}?idClient={idClient}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2123,12 +2011,12 @@ namespace cfm_frontend.Controllers.Helpdesk
                     return result ?? new List<LocationModel>();
                 }
 
-                _logger.LogWarning("Locations API returned status: {StatusCode}", response.StatusCode);
+                _logger.LogWarning("Properties API returned status: {StatusCode}", response.StatusCode);
                 return new List<LocationModel>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching locations");
+                _logger.LogError(ex, "Error fetching properties");
                 return new List<LocationModel>();
             }
         }

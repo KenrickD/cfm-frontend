@@ -2,9 +2,7 @@
 {
     public class FloorModel
     {
-        public int id { get; set; }
-        public string name { get; set; }
-        public int locationId { get; set; }
-        public string floorNumber { get; set; }
+        public int IdPropertyFloor { get; set; }
+        public string FloorUnitName { get; set; }
     }
 }

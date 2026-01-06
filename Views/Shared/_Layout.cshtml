@@ -6,6 +6,29 @@
     @RenderSection("styles", required: false)
 
     @Html.Partial("~/Views/Shared/HeadCSS.cshtml")
+
+    <script>
+        // Apply saved theme immediately on page load (in head to prevent flash)
+        (function() {
+            // FUTURE: Server-side user preference from database
+            // When implemented, set ViewBag.UserThemePreference in BaseController from DB
+            var serverTheme = '@ViewBag.UserThemePreference';
+
+            // Priority: localStorage (user's current session choice) > Server DB preference > default (light)
+            var savedTheme = localStorage.getItem('pc-theme');
+
+            if (savedTheme && savedTheme !== 'default') {
+                // Use localStorage (highest priority - current session choice)
+                window.__pendingTheme = savedTheme;
+            } else if (serverTheme && serverTheme !== '' && serverTheme !== 'default') {
+                // Use server-side DB preference (only if no localStorage override)
+                window.__pendingTheme = serverTheme;
+                // Sync to localStorage so it persists in current session
+                localStorage.setItem('pc-theme', serverTheme);
+            }
+            // If neither exists, use light mode (app default) - no action needed
+        })();
+    </script>
 </head>
 @{
         var layout = ViewBag.LayoutSettings as LayoutSettings;
@@ -13,6 +36,13 @@
 @* <body data-pc-preset="@layout?.PcPreset ?? " preset-1"" data-pc-sidebar-theme="@layout?.PcSidebarTheme ?? " light"" data-pc-sidebar-caption="@layout?.PcSidebarCaption ?? " true"" data-pc-direction="@layout?.PcDirection ?? " ltr"" data-pc-theme="@layout?.PcTheme ?? " light"> *@
 @* <body data-pc-preset="@layout.PcPreset" data-pc-sidebar-theme="@layout.PcSidebarTheme" data-pc-sidebar-caption="@layout.PcSidebarCaption" data-pc-direction="@layout.PcDirection" data-pc-theme="@layout.PcTheme"> *@
 <body data-pc-preset="@layout.PcPreset" data-pc-sidebar-theme="@layout.PcSidebarTheme" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">
+    <script>
+        // Apply theme immediately now that body exists
+        if (window.__pendingTheme) {
+            document.body.setAttribute('data-pc-theme', window.__pendingTheme);
+            delete window.__pendingTheme;
+        }
+    </script>
 
     @Html.Partial("~/Views/Shared/LayoutVertical.cshtml")
 

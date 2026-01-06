@@ -332,20 +332,9 @@ var dark_flag = false;
 
 // ----------    new setup start   ------------
 function layout_change_default() {
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    dark_layout = 'dark';
-  } else {
-    dark_layout = 'light';
-  }
-  layout_change(dark_layout);
-  var btn_control = document.querySelector('.theme-layout .btn[data-value="default"]');
-  if (btn_control) {
-    btn_control.classList.add('active');
-  }
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
-    dark_layout = event.matches ? 'dark' : 'light';
-    layout_change(dark_layout);
-  });
+  // "Default" button just sets to light mode (app default)
+  // We ignore OS/browser dark mode preferences
+  layout_change('light');
 }
 
 // dark switch mode
@@ -465,6 +454,9 @@ function layout_rtl_change(value) {
 function layout_change(layout) {
   var control = document.querySelector('.pct-offcanvas');
   document.getElementsByTagName('body')[0].setAttribute('data-pc-theme', layout);
+
+  // Persist theme preference to localStorage
+  localStorage.setItem('pc-theme', layout);
 
   var btn_control = document.querySelector('.theme-layout .btn[data-value="default"]');
   if (btn_control) {
@@ -610,6 +602,46 @@ var slideToggle = (target, duration = 0) => {
     return slideUp(target, duration);
   }
 };
+
+// Restore theme state on page load (logos and button states)
+document.addEventListener('DOMContentLoaded', function () {
+  var savedTheme = localStorage.getItem('pc-theme');
+  if (savedTheme && savedTheme !== 'default') {
+    var currentTheme = document.body.getAttribute('data-pc-theme');
+
+    // Update dark mode toggle checkbox in sidebar
+    var darkModeCheckbox = document.getElementById('dark-mode');
+    if (darkModeCheckbox) {
+      darkModeCheckbox.checked = (currentTheme === 'dark');
+    }
+
+    // Update logos based on current theme
+    if (currentTheme === 'dark') {
+      if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
+        document.querySelector('.pc-sidebar .m-header .logo-lg').setAttribute('src', '../assets/images/logo-white.svg');
+      }
+      if (document.querySelector('.navbar-brand .logo-lg')) {
+        document.querySelector('.navbar-brand .logo-lg').setAttribute('src', '../assets/images/logo-white.svg');
+      }
+    } else {
+      if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
+        document.querySelector('.pc-sidebar .m-header .logo-lg').setAttribute('src', '../assets/images/logo-dark.svg');
+      }
+      if (document.querySelector('.navbar-brand .logo-lg')) {
+        document.querySelector('.navbar-brand .logo-lg').setAttribute('src', '../assets/images/logo-dark.svg');
+      }
+    }
+
+    // Update button states in customizer
+    var themeBtn = document.querySelector('.theme-layout .btn[data-value="' + (savedTheme === 'dark' ? 'false' : 'true') + '"]');
+    if (themeBtn) {
+      document.querySelectorAll('.theme-layout .btn').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      themeBtn.classList.add('active');
+    }
+  }
+});
 
 // =======================================================
 // =======================================================

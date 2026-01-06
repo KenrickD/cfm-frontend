@@ -49,11 +49,25 @@
             const locationId = $(this).val();
             state.selectedLocation = locationId;
 
-            // Reset floor and room
+            // Reset floor and room dropdowns
             $floorSelect.prop('disabled', true).empty().append('<option value="">Loading floors...</option>');
             $roomSelect.prop('disabled', true).empty().append('<option value="">Select Room/Area/Zone</option>');
             state.selectedFloor = null;
             state.selectedRoom = null;
+
+            // Reset searchable dropdown components
+            const floorElement = document.getElementById('floorSelect');
+            if (floorElement && floorElement._searchableDropdown) {
+                floorElement._searchableDropdown.clear();
+                floorElement._searchableDropdown.loadFromSelect();
+                floorElement._searchableDropdown.disable();
+            }
+            const roomElement = document.getElementById('roomSelect');
+            if (roomElement && roomElement._searchableDropdown) {
+                roomElement._searchableDropdown.clear();
+                roomElement._searchableDropdown.loadFromSelect();
+                roomElement._searchableDropdown.disable();
+            }
 
             if (locationId) {
                 loadFloors(locationId);
@@ -67,12 +81,20 @@
             const floorId = $(this).val();
             state.selectedFloor = floorId;
 
-            // Reset room
+            // Reset room dropdown
             $roomSelect.prop('disabled', true).empty().append('<option value="">Loading rooms...</option>');
             state.selectedRoom = null;
 
-            if (floorId) {
-                loadRooms(floorId);
+            // Reset searchable dropdown component
+            const roomElement = document.getElementById('roomSelect');
+            if (roomElement && roomElement._searchableDropdown) {
+                roomElement._searchableDropdown.clear();
+                roomElement._searchableDropdown.loadFromSelect();
+                roomElement._searchableDropdown.disable();
+            }
+
+            if (floorId && state.selectedLocation) {
+                loadRooms(state.selectedLocation, floorId);
             } else {
                 $roomSelect.empty().append('<option value="">Select Room/Area/Zone</option>');
             }
@@ -85,27 +107,36 @@
     }
 
     /**
-     * Load floors for selected location
+     * Load floors for selected property
      */
-    function loadFloors(locationId) {
+    function loadFloors(propertyId) {
         const $floorSelect = $('#floorSelect');
 
         $.ajax({
             url: CONFIG.apiEndpoints.floors,
             method: 'GET',
-            data: { locationId: locationId },
+            data: { locationId: propertyId },
             success: function (response) {
-                $floorSelect.empty().append('<option value="">Select Floor</option>');
+                $floorSelect.empty()
+                    .append('<option value="">Select Floor</option>')
+                    .append('<option value="-1">Not Specified</option>');
 
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, floor) {
                         $floorSelect.append(
                             $('<option></option>')
-                                .val(floor.id)
-                                .text(floor.name)
+                                .val(floor.idPropertyFloor)
+                                .text(floor.floorUnitName)
                         );
                     });
                     $floorSelect.prop('disabled', false);
+
+                    // Refresh and enable the searchable dropdown component
+                    const selectElement = document.getElementById('floorSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                    }
                 } else {
                     $floorSelect.append('<option value="">No floors available</option>');
                 }
@@ -119,29 +150,38 @@
     }
 
     /**
-     * Load rooms for selected floor
+     * Load room zones for selected property and floor
      */
-    function loadRooms(floorId) {
+    function loadRooms(propertyId, floorId) {
         const $roomSelect = $('#roomSelect');
 
         $.ajax({
             url: CONFIG.apiEndpoints.rooms,
             method: 'GET',
-            data: { floorId: floorId },
+            data: { propertyId: propertyId, floorId: floorId },
             success: function (response) {
-                $roomSelect.empty().append('<option value="">Select Room/Area/Zone</option>');
+                $roomSelect.empty()
+                    .append('<option value="">Select Room/Area/Zone</option>')
+                    .append('<option value="-1">Not Specified</option>');
 
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, room) {
                         $roomSelect.append(
                             $('<option></option>')
-                                .val(room.id)
-                                .text(room.name)
+                                .val(room.idRoomZone)
+                                .text(room.roomZoneName)
                         );
                     });
                     $roomSelect.prop('disabled', false);
+
+                    // Refresh and enable the searchable dropdown component
+                    const selectElement = document.getElementById('roomSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                    }
                 } else {
-                    $roomSelect.append('<option value="">No rooms available</option>');
+                    $roomSelect.append('<option value="">No room zones available</option>');
                 }
             },
             error: function (xhr, status, error) {
