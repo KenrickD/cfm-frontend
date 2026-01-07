@@ -1,0 +1,51 @@
+/**
+ * CFM Frontend Design System - CSS Variables
+ *
+ * Core color palette, spacing, and design tokens extracted from
+ * Work Request Index and Add pages.
+ *
+ * Usage: var(--cfm-primary) in CSS
+ */
+
+:root {
+  /* Primary Colors - from Work Request pages */
+  --cfm-primary: #04a9f5;
+  --cfm-primary-dark: #0396de;
+  --cfm-primary-light: #e7f3ff;
+
+  /* Status Colors */
+  --cfm-success: #2ed8b6;
+  --cfm-danger: #f5576c;
+  --cfm-warning: #ff9800;
+  --cfm-info: #04a9f5;
+
+  /* Background Colors - Light variants for badges/alerts */
+  --cfm-bg-light-primary: rgba(4, 169, 245, 0.1);
+  --cfm-bg-light-success: rgba(46, 216, 182, 0.1);
+  --cfm-bg-light-danger: rgba(245, 87, 108, 0.1);
+  --cfm-bg-light-secondary: rgba(108, 117, 125, 0.1);
+
+  /* Grays - Consistent with Light Able theme */
+  --cfm-gray-100: #f8f9fa;
+  --cfm-gray-200: #e9ecef;
+  --cfm-gray-300: #dee2e6;
+  --cfm-gray-400: #dbe0e5;
+  --cfm-gray-600: #6c757d;
+  --cfm-gray-700: #495057;
+
+  /* Spacing */
+  --cfm-card-padding: 1.5rem;
+  --cfm-section-spacing: 1.5rem;
+
+  /* Border Radius */
+  --cfm-border-radius: 0.375rem;
+  --cfm-border-radius-sm: 0.25rem;
+  --cfm-border-radius-lg: 0.5rem;
+
+  /* Shadows */
+  --cfm-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --cfm-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+
+  /* Transitions */
+  --cfm-transition-base: all 0.3s ease;
+}

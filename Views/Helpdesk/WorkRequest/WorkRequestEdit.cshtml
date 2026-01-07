@@ -7,9 +7,7 @@ Layout = "~/Views/Shared/_Layout.cshtml";
 
 @section styles {
     <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
-    <link rel="stylesheet" href="~/assets/css/uikit.css">
     <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
-    <link rel="stylesheet" href="~/assets/css/pages/work-request.css">
 }
 
 <div class="row">
@@ -34,8 +32,13 @@ Layout = "~/Views/Shared/_Layout.cshtml";
 
                     <div class="row">
                         <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Location</label>
-                            <select class="form-select form-select-sm" id="select-location" data-placeholder="Location">
+                            <label class="form-label fw-semibold">Location</label>
+                            <select class="form-select form-select-sm"
+                                    id="select-location"
+                                    data-searchable="true"
+                                    data-placeholder="Select Location"
+                                    data-search-placeholder="Search location...">
+                                <option value="">Select Location</option>
                                 <option class="text-sm">Reactive</option>
                                 <option class="text-sm">Solution</option>
                                 <option class="text-sm">Conglomeration</option>
@@ -45,8 +48,13 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                         </div>
 
                         <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Floor</label>
-                            <select class="form-select form-select-sm" id="select-floor" data-placeholder="Floor">
+                            <label class="form-label fw-semibold">Floor</label>
+                            <select class="form-select form-select-sm"
+                                    id="select-floor"
+                                    data-searchable="true"
+                                    data-placeholder="Select Floor"
+                                    data-search-placeholder="Search floor...">
+                                <option value="">Select Floor</option>
                                 <option class="text-sm">Reactive</option>
                                 <option class="text-sm">Solution</option>
                                 <option class="text-sm">Conglomeration</option>
@@ -56,9 +64,13 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                         </div>
 
                         <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Room/Area/Zone</label>
-                            <select class="form-select form-select-sm" id="select-room"
-                                    data-placeholder="Room/Area/Zone">
+                            <label class="form-label fw-semibold">Room/Area/Zone</label>
+                            <select class="form-select form-select-sm"
+                                    id="select-room"
+                                    data-searchable="true"
+                                    data-placeholder="Select Room/Area/Zone"
+                                    data-search-placeholder="Search room...">
+                                <option value="">Select Room/Area/Zone</option>
                                 <option class="text-sm">Reactive</option>
                                 <option class="text-sm">Solution</option>
                                 <option class="text-sm">Conglomeration</option>
@@ -96,8 +108,12 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                 <div class="card-body">
                     <div class="row">
                         <div class="mb-3 col-md-4">
-                            <label class="form-label fw-semibold" for="inputEmail4">Status</label>
-                            <select class="form-select form-select-sm" data-placeholder="Priority">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select class="form-select form-select-sm"
+                                    data-searchable="true"
+                                    data-placeholder="Select Status"
+                                    data-search-placeholder="Search status...">
+                                <option value="">Select Status</option>
                                 <option class="text-sm">New</option>
                                 <option class="text-sm">In Progress</option>
                                 <option class="text-sm">Cancelled</option>
@@ -172,8 +188,12 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                 <div class="card-body">
                     <div class="row">
                         <div class="mb-3 col-md-12">
-                            <label class="form-label fw-semibold" for="inputEmail4">Person in Charge</label>
-                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                            <label class="form-label fw-semibold">Person in Charge</label>
+                            <select class="form-select form-select-sm"
+                                    data-searchable="true"
+                                    data-placeholder="Select Person in Charge"
+                                    data-search-placeholder="Search person...">
+                                <option value="">Select Person in Charge</option>
                                 <option class="text-sm">Sabarudin</option>
                                 <option class="text-sm">Sarifudin</option>
                                 <option class="text-sm">Safiudin</option>
@@ -183,8 +203,12 @@ Layout = "~/Views/Shared/_Layout.cshtml";
 
                     <div class="row">
                         <div class="mb-3 col-md-12">
-                            <label class="form-label fw-semibold" for="inputEmail4">Service Provider</label>
-                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                            <label class="form-label fw-semibold">Service Provider</label>
+                            <select class="form-select form-select-sm"
+                                    data-searchable="true"
+                                    data-placeholder="Select Service Provider"
+                                    data-search-placeholder="Search provider...">
+                                <option value="">Select Service Provider</option>
                                 <option class="text-sm">Provider 1</option>
                                 <option class="text-sm">Provider 2</option>
                                 <option class="text-sm">Provider 3</option>
@@ -193,8 +217,12 @@ Layout = "~/Views/Shared/_Layout.cshtml";
                     </div>
                     <div class="row">
                         <div class="mb-3 col-md-12">
-                            <label class="form-label fw-semibold" for="inputEmail4">Worker from Company</label>
-                            <select class="form-select form-select-sm" id="" data-placeholder="Room/Area/Zone">
+                            <label class="form-label fw-semibold">Worker from Company</label>
+                            <select class="form-select form-select-sm"
+                                    data-searchable="true"
+                                    data-placeholder="Select Worker"
+                                    data-search-placeholder="Search worker...">
+                                <option value="">Select Worker</option>
                                 <option class="text-sm">Worker 1</option>
                                 <option class="text-sm">Worker 2</option>
                                 <option class="text-sm">Worker 3</option>

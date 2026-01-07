@@ -9,53 +9,6 @@
 
 @section styles {
     <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
-    <style>
-        .required-field::after {
-            content: " *";
-            color: #dc3545;
-        }
-
-        .form-control-sm, .form-select-sm {
-            font-size: 0.875rem;
-        }
-
-        .location-search-wrapper {
-            position: relative;
-        }
-
-        .typeahead-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-top: none;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-
-            .typeahead-dropdown.show {
-                display: block;
-            }
-
-        .typeahead-item {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-            .typeahead-item:hover {
-                background-color: #f8f9fa;
-            }
-
-            .typeahead-item:last-child {
-                border-bottom: none;
-            }
-    </style>
 }
 
 <div class="row">
@@ -64,7 +17,8 @@
         <div class="page-header-title mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="m-b-10" style="color: #04a9f5;">@ViewBag.cTitle</h5>
+                    <h5 class="m-b-10">@ViewBag.cTitle</h5>
+                    <p class="m-b-0 text-muted">Submit a new work request quickly</p>
                 </div>
             </div>
         </div>
@@ -72,128 +26,160 @@
         <form id="sendWorkRequestForm" method="post" action="/Helpdesk/SendNewWorkRequest" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
-            <div class="row">
-                <!-- Location -->
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Location</label>
-                    <select class="form-select form-select-sm"
-                            id="locationSelect"
-                            name="IdLocation"
-                            data-searchable="true"
-                            data-placeholder="Select Location"
-                            data-search-placeholder="Search location..."
-                            required>
-                        <option value="">Select Location</option>
-                        <option value="-1">Not Specified</option>
-                        @if (Model?.Locations != null && Model.Locations.Any())
-                        {
-                            foreach (var location in Model.Locations)
-                            {
-                                <option value="@location.idProperty">@location.propertyName</option>
-                            }
-                        }
-                    </select>
+            <!-- Location Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Location Details</h5>
+                    <p class="text-muted mb-0 small">Specify where the work needs to be done</p>
                 </div>
-
-                <!-- Floor -->
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Floor</label>
-                    <select class="form-select form-select-sm"
-                            id="floorSelect"
-                            name="IdFloor"
-                            data-searchable="true"
-                            data-placeholder="Select Floor"
-                            data-search-placeholder="Search floor..."
-                            required
-                            disabled>
-                        <option value="">Select Floor</option>
-                    </select>
-                </div>
-
-                <!-- Room/Area/Zone -->
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Room/Area/Zone</label>
-                    <select class="form-select form-select-sm"
-                            id="roomSelect"
-                            name="IdRoom"
-                            data-searchable="true"
-                            data-placeholder="Select Room/Area/Zone"
-                            data-search-placeholder="Search room..."
-                            required
-                            disabled>
-                        <option value="">Select Room/Area/Zone</option>
-                    </select>
-                </div>
-
-                <!-- For Whom -->
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">For Whom</label>
-                    <div class="mt-2">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="ForWhom" id="forMyself" value="Myself" checked required>
-                            <label class="form-check-label" for="forMyself">Myself</label>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Location -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Location</label>
+                            <select class="form-select form-select-sm"
+                                    id="locationSelect"
+                                    name="IdLocation"
+                                    data-searchable="true"
+                                    data-placeholder="Select Location"
+                                    data-search-placeholder="Search location..."
+                                    required>
+                                <option value="">Select Location</option>
+                                <option value="-1">Not Specified</option>
+                                @if (Model?.Locations != null && Model.Locations.Any())
+                                {
+                                    foreach (var location in Model.Locations)
+                                    {
+                                        <option value="@location.idProperty">@location.propertyName</option>
+                                    }
+                                }
+                            </select>
                         </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="ForWhom" id="forOther" value="OnBehalfOfOther">
-                            <label class="form-check-label" for="forOther">On behalf of other person</label>
+
+                        <!-- Floor -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Floor</label>
+                            <select class="form-select form-select-sm"
+                                    id="floorSelect"
+                                    name="IdFloor"
+                                    data-searchable="true"
+                                    data-placeholder="Select Floor"
+                                    data-search-placeholder="Search floor..."
+                                    required
+                                    disabled>
+                                <option value="">Select Floor</option>
+                            </select>
+                        </div>
+
+                        <!-- Room/Area/Zone -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold required-field">Room/Area/Zone</label>
+                            <select class="form-select form-select-sm"
+                                    id="roomSelect"
+                                    name="IdRoom"
+                                    data-searchable="true"
+                                    data-placeholder="Select Room/Area/Zone"
+                                    data-search-placeholder="Search room..."
+                                    required
+                                    disabled>
+                                <option value="">Select Room/Area/Zone</option>
+                            </select>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Work Category -->
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Work Category</label>
-                    <select class="form-select form-select-sm"
-                            id="workCategorySelect"
-                            name="IdWorkCategory"
-                            data-searchable="true"
-                            data-placeholder="Select Work Category"
-                            data-search-placeholder="Search category..."
-                            required>
-                        <option value="">-</option>
-                        @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
-                        {
-                            foreach (var category in Model.WorkCategories)
-                            {
-                                <option value="@category.id">@category.name</option>
-                            }
-                        }
-                    </select>
+            <!-- Request Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Request Details</h5>
+                    <p class="text-muted mb-0 small">Provide details about your request</p>
                 </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- For Whom -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold required-field">For Whom</label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="ForWhom" id="forMyself" value="Myself" checked required>
+                                    <label class="form-check-label" for="forMyself">Myself</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="ForWhom" id="forOther" value="OnBehalfOfOther">
+                                    <label class="form-check-label" for="forOther">On behalf of other person</label>
+                                </div>
+                            </div>
+                        </div>
 
-                <!-- Request -->
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-semibold required-field" style="color: #04a9f5;">Request</label>
-                    <textarea class="form-control form-control-sm"
-                              id="requestDetail"
-                              name="RequestDetail"
-                              rows="5"
-                              placeholder="Write your problem or request here. Within maximum of 15 minutes, our Helpdesk will contact you to confirm this request and ask for additional information as necessary"
-                              required></textarea>
-                </div>
+                        <!-- Work Category -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold required-field">Work Category</label>
+                            <select class="form-select form-select-sm"
+                                    id="workCategorySelect"
+                                    name="IdWorkCategory"
+                                    data-searchable="true"
+                                    data-placeholder="Select Work Category"
+                                    data-search-placeholder="Search category..."
+                                    required>
+                                <option value="">Select Work Category</option>
+                                @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                                {
+                                    foreach (var category in Model.WorkCategories)
+                                    {
+                                        <option value="@category.id">@category.name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
 
-                <!-- Related Photos -->
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-semibold" style="color: #04a9f5;">Related Photos</label>
-                    <input type="file"
-                           class="form-control form-control-sm"
-                           id="relatedPhotos"
-                           name="RelatedPhotos"
-                           accept="image/*"
-                           multiple>
-                    <div class="form-text">
-                        <i class="ti ti-arrow-right me-1"></i>Search or drag & drop your file to <strong>Browse</strong> or <strong>Choose File</strong> box above, it will be added to <strong>Uploaded File</strong> table below
+                        <!-- Request -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold required-field">Request</label>
+                            <textarea class="form-control form-control-sm"
+                                      id="requestDetail"
+                                      name="RequestDetail"
+                                      rows="5"
+                                      placeholder="Write your problem or request here. Within maximum of 15 minutes, our Helpdesk will contact you to confirm this request and ask for additional information as necessary"
+                                      required></textarea>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Uploaded File Table -->
-                <div class="col-md-12 mb-4">
-                    <label class="form-label fw-semibold" style="color: #04a9f5;">Uploaded File</label>
+            <!-- Related Documents -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Related Photos</h5>
+                    <p class="text-muted mb-0 small">Upload photos related to your request (optional)</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="file"
+                                   class="form-control form-control-sm"
+                                   id="relatedPhotos"
+                                   name="RelatedPhotos"
+                                   accept="image/*"
+                                   multiple>
+                        </div>
+                        <small class="text-muted">
+                            <i class="ti ti-arrow-right me-1"></i>
+                            Search or drag and drop your file to 'Browse' or 'Choose File' field above
+                        </small>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-bordered table-sm" id="uploadedFilesTable">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th width="10%">Action</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr>
-                                    <td class="text-center text-muted">
+                                    <td colspan="2" class="text-center text-muted">
                                         <em>No file yet</em>
                                     </td>
                                 </tr>
@@ -201,11 +187,13 @@
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- Form Actions -->
-                <div class="col-md-12">
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
                     <div class="d-flex justify-content-center">
-                        <button type="submit" class="btn btn-primary" style="background-color: #04a9f5; border-color: #04a9f5; min-width: 200px;">
+                        <button type="submit" class="btn btn-primary" style="min-width: 200px;">
                             <i class="ti ti-send me-1"></i>
                             Send Work Request
                         </button>

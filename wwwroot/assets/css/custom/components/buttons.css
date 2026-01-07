@@ -1,0 +1,27 @@
+/**
+ * CFM Frontend Design System - Buttons
+ *
+ * Button variants and custom button styles
+ */
+
+/* Add Labor/Material Button (Primary Action) */
+.btn-add-labor {
+  background-color: var(--cfm-primary, #04a9f5);
+  color: white;
+  border: none;
+}
+
+.btn-add-labor:hover {
+  background-color: var(--cfm-primary-dark, #0396de);
+  color: white;
+}
+
+/* Icon Buttons in Input Groups */
+.btn.d-flex.align-items-center {
+  gap: 0.25rem;
+}
+
+/* Light Variant Buttons */
+.btn-light {
+  border-color: var(--cfm-gray-400, #dbe0e5);
+}

@@ -1,0 +1,53 @@
+/**
+ * CFM Frontend Design System - Utility Classes
+ *
+ * Helper classes for layout, spacing, and common patterns
+ */
+
+/* Gap Utilities (Bootstrap 5 compatible) */
+.gap-0 {
+  gap: 0 !important;
+}
+
+.column-gap-2 {
+  column-gap: 0.5rem !important;
+}
+
+/* Width Utilities */
+.w-100 {
+  width: 100% !important;
+}
+
+/* Display Utilities */
+.d-flex {
+  display: flex !important;
+}
+
+.flex-row {
+  flex-direction: row !important;
+}
+
+.flex-column {
+  flex-direction: column !important;
+}
+
+.align-items-center {
+  align-items: center !important;
+}
+
+.justify-content-between {
+  justify-content: space-between !important;
+}
+
+/* Margin/Padding Shortcuts */
+.m-r-10 {
+  margin-right: 10px !important;
+}
+
+.m-b-10 {
+  margin-bottom: 10px !important;
+}
+
+.m-b-0 {
+  margin-bottom: 0 !important;
+}

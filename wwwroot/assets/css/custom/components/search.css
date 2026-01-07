@@ -1,0 +1,23 @@
+/**
+ * CFM Frontend Design System - Search
+ *
+ * Search bars, typeahead, and search-related components
+ */
+
+/* Main Search Input Group */
+.input-group .form-control {
+  border-right: none;
+}
+
+.input-group .btn {
+  border-color: var(--cfm-gray-400, #dbe0e5);
+}
+
+.input-group .btn:hover {
+  background-color: var(--cfm-gray-100, #f8f9fa);
+}
+
+/* Search Button Group */
+.input-group .btn + .btn {
+  margin-left: -1px;
+}

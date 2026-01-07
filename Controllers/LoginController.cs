@@ -64,8 +64,8 @@ namespace cfm_frontend.Controllers
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64Credentials);
 
                 // POST request with empty body (credentials are in Authorization header)
-                //var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Auth.Login}");
+                var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.Login}",content);
 
                 if (response.IsSuccessStatusCode)
                 {

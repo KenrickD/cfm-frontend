@@ -1,0 +1,34 @@
+/**
+ * CFM Frontend Design System - Typography
+ *
+ * Text styles, headings, and typography utilities
+ */
+
+/* Page Headers */
+.page-header-title h5 {
+  font-weight: 600;
+  color: var(--cfm-gray-700, #495057);
+}
+
+.page-header-title .text-muted {
+  font-size: 0.875rem;
+}
+
+/* Section Headings in Cards */
+.card-header h5 {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+
+/* Small Text */
+small,
+.small {
+  font-size: 0.875rem;
+}
+
+/* Text Utilities */
+.text-wrap {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}

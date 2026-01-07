@@ -1,0 +1,22 @@
+/**
+ * CFM Frontend Design System - Cards
+ *
+ * Card component styles and variants
+ */
+
+/* Card Headers with Background */
+.card-header {
+  background-color: var(--cfm-gray-100, #f8f9fa);
+  border-bottom: 1px solid var(--cfm-gray-200, #e9ecef);
+}
+
+/* Card Header with Description */
+.card-header .text-muted.small {
+  font-size: 0.875rem;
+  margin-bottom: 0;
+}
+
+/* Card with Actions in Header */
+.card-header .d-flex.justify-content-between {
+  align-items: flex-start;
+}

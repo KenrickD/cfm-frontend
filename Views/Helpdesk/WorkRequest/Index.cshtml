@@ -113,26 +113,26 @@
             <div class="card-body">
                 <div class="mb-4">
                     <div class="grid gap-0 column-gap-2 d-flex flex-row" style="width: 100%">
-                        <div class="input-group w-100" style="border-color: #DBE0E5;">
+                        <div class="input-group w-100">
                             <input placeholder="Search by entering keywords for Work Request Code, Work Title, or Requestor ..."
                                    type="text" class="form-control" id="mainSearchInput" value="@Context.Request.Query["search"]">
-                            <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
                                     data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                     data-bs-content="Search" data-bs-trigger="hover" id="searchButton">
                                 <i class="ti ti-search"></i>
                             </button>
                             <!-- Filter Button - Opens Modal -->
-                            <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
                                     data-bs-toggle="modal" data-bs-target="#filterModal"
                                     data-bs-container="body" data-bs-original-title="Advanced Filters">
                                 <i class="ti ti-filter"></i>
                             </button>
-                            <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
                                     data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                     data-bs-content="Clear Search" data-bs-trigger="hover" id="clearSearchButton">
                                 <i class="ti ti-list-search"></i>
                             </button>
-                            <button type="button" class="btn btn-light dropdown-toggle d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                            <button type="button" class="btn btn-light dropdown-toggle d-flex flex-row align-items-center"
                                     data-bs-toggle="dropdown" aria-expanded="false" id="downloadDropdownPopover">
                                 <i class="ti ti-cloud-download"></i>
                             </button>
@@ -141,14 +141,14 @@
                                 <li><a class="dropdown-item" href="#">Download for Updating in Exodus</a></li>
                             </ul>
 
-                            <button type="button" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
                                     data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                     data-bs-content="Send Summary" data-bs-trigger="hover">
                                 <i class="ti ti-mail-forward"></i>
                             </button>
                             @if (Context.Session.CanAdd("Helpdesk", "Work Request Management"))
                             {
-                                <a href="@Url.Action("WorkRequestAdd", "Helpdesk")" class="btn btn-light d-flex flex-row align-items-center" style="border-color: #DBE0E5;"
+                                <a href="@Url.Action("WorkRequestAdd", "Helpdesk")" class="btn btn-light d-flex flex-row align-items-center"
                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                    data-bs-content="Add New Work Request" data-bs-trigger="hover">
                                     <i class="ti ti-plus"></i>
@@ -203,7 +203,7 @@
                                                 </div>
                                                 @if (workRequest.totalWorker > 0)
                                                 {
-                                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                                    <div class="text-muted small">
                                                         <span>Completed by @workRequest.totalWorkerCompleted of @workRequest.totalWorker Workers</span>
                                                     </div>
                                                 }
@@ -213,7 +213,7 @@
                                             <div>
                                                 @workRequest.fullName @(!string.IsNullOrEmpty(workRequest.requestorDeptName) ? $"({workRequest.requestorDeptName})" : "")
                                             </div>
-                                            <div style="font-size: 0.875rem; color: #6c757d;">
+                                            <div class="text-muted small">
                                                 On @workRequest.requestDate.ToString("dd MMM yyyy hh:mm tt")
                                             </div>
                                         </td>
@@ -252,7 +252,7 @@
                                                 @if (workRequest.totalHasSentEmail > 0)
                                                 {
                                                     <div class="mt-1">
-                                                        <i class="ti ti-mail" style="font-size: 18px; color: #04a9f5;" title="Email sent"></i>
+                                                        <i class="ti ti-mail text-primary" style="font-size: 18px;" title="Email sent"></i>
                                                     </div>
                                                 }
                                             </div>
@@ -284,7 +284,7 @@
                                 <tr>
                                     <td colspan="6" class="text-center py-4">
                                         <div class="text-muted">
-                                            <i class="ti ti-inbox" style="font-size: 48px;"></i>
+                                            <i class="ti ti-inbox" style="font-size: 48px; opacity: 0.5;"></i>
                                             <p class="mt-2">No work requests found</p>
                                         </div>
                                     </td>
@@ -622,7 +622,7 @@
         <div class="modal-content">
             <div class="modal-header no-divider">
                 <div class="d-flex flex-row align-items-center text-danger">
-                    <i class="ti ti-alert-octagon m-r-10" style="font-size: 20px"></i>
+                    <i class="ti ti-alert-octagon me-2 fs-5"></i>
                     <span class="text-lg fw-semibold">Warning</span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -635,11 +635,11 @@
                 <div class="container-fluid">
                     <div class="d-flex align-items-center justify-content-between gap-3">
                         <button type="button" class="btn btn-outline-secondary rounded-3 w-100 d-flex justify-content-center align-items-center" data-bs-dismiss="modal">
-                            <i class="ti ti-x m-r-10"></i>
+                            <i class="ti ti-x me-2"></i>
                             Cancel
                         </button>
                         <button type="button" class="btn btn-danger rounded-3 w-100 d-flex justify-content-center align-items-center">
-                            <i class="ti ti-trash m-r-10"></i>
+                            <i class="ti ti-trash me-2"></i>
                             Delete
                         </button>
                     </div>

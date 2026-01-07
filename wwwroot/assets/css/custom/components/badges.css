@@ -1,0 +1,42 @@
+/**
+ * CFM Frontend Design System - Badges
+ *
+ * Badge styles, status badges, and badge variants
+ */
+
+/* Light Background Badge Variants */
+.bg-light-primary {
+  background-color: var(--cfm-bg-light-primary, rgba(4, 169, 245, 0.1)) !important;
+  color: var(--cfm-primary, #04a9f5) !important;
+}
+
+.bg-light-success {
+  background-color: var(--cfm-bg-light-success, rgba(46, 216, 182, 0.1)) !important;
+  color: var(--cfm-success, #2ed8b6) !important;
+}
+
+.bg-light-secondary {
+  background-color: var(--cfm-bg-light-secondary, rgba(108, 117, 125, 0.1)) !important;
+  color: var(--cfm-gray-600, #6c757d) !important;
+}
+
+.bg-light-danger {
+  background-color: var(--cfm-bg-light-danger, rgba(245, 87, 108, 0.1)) !important;
+  color: var(--cfm-danger, #f5576c) !important;
+}
+
+.bg-light-warning {
+  background-color: rgba(255, 152, 0, 0.1) !important;
+  color: var(--cfm-warning, #ff9800) !important;
+}
+
+.bg-light-info {
+  background-color: var(--cfm-bg-light-primary, rgba(4, 169, 245, 0.1)) !important;
+  color: var(--cfm-info, #04a9f5) !important;
+}
+
+/* Badge Sizing */
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}

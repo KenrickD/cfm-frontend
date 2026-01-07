@@ -1,0 +1,87 @@
+/**
+ * CFM Frontend Design System - Forms
+ *
+ * Form controls, inputs, labels, and form-related components
+ */
+
+/* Required Field Indicator */
+.required-field::after {
+  content: " *";
+  color: #dc3545;
+}
+
+/* Form Control Sizing */
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.875rem;
+}
+
+/* DateTime Input Groups */
+.datetime-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.datetime-group input[type="date"],
+.datetime-group input[type="time"] {
+  flex: 1;
+}
+
+/* Target Time Display (from WorkRequestAdd) */
+.target-time-display {
+  background-color: var(--cfm-primary-light, #e7f3ff);
+  border: 1px solid var(--cfm-primary, #04a9f5);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--cfm-border-radius-sm, 0.25rem);
+  display: inline-block;
+  cursor: pointer;
+  transition: var(--cfm-transition-base, all 0.3s);
+}
+
+.target-time-display:hover {
+  background-color: #d0ebff;
+}
+
+.target-change-form {
+  display: none;
+  margin-top: 0.5rem;
+}
+
+/* Typeahead Dropdown (from WorkRequestAdd) */
+.location-search-wrapper {
+  position: relative;
+}
+
+.typeahead-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--cfm-gray-300, #dee2e6);
+  border-top: none;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: var(--cfm-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
+}
+
+.typeahead-dropdown.show {
+  display: block;
+}
+
+.typeahead-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.typeahead-item:hover {
+  background-color: var(--cfm-gray-100, #f8f9fa);
+}
+
+.typeahead-item:last-child {
+  border-bottom: none;
+}

@@ -1,0 +1,31 @@
+/**
+ * CFM Frontend Custom Styles
+ *
+ * This file imports all custom component styles for the CFM Frontend application.
+ * Based on Work Request Index and Add pages as design baseline.
+ * Built on top of Light Able Bootstrap 5 theme.
+ *
+ * Organization:
+ * - Core: Variables, typography, utilities
+ * - Components: Reusable UI components
+ *
+ * Usage: Import this file in HeadCSS.cshtml after theme CSS
+ */
+
+/* Core Styles */
+@import url('./core/variables.css');
+@import url('./core/typography.css');
+@import url('./core/utilities.css');
+
+/* Component Styles */
+@import url('./components/buttons.css');
+@import url('./components/forms.css');
+@import url('./components/cards.css');
+@import url('./components/tables.css');
+@import url('./components/modals.css');
+@import url('./components/badges.css');
+@import url('./components/pagination.css');
+@import url('./components/search.css');
+
+/* Existing Custom Components */
+@import url('../components/searchable-dropdown.css');
