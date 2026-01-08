@@ -13,6 +13,9 @@ namespace cfm_frontend.Handlers
 {
     public class AuthTokenHandler : DelegatingHandler
     {
+        private static readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(1, 1);
+        private static readonly HttpClient _refreshClient = new HttpClient();
+
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthTokenHandler> _logger;
@@ -45,25 +48,51 @@ namespace cfm_frontend.Handlers
 
                 if (!string.IsNullOrEmpty(refreshToken) && !string.IsNullOrEmpty(accessToken))
                 {
-                    //  Perform Refresh via Backend
-                    var refreshSuccess = await RefreshTokensAsync(context, accessToken, refreshToken);
+                    // Wait for exclusive access to token refresh
+                    await _refreshSemaphore.WaitAsync(cancellationToken);
 
-                    if (refreshSuccess)
+                    try
                     {
-                        //  Get the NEW access token (updated in RefreshTokensAsync)
-                        var newAccessToken = await context.GetTokenAsync("access_token");
+                        // RE-CHECK if token still needs refresh (another thread may have refreshed it)
+                        var currentToken = await context.GetTokenAsync("access_token");
 
-                        // Retry the original request
-                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newAccessToken);
+                        // If token changed while we were waiting, use the new one
+                        if (currentToken != accessToken)
+                        {
+                            _logger.LogInformation("Token was already refreshed by another request at {Time}", DateTime.UtcNow);
 
-                        // We must dispose the previous failed response before retrying
-                        response.Dispose();
-                        return await base.SendAsync(request, cancellationToken);
+                            // Clone the request before retrying (HttpRequestMessage can only be sent once)
+                            using var retryRequest = await CloneHttpRequestMessageAsync(request);
+                            retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
+                            response.Dispose();
+                            return await base.SendAsync(retryRequest, cancellationToken);
+                        }
+
+                        //  Perform Refresh via Backend
+                        var refreshSuccess = await RefreshTokensAsync(context, accessToken, refreshToken);
+
+                        if (refreshSuccess)
+                        {
+                            //  Get the NEW access token (updated in RefreshTokensAsync)
+                            var newAccessToken = await context.GetTokenAsync("access_token");
+
+                            // Clone the request before retrying (HttpRequestMessage can only be sent once)
+                            using var retryRequest = await CloneHttpRequestMessageAsync(request);
+                            retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newAccessToken);
+
+                            // We must dispose the previous failed response before retrying
+                            response.Dispose();
+                            return await base.SendAsync(retryRequest, cancellationToken);
+                        }
+                        else
+                        {
+                            // Refresh failed (refresh token expired?), force logout
+                            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
                     }
-                    else
+                    finally
                     {
-                        // Refresh failed (refresh token expired?), force logout
-                        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        _refreshSemaphore.Release();
                     }
                 }
             }
@@ -75,13 +104,15 @@ namespace cfm_frontend.Handlers
         {
             try
             {
-                var client = new HttpClient();
+                _logger.LogInformation("Starting token refresh at {Time}", DateTime.UtcNow);
+
+                var client = _refreshClient;
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var payload = new { accessToken = expiredAccess, refreshToken = refresh };
-                var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var url = $"{backendUrl}{ApiEndpoints.Auth.RefreshToken}?refreshToken={Uri.EscapeDataString(refresh)}";
+                _logger.LogInformation("Refresh token request: POST {Url}", url);
 
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.RefreshToken}", content);
+                var response = await client.PostAsync(url, null);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -113,8 +144,9 @@ namespace cfm_frontend.Handlers
                 }
                 else
                 {
-                    _logger.LogWarning("Token refresh failed with status code {StatusCode} at {Time}",
-                        response.StatusCode, DateTime.UtcNow);
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Token refresh failed with status code {StatusCode} at {Time}. Response: {ErrorContent}",
+                        response.StatusCode, DateTime.UtcNow, errorContent);
                 }
             }
             catch(Exception ex)
@@ -122,6 +154,40 @@ namespace cfm_frontend.Handlers
                 _logger.LogError(ex, "Error refreshing token at {Time}", DateTime.UtcNow);
             }
             return false;
+        }
+
+        private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage original)
+        {
+            var clone = new HttpRequestMessage(original.Method, original.RequestUri)
+            {
+                Version = original.Version
+            };
+
+            // Copy headers
+            foreach (var header in original.Headers)
+            {
+                clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            // Copy content if present
+            if (original.Content != null)
+            {
+                var ms = new MemoryStream();
+                await original.Content.CopyToAsync(ms);
+                ms.Position = 0;
+                clone.Content = new StreamContent(ms);
+
+                // Copy content headers
+                if (original.Content.Headers != null)
+                {
+                    foreach (var header in original.Content.Headers)
+                    {
+                        clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                    }
+                }
+            }
+
+            return clone;
         }
     }
 }
