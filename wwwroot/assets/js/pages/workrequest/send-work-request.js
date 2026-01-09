@@ -11,7 +11,8 @@
     const CONFIG = {
         apiEndpoints: {
             floors: '/Helpdesk/GetFloorsByLocation',
-            rooms: '/Helpdesk/GetRoomsByFloor'
+            rooms: '/Helpdesk/GetRoomsByFloor',
+            workCategories: MvcEndpoints.Helpdesk.WorkRequest.GetWorkCategoriesByTypes
         },
         maxFileSize: 5 * 1024 * 1024, // 5MB per file
         allowedFileTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
@@ -29,11 +30,39 @@
      * Initialize the module
      */
     function init() {
+        loadWorkCategories();
         initializeLocationCascade();
         initializeFileUpload();
         initializeFormSubmission();
 
         console.log('Send Work Request page initialized');
+    }
+
+    /**
+     * Load work categories from API
+     */
+    function loadWorkCategories() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.workCategories,
+            method: 'GET',
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#workCategorySelect');
+                    $select.empty().append('<option value="">Select Work Category</option>');
+                    $.each(response.data, function (index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.idType)
+                                .text(category.typeName)
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading work categories:', error);
+                showNotification('Error loading work categories', 'error');
+            }
+        });
     }
 
     /**

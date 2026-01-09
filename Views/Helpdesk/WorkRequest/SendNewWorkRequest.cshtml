@@ -123,13 +123,7 @@
                                     data-search-placeholder="Search category..."
                                     required>
                                 <option value="">Select Work Category</option>
-                                @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
-                                {
-                                    foreach (var category in Model.WorkCategories)
-                                    {
-                                        <option value="@category.id">@category.name</option>
-                                    }
-                                }
+                                <!-- Options loaded dynamically via JavaScript -->
                             </select>
                         </div>
 

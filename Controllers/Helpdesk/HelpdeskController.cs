@@ -421,19 +421,12 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var idClient = userInfo.PreferredClientId;
 
                 // Load initial data for dropdowns
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
-                var workCategoriesTask = GetWorkCategoriesAsync(client, backendUrl);
-
-                await Task.WhenAll(locationsTask, workCategoriesTask);
-
-                viewmodel.Locations = await locationsTask;
-                viewmodel.WorkCategories = await workCategoriesTask;
+                viewmodel.Locations = await GetLocationsAsync(client, backendUrl, idClient);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading send new work request page");
                 viewmodel.Locations = new List<LocationModel>();
-                viewmodel.WorkCategories = new List<WorkCategoryModel>();
             }
 
             return View("~/Views/Helpdesk/WorkRequest/SendNewWorkRequest.cshtml", viewmodel);
