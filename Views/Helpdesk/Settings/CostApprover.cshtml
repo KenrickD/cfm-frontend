@@ -6,14 +6,6 @@
 
 @section styles {
     <style>
-        .page-header-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
         .stats-section {
             display: flex;
             justify-content: space-between;
@@ -24,9 +16,17 @@
             border-radius: 0.25rem;
         }
 
+        [data-pc-theme="dark"] .stats-section {
+            background-color: #2d3748;
+        }
+
         .total-count {
             font-size: 0.9rem;
             color: #495057;
+        }
+
+        [data-pc-theme="dark"] .total-count {
+            color: #cbd5e0;
         }
 
         .approver-table {
@@ -34,6 +34,10 @@
             border-radius: 0.5rem;
             overflow: hidden;
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        [data-pc-theme="dark"] .approver-table {
+            background: #2d3748;
         }
 
         .approver-table-header {
@@ -54,8 +58,16 @@
             transition: background-color 0.2s;
         }
 
+        [data-pc-theme="dark"] .approver-row {
+            border-bottom-color: #4a5568;
+        }
+
         .approver-row:hover {
             background-color: #f8f9fa;
+        }
+
+        [data-pc-theme="dark"] .approver-row:hover {
+            background-color: #374151;
         }
 
         .approver-row:last-child {
@@ -70,6 +82,10 @@
             display: inline-block;
         }
 
+        [data-pc-theme="dark"] .approver-name {
+            color: #e5e7eb;
+        }
+
         .approver-name:hover {
             color: #667eea;
             text-decoration: underline;
@@ -78,6 +94,10 @@
         .property-info {
             font-size: 0.875rem;
             color: #495057;
+        }
+
+        [data-pc-theme="dark"] .property-info {
+            color: #9ca3af;
         }
 
         .category-badge {
@@ -154,6 +174,10 @@
             color: #6c757d;
         }
 
+        [data-pc-theme="dark"] .empty-state {
+            color: #9ca3af;
+        }
+
         .empty-state i {
             font-size: 4rem;
             margin-bottom: 1rem;
@@ -175,13 +199,25 @@
             border-radius: 3px;
         }
 
+        [data-pc-theme="dark"] .scrollable-cell::-webkit-scrollbar-track {
+            background: #374151;
+        }
+
         .scrollable-cell::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 3px;
         }
 
+        [data-pc-theme="dark"] .scrollable-cell::-webkit-scrollbar-thumb {
+            background: #6b7280;
+        }
+
         .scrollable-cell::-webkit-scrollbar-thumb:hover {
             background: #555;
+        }
+
+        [data-pc-theme="dark"] .scrollable-cell::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
         }
     </style>
 }
@@ -189,25 +225,20 @@
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
-        <div class="page-header-custom mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1">
-                        <i class="ti ti-users me-2"></i>
-                        List of Cost Approver Group
-                    </h4>
-                    <p class="mb-0 opacity-75">Manage cost approver groups for work request approval flows</p>
-                </div>
-                <div>
-                    <a href="/Helpdesk/Settings" class="btn btn-light btn-sm me-2">
-                        <i class="ti ti-arrow-left me-1"></i>
-                        Back to Settings
-                    </a>
-                    <a href="/Helpdesk/CostApproverAdd" class="btn btn-primary btn-sm">
-                        <i class="ti ti-plus me-1"></i>
-                        Add New Cost Approver Group
-                    </a>
-                </div>
+        <div class="page-header-title mb-3">
+            <h4 class="mb-2">
+                <i class="ti ti-users me-2"></i>List of Cost Approver Group
+            </h4>
+            <p class="text-muted mb-3">Manage cost approver groups for work request approval flows</p>
+            <div class="d-flex gap-2">
+                <a href="/Helpdesk/Settings" class="btn btn-light btn-sm">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to Settings
+                </a>
+                <a href="/Helpdesk/CostApproverAdd" class="btn btn-primary btn-sm">
+                    <i class="ti ti-plus me-1"></i>
+                    Add New Cost Approver Group
+                </a>
             </div>
         </div>
 

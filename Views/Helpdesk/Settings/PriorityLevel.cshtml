@@ -6,29 +6,11 @@
 
 @section styles {
     <style>
-        .page-header-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .breadcrumb-custom {
-            background-color: #f8f9fa;
-            padding: 0.75rem 1rem;
-            border-radius: 0.25rem;
-            margin-bottom: 1rem;
-        }
-
         .stats-section {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items-center;
             margin-bottom: 1rem;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 0.25rem;
         }
 
         .total-count {
@@ -36,23 +18,10 @@
             color: #495057;
         }
 
-        .priority-table {
-            background: white;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
-        }
-
         .priority-table-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
             padding: 0.75rem 1rem;
             font-weight: 600;
             font-size: 0.875rem;
-        }
-
-        .priority-table-body {
-            max-height: none;
         }
 
         .priority-row {
@@ -79,13 +48,12 @@
 
         .priority-name {
             font-weight: 600;
-            color: #2c3e50;
             cursor: pointer;
             text-decoration: none;
         }
 
         .priority-name:hover {
-            color: #667eea;
+            color: #04a9f5;
             text-decoration: underline;
         }
 
@@ -101,7 +69,6 @@
 
         .target-label {
             font-weight: 600;
-            color: #495057;
             margin-bottom: 0.25rem;
         }
 
@@ -135,42 +102,6 @@
             border-radius: 0.25rem;
         }
 
-        .btn-view {
-            background-color: #17a2b8;
-            border-color: #17a2b8;
-            color: white;
-        }
-
-        .btn-view:hover {
-            background-color: #138496;
-            border-color: #117a8b;
-            color: white;
-        }
-
-        .btn-edit {
-            background-color: #ffc107;
-            border-color: #ffc107;
-            color: #000;
-        }
-
-        .btn-edit:hover {
-            background-color: #e0a800;
-            border-color: #d39e00;
-            color: #000;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-            border-color: #dc3545;
-            color: white;
-        }
-
-        .btn-delete:hover {
-            background-color: #c82333;
-            border-color: #bd2130;
-            color: white;
-        }
-
         .empty-state {
             text-align: center;
             padding: 3rem;
@@ -202,31 +133,66 @@
         .checkbox-info i {
             margin-right: 0.25rem;
         }
+
+        /* Dark Mode Support */
+        [data-pc-theme="dark"] .stats-section {
+            color: #e5e7eb;
+        }
+
+        [data-pc-theme="dark"] .total-count {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .priority-row:hover {
+            background-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .priority-name:hover {
+            color: #60a5fa;
+        }
+
+        [data-pc-theme="dark"] .target-info,
+        [data-pc-theme="dark"] .target-value {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .empty-state {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .within-office-hours {
+            background-color: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        [data-pc-theme="dark"] .compliance-badge {
+            background-color: #3a3010;
+            color: #fbbf24;
+        }
+
+        [data-pc-theme="dark"] .checkbox-info {
+            color: #9ca3af;
+        }
     </style>
 }
 
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
-        <div class="page-header-custom mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1">
-                        <i class="ti ti-alert-triangle me-2"></i>
-                        List of Priority Level
-                    </h4>
-                    <p class="mb-0 opacity-75">Manage priority levels and their response time targets</p>
-                </div>
-                <div>
-                    <a href="/Helpdesk/Settings" class="btn btn-light btn-sm me-2">
-                        <i class="ti ti-arrow-left me-1"></i>
-                        Back to Settings
-                    </a>
-                    <a href="/Helpdesk/PriorityLevelAdd" class="btn btn-primary btn-sm">
-                        <i class="ti ti-plus me-1"></i>
-                        Add New Priority Level
-                    </a>
-                </div>
+        <div class="page-header-title mb-3">
+            <h4 class="mb-2">
+                <i class="ti ti-alert-triangle me-2"></i>List of Priority Level
+            </h4>
+            <p class="text-muted mb-3">Manage priority levels and their response time targets</p>
+            <div class="d-flex gap-2">
+                <a href="/Helpdesk/Settings" class="btn btn-light btn-sm">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to Settings
+                </a>
+                <a href="/Helpdesk/PriorityLevelAdd" class="btn btn-primary btn-sm">
+                    <i class="ti ti-plus me-1"></i>
+                    Add New Priority Level
+                </a>
             </div>
         </div>
 
@@ -238,8 +204,8 @@
         </div>
 
         <!-- Priority Level Table -->
-        <div class="priority-table">
-            <div class="priority-table-header">
+        <div class="card">
+            <div class="card-header priority-table-header">
                 <div class="row">
                     <div class="col-md-1 text-center">No.</div>
                     <div class="col-md-2">Name</div>
@@ -252,7 +218,7 @@
                     <div class="col-md-1 text-end">Actions</div>
                 </div>
             </div>
-            <div class="priority-table-body" id="priorityTableBody">
+            <div class="card-body" id="priorityTableBody">
                 <div class="empty-state" id="emptyState">
                     <i class="ti ti-alert-triangle"></i>
                     <p>No priority levels found</p>

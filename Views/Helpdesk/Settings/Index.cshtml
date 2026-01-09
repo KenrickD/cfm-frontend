@@ -7,26 +7,16 @@
 
 @section styles {
     <style>
-        .settings-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            margin-bottom: 2rem;
-        }
-
         .settings-card {
             transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
-            border-radius: 0.5rem;
             height: 100%;
         }
 
-            .settings-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-                border-color: #04a9f5;
-            }
+        .settings-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border-color: #04a9f5;
+        }
 
         .settings-icon {
             width: 60px;
@@ -37,60 +27,7 @@
             justify-content: center;
             font-size: 1.75rem;
             margin-bottom: 1rem;
-        }
-
-        .icon-blue {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .icon-green {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-
-        .icon-orange {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .icon-purple {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-        }
-
-        .icon-red {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: white;
-        }
-
-        .icon-cyan {
-            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-            color: white;
-        }
-
-        .icon-indigo {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            color: #333;
-        }
-
-        .icon-pink {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            color: white;
-        }
-
-        .icon-teal {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: white;
-        }
-
-        .icon-yellow {
-            background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%);
-            color: white;
-        }
-
-        .icon-lime {
-            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            background-color: #04a9f5;
             color: white;
         }
 
@@ -98,7 +35,6 @@
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #2c3e50;
         }
 
         .settings-card-description {
@@ -114,23 +50,16 @@
 
         .btn-settings {
             width: 100%;
-            background-color: #04a9f5;
-            border-color: #04a9f5;
-            color: white;
             transition: all 0.3s ease;
         }
 
-            .btn-settings:hover {
-                background-color: #0396de;
-                border-color: #0396de;
-                color: white;
-                transform: translateX(5px);
-            }
+        .btn-settings:hover {
+            transform: translateX(5px);
+        }
 
         .settings-section-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #2c3e50;
             margin-bottom: 1.5rem;
             padding-bottom: 0.5rem;
             border-bottom: 2px solid #e9ecef;
@@ -141,23 +70,30 @@
             flex-direction: column;
             height: 100%;
         }
+
+        /* Dark Mode Support */
+        [data-pc-theme="dark"] .settings-card-description {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .settings-section-title {
+            border-bottom-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .settings-icon {
+            background-color: #0d6efd;
+        }
     </style>
 }
 
 <div class="row">
     <div class="col-sm-12">
-        <!-- Settings Header -->
-        <div class="settings-header">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-2">
-                        <i class="ti ti-settings me-2"></i>
-                        Settings
-                    </h2>
-                    <p class="mb-0 opacity-75">Manage work request configurations and system settings</p>
-                </div>
-                <div>
-                    <i class="ph-duotone ph-gear" style="font-size: 4rem; opacity: 0.2;"></i>
+                    <h5 class="m-b-10">Settings</h5>
+                    <p class="m-b-0 text-muted">Manage work request configurations and system settings</p>
                 </div>
             </div>
         </div>
@@ -173,7 +109,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-blue">
+                            <div class="settings-icon">
                                 <i class="ti ti-category"></i>
                             </div>
                             <h6 class="settings-card-title">Work Category List</h6>
@@ -181,7 +117,7 @@
                                 Manage primary work categories for classifying work requests
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/WorkCategory" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/WorkCategory" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -194,7 +130,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-green">
+                            <div class="settings-icon">
                                 <i class="ti ti-list"></i>
                             </div>
                             <h6 class="settings-card-title">Other Category List</h6>
@@ -202,7 +138,7 @@
                                 Configure secondary categorization options for work requests
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/OtherCategory" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/OtherCategory" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -215,7 +151,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-orange">
+                            <div class="settings-icon">
                                 <i class="ti ti-list-check"></i>
                             </div>
                             <h6 class="settings-card-title">Other Category 2 List</h6>
@@ -223,7 +159,7 @@
                                 Define tertiary categorization for detailed work classification
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/OtherCategory2" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/OtherCategory2" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -245,7 +181,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-purple">
+                            <div class="settings-icon">
                                 <i class="ti ti-user-check"></i>
                             </div>
                             <h6 class="settings-card-title">Person in Charge List</h6>
@@ -253,7 +189,7 @@
                                 Manage personnel who can be assigned as work request owners
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/PersonInCharge" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/PersonInCharge" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -266,7 +202,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-red">
+                            <div class="settings-icon">
                                 <i class="ti ti-report-money"></i>
                             </div>
                             <h6 class="settings-card-title">Cost Approver Group List</h6>
@@ -274,7 +210,7 @@
                                 Define groups authorized to approve work request costs
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/CostApprover" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/CostApprover" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -296,7 +232,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-cyan">
+                            <div class="settings-icon">cyan">
                                 <i class="ti ti-checkbox"></i>
                             </div>
                             <h6 class="settings-card-title">Important Checklist List</h6>
@@ -304,7 +240,7 @@
                                 Configure safety and compliance checklist items with drag-and-drop ordering
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/ImportantChecklist" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/ImportantChecklist" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -317,7 +253,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-indigo">
+                            <div class="settings-icon">indigo">
                                 <i class="ti ti-alert-triangle"></i>
                             </div>
                             <h6 class="settings-card-title">Priority Level Management</h6>
@@ -325,7 +261,7 @@
                                 Define priority levels and their response time targets
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/PriorityLevel" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/PriorityLevel" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -338,7 +274,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-pink">
+                            <div class="settings-icon">pink">
                                 <i class="ti ti-code"></i>
                             </div>
                             <h6 class="settings-card-title">Job Code Group List</h6>
@@ -346,7 +282,7 @@
                                 Manage job code classifications for work tracking
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/JobCodeGroup" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/JobCodeGroup" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -368,7 +304,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-teal">
+                            <div class="settings-icon">teal">
                                 <i class="ti ti-file-text"></i>
                             </div>
                             <h6 class="settings-card-title">Related Document Label List</h6>
@@ -376,7 +312,7 @@
                                 Configure document type labels for file attachments in work requests
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/RelatedDocument" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/RelatedDocument" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>
@@ -389,7 +325,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-yellow">
+                            <div class="settings-icon">yellow">
                                 <i class="ti ti-mail-forward"></i>
                             </div>
                             <h6 class="settings-card-title">Email Distribution List Management</h6>
@@ -397,7 +333,7 @@
                                 Configure email recipients for system notifications
                             </p>
                             <div class="settings-card-footer">
-                                <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-settings btn-sm">
+                                <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Manage
                                 </a>
@@ -419,7 +355,7 @@
                 <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card settings-card">
                         <div class="card-body card-body-settings">
-                            <div class="settings-icon icon-lime">
+                            <div class="settings-icon">lime">
                                 <i class="ti ti-box"></i>
                             </div>
                             <h6 class="settings-card-title">Material Type List</h6>
@@ -427,7 +363,7 @@
                                 Define material and supply categories for work requests
                             </p>
                             <div class="settings-card-footer">
-                                <a href="/Helpdesk/MaterialType" class="btn btn-settings btn-sm">
+                                <a href="/Helpdesk/MaterialType" class="btn btn-primary btn-settings btn-sm">
                                     <i class="ti ti-edit me-1"></i>
                                     Edit
                                 </a>

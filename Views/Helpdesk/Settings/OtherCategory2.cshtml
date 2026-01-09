@@ -14,17 +14,17 @@
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
-        <div class="page-header-custom mb-3">
+        <div class="page-header-title mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">
+                    <h5 class="m-b-10">
                         <i class="ti ti-list-check me-2"></i>
                         List of Other Category 2
                     </h4>
-                    <p class="mb-0 opacity-75">Define tertiary categorization for detailed work classification</p>
+                    <p class="m-b-0 text-muted">Define tertiary categorization for detailed work classification</p>
                 </div>
                 <div>
-                    <a href="/Helpdesk/Settings" class="btn btn-light btn-sm">
+                    <a href="/Helpdesk/Settings" class="btn btn-outline-secondary btn-sm">
                         <i class="ti ti-arrow-left me-1"></i>
                         Back to Settings
                     </a>
@@ -46,7 +46,8 @@
         </div>
 
         <!-- Add New Section -->
-        <div class="add-new-section" id="addNewSection">
+        <div class="card mb-3" id="addNewSection">
+            <div class="card-body">
             <div class="d-flex align-items-start">
                 <div class="flex-grow-1">
                     <button type="button" class="btn btn-primary" id="showAddFormBtn">
@@ -67,25 +68,26 @@
                         <div class="invalid-feedback" id="addValidationError"></div>
                     </div>
                     <div style="margin-top: 1.75rem;">
-                        <button type="button" class="btn btn-save btn-action me-1" id="saveNewBtn">
+                        <button type="button" class="btn btn-success btn-action me-1" id="saveNewBtn">
                             <i class="ti ti-check me-1"></i>
                             Save
                         </button>
-                        <button type="button" class="btn btn-cancel btn-action" id="cancelNewBtn">
+                        <button type="button" class="btn btn-secondary btn-action" id="cancelNewBtn">
                             <i class="ti ti-x me-1"></i>
                             Cancel
                         </button>
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
         <!-- Category Table -->
-        <div class="category-table">
-            <div class="category-table-header">
+        <div class="card">
+            <div class="card-header">
                 <h6 class="mb-0">Description</h6>
             </div>
-            <div class="category-table-body" id="categoryTableBody">
+            <div class="card-body" id="categoryTableBody">
                 <div class="empty-state" id="emptyState">
                     <i class="ti ti-folder-off"></i>
                     <p>No other categories 2 found</p>

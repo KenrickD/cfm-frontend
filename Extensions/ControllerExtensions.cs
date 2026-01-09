@@ -17,7 +17,11 @@ namespace cfm_frontend.Extensions
             if (privileges == null || !privileges.CanViewPage(moduleName, pageName))
             {
                 controller.TempData["AccessDeniedMessage"] = $"You do not have permission to view {pageName} in {moduleName}.";
-                return controller.RedirectToAction("AccessDenied", "Error");
+
+                // Capture current URL for redirect after restore
+                var returnUrl = controller.HttpContext.Request.Path + controller.HttpContext.Request.QueryString;
+
+                return controller.RedirectToAction("AccessDenied", "Error", new { returnUrl });
             }
 
             return null;
@@ -33,7 +37,11 @@ namespace cfm_frontend.Extensions
             if (privileges == null || !privileges.CanAddToPage(moduleName, pageName))
             {
                 controller.TempData["AccessDeniedMessage"] = $"You do not have permission to add to {pageName} in {moduleName}.";
-                return controller.RedirectToAction("AccessDenied", "Error");
+
+                // Capture current URL for redirect after restore
+                var returnUrl = controller.HttpContext.Request.Path + controller.HttpContext.Request.QueryString;
+
+                return controller.RedirectToAction("AccessDenied", "Error", new { returnUrl });
             }
 
             return null;
@@ -49,7 +57,11 @@ namespace cfm_frontend.Extensions
             if (privileges == null || !privileges.CanEditPage(moduleName, pageName))
             {
                 controller.TempData["AccessDeniedMessage"] = $"You do not have permission to edit {pageName} in {moduleName}.";
-                return controller.RedirectToAction("AccessDenied", "Error");
+
+                // Capture current URL for redirect after restore
+                var returnUrl = controller.HttpContext.Request.Path + controller.HttpContext.Request.QueryString;
+
+                return controller.RedirectToAction("AccessDenied", "Error", new { returnUrl });
             }
 
             return null;
@@ -65,7 +77,11 @@ namespace cfm_frontend.Extensions
             if (privileges == null || !privileges.CanDeleteFromPage(moduleName, pageName))
             {
                 controller.TempData["AccessDeniedMessage"] = $"You do not have permission to delete from {pageName} in {moduleName}.";
-                return controller.RedirectToAction("AccessDenied", "Error");
+
+                // Capture current URL for redirect after restore
+                var returnUrl = controller.HttpContext.Request.Path + controller.HttpContext.Request.QueryString;
+
+                return controller.RedirectToAction("AccessDenied", "Error", new { returnUrl });
             }
 
             return null;

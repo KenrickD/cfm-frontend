@@ -7,12 +7,21 @@
 @section styles {
     <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
     <style>
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+
         .form-section {
             background: white;
             border-radius: 0.5rem;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        [data-pc-theme="dark"] .form-section {
+            background: #2d3748;
         }
 
         .section-title {
@@ -24,10 +33,19 @@
             border-bottom: 2px solid #e9ecef;
         }
 
+        [data-pc-theme="dark"] .section-title {
+            color: #e5e7eb;
+            border-bottom-color: #4a5568;
+        }
+
         .form-label {
             font-weight: 600;
             color: #495057;
             margin-bottom: 0.5rem;
+        }
+
+        [data-pc-theme="dark"] .form-label {
+            color: #cbd5e0;
         }
 
         .form-label .required {
@@ -43,6 +61,11 @@
             margin-bottom: 1rem;
         }
 
+        [data-pc-theme="dark"] .approval-flow-card {
+            background: #374151;
+            border-color: #4a5568;
+        }
+
         .approval-flow-header {
             display: flex;
             justify-content: space-between;
@@ -56,10 +79,18 @@
             color: #2c3e50;
         }
 
+        [data-pc-theme="dark"] .approval-flow-name {
+            color: #e5e7eb;
+        }
+
         .approver-section {
             background: white;
             border-radius: 0.25rem;
             padding: 0.75rem;
+        }
+
+        [data-pc-theme="dark"] .approver-section {
+            background: #2d3748;
         }
 
         .approver-table {
@@ -70,11 +101,19 @@
             background: #e9ecef;
         }
 
+        [data-pc-theme="dark"] .approver-table thead {
+            background: #374151;
+        }
+
         .approver-table th {
             padding: 0.5rem;
             font-size: 0.875rem;
             font-weight: 600;
             color: #495057;
+        }
+
+        [data-pc-theme="dark"] .approver-table th {
+            color: #cbd5e0;
         }
 
         .approver-table td {
@@ -86,9 +125,17 @@
             border-bottom: 1px solid #e9ecef;
         }
 
+        [data-pc-theme="dark"] .approver-row {
+            border-bottom-color: #4a5568;
+        }
+
         .approver-name {
             font-weight: 500;
             color: #2c3e50;
+        }
+
+        [data-pc-theme="dark"] .approver-name {
+            color: #e5e7eb;
         }
 
         .authority-level {
@@ -119,6 +166,11 @@
             border-radius: 0.25rem;
         }
 
+        [data-pc-theme="dark"] .properties-grid,
+        [data-pc-theme="dark"] .categories-grid {
+            border-color: #4a5568;
+        }
+
         .checkbox-item {
             display: flex;
             align-items: center;
@@ -135,13 +187,8 @@
             user-select: none;
         }
 
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .modal-header .btn-close {
-            filter: invert(1);
+        [data-pc-theme="dark"] .checkbox-item label {
+            color: #cbd5e0;
         }
 
         .search-bar {
@@ -169,6 +216,10 @@
             color: #6c757d;
         }
 
+        [data-pc-theme="dark"] .empty-approvers {
+            color: #9ca3af;
+        }
+
         .priority-badge {
             display: inline-block;
             background-color: #667eea;
@@ -193,21 +244,16 @@
 
 <div class="row">
     <div class="col-sm-12">
-        <div class="page-header-custom mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 0.5rem;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1">
-                        <i class="ti ti-plus me-2"></i>
-                        New Cost Approver Group
-                    </h4>
-                    <p class="mb-0 opacity-75">Create a new cost approver group for work request approvals</p>
-                </div>
-                <div>
-                    <a href="/Helpdesk/CostApprover" class="btn btn-light btn-sm">
-                        <i class="ti ti-arrow-left me-1"></i>
-                        Back to List
-                    </a>
-                </div>
+        <div class="page-header-title mb-3">
+            <h4 class="mb-2">
+                <i class="ti ti-plus me-2"></i>New Cost Approver Group
+            </h4>
+            <p class="text-muted mb-3">Create a new cost approver group for work request approvals</p>
+            <div>
+                <a href="/Helpdesk/CostApprover" class="btn btn-light btn-sm">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to List
+                </a>
             </div>
         </div>
 

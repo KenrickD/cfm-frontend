@@ -20,3 +20,14 @@
 .card-header .d-flex.justify-content-between {
   align-items: flex-start;
 }
+
+/* Dark Mode Support */
+[data-pc-theme="dark"] .card-header {
+  background-color: #1D2630;
+  border-bottom-color: #374151;
+}
+
+[data-pc-theme="dark"] .card-header h5,
+[data-pc-theme="dark"] .card-header .text-muted {
+  color: #e5e7eb !important;
+}

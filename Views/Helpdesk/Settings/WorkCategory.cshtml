@@ -9,31 +9,6 @@
 
 @section styles {
     <style>
-        .page-header-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .category-table {
-            background: white;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
-        .category-table-header {
-            background-color: #f8f9fa;
-            padding: 1rem 1.5rem;
-            border-bottom: 2px solid #e9ecef;
-        }
-
-        .category-table-body {
-            padding: 0;
-        }
-
         .category-row {
             display: flex;
             align-items: center;
@@ -42,22 +17,21 @@
             transition: background-color 0.2s;
         }
 
-            .category-row:hover {
-                background-color: #f8f9fa;
-            }
+        .category-row:hover {
+            background-color: #f8f9fa;
+        }
 
-            .category-row.editing {
-                background-color: #e7f3ff;
-            }
+        .category-row.editing {
+            background-color: #e7f3ff;
+        }
 
-            .category-row.adding {
-                background-color: #fff3cd;
-            }
+        .category-row.adding {
+            background-color: #fff3cd;
+        }
 
         .category-description {
             flex: 1;
             font-size: 0.95rem;
-            color: #2c3e50;
         }
 
         .category-actions {
@@ -77,61 +51,6 @@
             transition: all 0.2s;
         }
 
-        .btn-edit {
-            background-color: #04a9f5;
-            border-color: #04a9f5;
-            color: white;
-        }
-
-            .btn-edit:hover {
-                background-color: #0396de;
-                border-color: #0396de;
-                color: white;
-            }
-
-        .btn-delete {
-            background-color: #dc3545;
-            border-color: #dc3545;
-            color: white;
-        }
-
-            .btn-delete:hover {
-                background-color: #c82333;
-                border-color: #bd2130;
-                color: white;
-            }
-
-        .btn-save {
-            background-color: #28a745;
-            border-color: #28a745;
-            color: white;
-        }
-
-            .btn-save:hover {
-                background-color: #218838;
-                border-color: #1e7e34;
-                color: white;
-            }
-
-        .btn-cancel {
-            background-color: #6c757d;
-            border-color: #6c757d;
-            color: white;
-        }
-
-            .btn-cancel:hover {
-                background-color: #5a6268;
-                border-color: #545b62;
-                color: white;
-            }
-
-        .add-new-section {
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
         .stats-section {
             display: flex;
             justify-content: space-between;
@@ -144,10 +63,9 @@
             color: #6c757d;
         }
 
-            .total-count strong {
-                color: #2c3e50;
-                font-size: 1.1rem;
-            }
+        .total-count strong {
+            font-size: 1.1rem;
+        }
 
         .search-box {
             max-width: 300px;
@@ -159,34 +77,51 @@
             color: #6c757d;
         }
 
-            .empty-state i {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                opacity: 0.3;
-            }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
 
         .invalid-feedback {
             display: block;
             margin-top: 0.25rem;
         }
 
+        /* Dark Mode Support */
+        [data-pc-theme="dark"] .category-row:hover {
+            background-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .category-row.editing {
+            background-color: #1e3a5f;
+        }
+
+        [data-pc-theme="dark"] .category-row.adding {
+            background-color: #3a3010;
+        }
+
+        [data-pc-theme="dark"] .total-count {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .empty-state {
+            color: #9ca3af;
+        }
     </style>
 }
 
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
-        <div class="page-header-custom mb-3">
+        <div class="page-header-title mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">
-                        <i class="ti ti-category me-2"></i>
-                        List of Work Category
-                    </h4>
-                    <p class="mb-0 opacity-75">Manage work categories for classifying work requests</p>
+                    <h5 class="m-b-10">List of Work Category</h5>
+                    <p class="m-b-0 text-muted">Manage work categories for classifying work requests</p>
                 </div>
                 <div>
-                    <a href="/Helpdesk/Settings" class="btn btn-light btn-sm">
+                    <a href="/Helpdesk/Settings" class="btn btn-outline-secondary btn-sm">
                         <i class="ti ti-arrow-left me-1"></i>
                         Back to Settings
                     </a>
@@ -208,46 +143,48 @@
         </div>
 
         <!-- Add New Section -->
-        <div class="add-new-section" id="addNewSection">
-            <div class="d-flex align-items-start">
-                <div class="flex-grow-1">
-                    <button type="button" class="btn btn-primary" id="showAddFormBtn">
-                        <i class="ti ti-plus me-1"></i>
-                        Add New Work Category
-                    </button>
-                </div>
-            </div>
-            <div id="addNewForm" style="display: none; margin-top: 1rem;">
+        <div class="card mb-3" id="addNewSection">
+            <div class="card-body">
                 <div class="d-flex align-items-start">
-                    <div class="flex-grow-1 me-2">
-                        <label class="form-label small text-muted mb-1">Work Category Name</label>
-                        <input type="text"
-                               class="form-control"
-                               id="newCategoryName"
-                               placeholder="Enter category name..."
-                               maxlength="200">
-                        <div class="invalid-feedback" id="addValidationError"></div>
+                    <div class="flex-grow-1">
+                        <button type="button" class="btn btn-primary" id="showAddFormBtn">
+                            <i class="ti ti-plus me-1"></i>
+                            Add New Work Category
+                        </button>
                     </div>
-                    <div style="margin-top: 1.75rem;">
-                        <button type="button" class="btn btn-save btn-action me-1" id="saveNewBtn">
-                            <i class="ti ti-check me-1"></i>
-                            Save
-                        </button>
-                        <button type="button" class="btn btn-cancel btn-action" id="cancelNewBtn">
-                            <i class="ti ti-x me-1"></i>
-                            Cancel
-                        </button>
+                </div>
+                <div id="addNewForm" style="display: none; margin-top: 1rem;">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1 me-2">
+                            <label class="form-label small text-muted mb-1">Work Category Name</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="newCategoryName"
+                                   placeholder="Enter category name..."
+                                   maxlength="200">
+                            <div class="invalid-feedback" id="addValidationError"></div>
+                        </div>
+                        <div style="margin-top: 1.75rem;">
+                            <button type="button" class="btn btn-success btn-action me-1" id="saveNewBtn">
+                                <i class="ti ti-check me-1"></i>
+                                Save
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-action" id="cancelNewBtn">
+                                <i class="ti ti-x me-1"></i>
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Category Table -->
-        <div class="category-table">
-            <div class="category-table-header">
+        <div class="card">
+            <div class="card-header">
                 <h6 class="mb-0">Description</h6>
             </div>
-            <div class="category-table-body" id="categoryTableBody">
+            <div class="card-body" id="categoryTableBody">
                 <!-- Categories will be loaded here -->
                 <div class="empty-state" id="emptyState">
                     <i class="ti ti-folder-off"></i>

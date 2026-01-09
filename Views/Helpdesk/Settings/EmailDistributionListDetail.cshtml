@@ -7,12 +7,9 @@
 
 @section styles {
     <style>
-        .page-header-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
         }
 
         .form-section {
@@ -21,6 +18,10 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        [data-pc-theme="dark"] .form-section {
+            background: #2d3748;
         }
 
         .section-title {
@@ -32,10 +33,19 @@
             border-bottom: 2px solid #e9ecef;
         }
 
+        [data-pc-theme="dark"] .section-title {
+            color: #e5e7eb;
+            border-bottom-color: #4a5568;
+        }
+
         .form-label {
             font-weight: 600;
             color: #495057;
             margin-bottom: 0.5rem;
+        }
+
+        [data-pc-theme="dark"] .form-label {
+            color: #cbd5e0;
         }
 
         .form-label .required {
@@ -60,6 +70,11 @@
             background-color: #f8f9fa;
             border-radius: 0.25rem;
             border: 1px solid #dee2e6;
+        }
+
+        [data-pc-theme="dark"] .custom-subject-options {
+            background-color: #374151;
+            border-color: #4a5568;
         }
 
         .custom-subject-options.show {
@@ -118,9 +133,19 @@
             transition: all 0.15s ease;
         }
 
+        [data-pc-theme="dark"] .recipient-card {
+            background-color: #374151;
+            border-color: #4a5568;
+        }
+
         .recipient-card:hover {
             background-color: #e9ecef;
             border-color: #adb5bd;
+        }
+
+        [data-pc-theme="dark"] .recipient-card:hover {
+            background-color: #4a5568;
+            border-color: #6b7280;
         }
 
         .recipient-info {
@@ -133,10 +158,18 @@
             margin-bottom: 0.25rem;
         }
 
+        [data-pc-theme="dark"] .recipient-name {
+            color: #e5e7eb;
+        }
+
         .recipient-email {
             font-size: 0.875rem;
             color: #6c757d;
             font-family: 'Courier New', monospace;
+        }
+
+        [data-pc-theme="dark"] .recipient-email {
+            color: #9ca3af;
         }
 
         .recipient-actions {
@@ -151,6 +184,12 @@
             background-color: #f8f9fa;
             border: 1px dashed #dee2e6;
             border-radius: 0.25rem;
+        }
+
+        [data-pc-theme="dark"] .empty-state {
+            color: #9ca3af;
+            background-color: #374151;
+            border-color: #4a5568;
         }
 
         .empty-state i {
@@ -183,12 +222,21 @@
             color: #495057;
         }
 
+        [data-pc-theme="dark"] .subject-preview-content {
+            color: #cbd5e0;
+        }
+
         .add-email-inline {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 0.25rem;
             padding: 1rem;
             margin-bottom: 1rem;
+        }
+
+        [data-pc-theme="dark"] .add-email-inline {
+            background-color: #374151;
+            border-color: #4a5568;
         }
 
         .inline-form-row {
@@ -216,21 +264,16 @@
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
-        <div class="page-header-custom">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1">
-                        <i class="ti ti-mail me-2"></i>
-                        @ViewBag.Title
-                    </h4>
-                    <p class="mb-0 opacity-75">Configure email recipients for <strong id="pageReferenceName">...</strong></p>
-                </div>
-                <div>
-                    <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-light btn-sm">
-                        <i class="ti ti-arrow-left me-1"></i>
-                        Back to List
-                    </a>
-                </div>
+        <div class="page-header-title mb-3">
+            <h4 class="mb-2">
+                <i class="ti ti-mail me-2"></i>@ViewBag.Title
+            </h4>
+            <p class="text-muted mb-3">Configure email recipients for <strong id="pageReferenceName">...</strong></p>
+            <div>
+                <a href="@Url.Action("EmailDistributionList", "Helpdesk")" class="btn btn-light btn-sm">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to List
+                </a>
             </div>
         </div>
 

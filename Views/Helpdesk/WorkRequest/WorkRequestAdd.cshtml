@@ -40,10 +40,7 @@
             margin-top: 0.5rem;
         }
 
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
+        /* Card header styles are now handled in cards.css */
 
         .datetime-group {
             display: flex;
@@ -75,6 +72,11 @@
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
         }
 
+        [data-pc-theme="dark"] .typeahead-dropdown {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+
             .typeahead-dropdown.show {
                 display: block;
             }
@@ -92,6 +94,15 @@
             .typeahead-item:last-child {
                 border-bottom: none;
             }
+
+        [data-pc-theme="dark"] .typeahead-item {
+            color: #e5e7eb;
+            border-bottom-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .typeahead-item:hover {
+            background-color: #374151;
+        }
 
         .labor-material-table {
             margin-top: 1rem;

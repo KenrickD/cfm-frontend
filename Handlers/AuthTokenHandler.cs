@@ -87,7 +87,24 @@ namespace cfm_frontend.Handlers
                         else
                         {
                             // Refresh failed (refresh token expired?), force logout
+                            _logger.LogWarning("Token refresh failed. Forcing user logout and clearing session.");
+
+                            // Clear session data explicitly
+                            context.Session.Remove("UserSession");
+                            context.Session.Remove("UserPrivileges");
+
+                            // Clear authentication cookie
                             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                            // Return custom 401 response with clear message for client-side handling
+                            response.Dispose();
+                            return new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized)
+                            {
+                                Content = new StringContent(
+                                    "{\"error\":\"Session expired\",\"message\":\"Your session has expired. Please log in again.\"}",
+                                    System.Text.Encoding.UTF8,
+                                    "application/json")
+                            };
                         }
                     }
                     finally

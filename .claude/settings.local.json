@@ -4,7 +4,8 @@
       "Bash(cd:*)",
       "Bash(wc:*)",
       "Bash(dotnet build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(echo:*)"
     ]
   }
 }

@@ -341,3 +341,90 @@
 .searchable-dropdown-selected-item .remove-item:hover {
     color: #dc3545;
 }
+
+/* Dark Mode Support */
+[data-pc-theme="dark"] .searchable-dropdown-toggle {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e5e7eb !important;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-toggle .selected-text {
+    color: #e5e7eb !important;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-toggle .selected-text.placeholder {
+    color: #9ca3af !important;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-toggle:hover {
+    border-color: #86b7fe;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-toggle .dropdown-icon,
+[data-pc-theme="dark"] .searchable-dropdown-toggle .clear-icon {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-menu {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-search-wrapper {
+    background-color: #1a202c;
+    border-bottom-color: #4a5568;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-search {
+    background-color: #374151;
+    border-color: #4a5568;
+    color: #e5e7eb;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-search::placeholder {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-search-wrapper .search-icon {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-option {
+    color: #e5e7eb;
+    border-bottom-color: #374151;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-option:hover,
+[data-pc-theme="dark"] .searchable-dropdown-option.selected {
+    background-color: #374151;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-option.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-option.disabled {
+    background-color: #1a202c;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-option .option-description {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-no-results,
+[data-pc-theme="dark"] .searchable-dropdown-loading {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown-group-label {
+    background-color: #1a202c;
+    color: #9ca3af;
+    border-bottom-color: #4a5568;
+}
+
+[data-pc-theme="dark"] .searchable-dropdown.disabled .searchable-dropdown-toggle {
+    background-color: #1a202c;
+    border-color: #4a5568;
+}

@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = "Access Denied";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var returnUrl = ViewBag.ReturnUrl as string;
 }
 
 <div class="auth-wrapper">
@@ -20,7 +21,13 @@
                             If you believe this is an error, please contact your administrator or try refreshing your permissions.
                         </p>
                         <div class="mt-4">
-                            <a href="@Url.Action("Index", "Dashboard")" class="btn btn-primary me-2">
+                            @if (!string.IsNullOrEmpty(returnUrl))
+                            {
+                                <a href="@returnUrl" class="btn btn-primary me-2">
+                                    <i class="ph-duotone ph-arrow-u-up-left me-2"></i>Try Again
+                                </a>
+                            }
+                            <a href="@Url.Action("Index", "Dashboard")" class="btn btn-@(string.IsNullOrEmpty(returnUrl) ? "primary" : "outline-primary") me-2">
                                 <i class="ph-duotone ph-house me-2"></i>Back to Dashboard
                             </a>
                             <a href="#" onclick="refreshPrivileges(); return false;" class="btn btn-outline-secondary">
@@ -52,10 +59,13 @@
                 type: 'POST',
                 success: function(response) {
                     if (response.success) {
-                        showNotification('Permissions refreshed. Redirecting to dashboard...', 'success', 'Success');
+                        showNotification('Permissions refreshed successfully!', 'success', 'Success');
+
+                        // Redirect to return URL or dashboard
+                        var returnUrl = '@Html.Raw(returnUrl ?? "")';
                         setTimeout(function() {
-                            window.location.href = '@Url.Action("Index", "Dashboard")';
-                        }, 1500);
+                            window.location.href = returnUrl || '@Url.Action("Index", "Dashboard")';
+                        }, 1000);
                     } else {
                         showNotification(response.message || 'Failed to refresh permissions', 'error', 'Error');
                     }

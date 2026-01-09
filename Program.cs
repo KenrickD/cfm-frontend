@@ -12,6 +12,7 @@ builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthTokenHandler>();
 builder.Services.AddScoped<IPrivilegeService, PrivilegeService>();
+builder.Services.AddScoped<ISessionRestoreService, SessionRestoreService>();
 
 builder.Services.AddHttpClient("BackendAPI", client =>
 {
