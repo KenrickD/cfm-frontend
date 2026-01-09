@@ -48,14 +48,14 @@
              * Static and dynamic dropdown data for work request forms
              */
             WorkRequest: {
-                GetWorkCategoriesByClient: '/Helpdesk/GetWorkCategoriesByClient',
-                GetOtherCategoriesByClient: '/Helpdesk/GetOtherCategoriesByClient',
+                GetWorkCategoriesByTypes: '/Helpdesk/GetWorkCategoriesByTypes',
+                GetOtherCategoriesByTypes: '/Helpdesk/GetOtherCategoriesByTypes',
+                GetImportantChecklistByTypes: '/Helpdesk/GetImportantChecklistByTypes',
+                GetWorkRequestMethodsByEnums: '/Helpdesk/GetWorkRequestMethodsByEnums',
+                GetWorkRequestStatusesByEnums: '/Helpdesk/GetWorkRequestStatusesByEnums',
+                GetFeedbackTypesByEnums: '/Helpdesk/GetFeedbackTypesByEnums',
                 GetServiceProvidersByClient: '/Helpdesk/GetServiceProvidersByClient',
                 GetPriorityLevels: '/Helpdesk/GetPriorityLevels',
-                GetFeedbackTypes: '/Helpdesk/GetFeedbackTypes',
-                GetImportantChecklist: '/Helpdesk/GetImportantChecklist',
-                GetWorkRequestMethods: '/Helpdesk/GetWorkRequestMethods',
-                GetWorkRequestStatuses: '/Helpdesk/GetWorkRequestStatuses',
                 GetPersonsInChargeByFilters: '/Helpdesk/GetPersonsInChargeByFilters'
             },
 

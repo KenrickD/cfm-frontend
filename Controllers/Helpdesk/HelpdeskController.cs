@@ -899,71 +899,6 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
         }
 
-        /// <summary>
-        /// API: Get work request methods from lookup table
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetWorkRequestMethods()
-        {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestMethod}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var methods = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = methods });
-                }
-
-                return Json(new { success = false, message = "Failed to load work request methods" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work request methods");
-                return Json(new { success = false, message = "Error loading work request methods" });
-            }
-        }
-
-        /// <summary>
-        /// API: Get work request statuses from lookup table
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetWorkRequestStatuses()
-        {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestStatus}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var statuses = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = statuses });
-                }
-
-                return Json(new { success = false, message = "Failed to load work request statuses" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work request statuses");
-                return Json(new { success = false, message = "Error loading work request statuses" });
-            }
-        }
 
         /// <summary>
         /// API: Get service providers
@@ -1137,48 +1072,38 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// API: Get important checklist items for work request
-        /// idClient is retrieved from session
+        /// API: Get important checklist using new Types API
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetImportantChecklist()
+        public async Task<IActionResult> GetImportantChecklistByTypes()
         {
             try
             {
-                // Get user session
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
                 if (string.IsNullOrEmpty(userSessionJson))
                 {
                     return Json(new { success = false, message = "Session expired. Please login again." });
                 }
 
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 var idClient = userInfo.PreferredClientId;
 
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"
-                );
+                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var checklist = await JsonSerializer.DeserializeAsync<List<ImportantChecklistItemModel>>(
+                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    // Sort by displayOrder for consistent ordering
-                    var sortedChecklist = checklist?.OrderBy(x => x.displayOrder).ToList();
-
-                    return Json(new { success = true, data = sortedChecklist });
+                    return Json(new { success = true, data = types });
                 }
 
                 return Json(new { success = false, message = "Failed to load important checklist" });
@@ -1191,45 +1116,38 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// API: Get work categories by category type
-        /// idClient is retrieved from session
+        /// API: Get work categories using new Types API
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetWorkCategoriesByClient(string categoryType = "workCategory")
+        public async Task<IActionResult> GetWorkCategoriesByTypes()
         {
             try
             {
-                // Get user session
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
                 if (string.IsNullOrEmpty(userSessionJson))
                 {
                     return Json(new { success = false, message = "Session expired. Please login again." });
                 }
 
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 var idClient = userInfo.PreferredClientId;
 
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/workcategory/list?idClient={idClient}&categoryType={categoryType}"
-                );
+                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var categories = await JsonSerializer.DeserializeAsync<List<WorkCategoryModel>>(
+                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    return Json(new { success = true, data = categories });
+                    return Json(new { success = true, data = types });
                 }
 
                 return Json(new { success = false, message = "Failed to load work categories" });
@@ -1242,53 +1160,46 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// API: Get other categories by category type
-        /// idClient is retrieved from session
+        /// API: Get other categories using new Types API
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOtherCategoriesByClient(string categoryType)
+        public async Task<IActionResult> GetOtherCategoriesByTypes(string categoryType)
         {
             try
             {
-                // Get user session
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
                 if (string.IsNullOrEmpty(userSessionJson))
                 {
                     return Json(new { success = false, message = "Session expired. Please login again." });
                 }
 
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 var idClient = userInfo.PreferredClientId;
 
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/othercategory/list?idClient={idClient}&categoryType={categoryType}"
-                );
+                var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var categories = await JsonSerializer.DeserializeAsync<List<OtherCategoryModel>>(
+                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    return Json(new { success = true, data = categories });
+                    return Json(new { success = true, data = types });
                 }
 
-                return Json(new { success = false, message = "Failed to load other categories" });
+                return Json(new { success = false, message = "Failed to load categories" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching other categories for type {CategoryType}", categoryType);
-                return Json(new { success = false, message = "Error loading other categories" });
+                _logger.LogError(ex, $"Error fetching categories for type {categoryType}");
+                return Json(new { success = false, message = "Error loading categories" });
             }
         }
 
@@ -1351,6 +1262,108 @@ namespace cfm_frontend.Controllers.Helpdesk
             {
                 _logger.LogError(ex, "Error fetching priority levels");
                 return Json(new { success = false, message = "Error loading priority levels" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get work request methods using new Enums API
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetWorkRequestMethodsByEnums()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = enums });
+                }
+
+                return Json(new { success = false, message = "Failed to load work request methods" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work request methods");
+                return Json(new { success = false, message = "Error loading work request methods" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get work request statuses using new Enums API
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetWorkRequestStatusesByEnums()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = enums });
+                }
+
+                return Json(new { success = false, message = "Failed to load work request statuses" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work request statuses");
+                return Json(new { success = false, message = "Error loading work request statuses" });
+            }
+        }
+
+        /// <summary>
+        /// API: Get feedback types using new Enums API
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetFeedbackTypesByEnums()
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(new { success = true, data = enums });
+                }
+
+                return Json(new { success = false, message = "Failed to load feedback types" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching feedback types");
+                return Json(new { success = false, message = "Error loading feedback types" });
             }
         }
 
@@ -1654,40 +1667,6 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
         }
 
-        /// <summary>
-        /// API: Get feedback types from lookup table
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetFeedbackTypes()
-        {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=workRequestFeedbackType"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var feedbackTypes = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = feedbackTypes });
-                }
-
-                return Json(new { success = false, message = "Failed to load feedback types" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching feedback types");
-                return Json(new { success = false, message = "Error loading feedback types" });
-            }
-        }
 
         /// <summary>
         /// API: Search Job Code by name

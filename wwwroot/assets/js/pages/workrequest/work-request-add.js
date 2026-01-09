@@ -18,17 +18,17 @@
             rooms: MvcEndpoints.Helpdesk.Location.GetRoomsByFloor,
 
             // Dropdowns
-            workCategories: MvcEndpoints.Helpdesk.WorkRequest.GetWorkCategoriesByClient,
-            otherCategories: MvcEndpoints.Helpdesk.WorkRequest.GetOtherCategoriesByClient,
+            workCategories: MvcEndpoints.Helpdesk.WorkRequest.GetWorkCategoriesByTypes,
+            otherCategories: MvcEndpoints.Helpdesk.WorkRequest.GetOtherCategoriesByTypes,
+            importantChecklist: MvcEndpoints.Helpdesk.WorkRequest.GetImportantChecklistByTypes,
             serviceProviders: MvcEndpoints.Helpdesk.WorkRequest.GetServiceProvidersByClient,
             priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
-            feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypes,
-            importantChecklist: MvcEndpoints.Helpdesk.WorkRequest.GetImportantChecklist,
+            feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypesByEnums,
             getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
 
             // Radio buttons
-            requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethods,
-            statuses: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestStatuses,
+            requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethodsByEnums,
+            statuses: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestStatusesByEnums,
 
             // Search/autocomplete
             searchRequestors: MvcEndpoints.Helpdesk.Search.Requestors,
@@ -154,7 +154,6 @@
         $.ajax({
             url: CONFIG.apiEndpoints.workCategories,
             method: 'GET',
-            data: { categoryType: 'workCategory' },
             success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#workCategorySelect');
@@ -162,8 +161,8 @@
                     $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
-                                .val(category.id)
-                                .text(category.name)
+                                .val(category.idType)
+                                .text(category.typeName)
                         );
                     });
                 }
@@ -190,8 +189,8 @@
                     $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
-                                .val(category.id)
-                                .text(category.name)
+                                .val(category.idType)
+                                .text(category.typeName)
                         );
                     });
                 }
@@ -205,16 +204,31 @@
             data: { categoryType: 'workRequestCustomCategory2' },
             success: function (response) {
                 if (response.success && response.data) {
-                    const $select = $('#otherCategory2Select');
-                    $select.empty().append('<option value="">Select Other Category 2</option>');
-                    $.each(response.data, function (index, category) {
-                        $select.append(
-                            $('<option></option>')
-                                .val(category.id)
-                                .text(category.name)
-                        );
-                    });
+                    const $container = $('#otherCategory2Container');
+
+                    if (response.data.length === 0) {
+                        // Hide container if no data
+                        $container.hide();
+                    } else {
+                        $container.show();
+                        const $select = $('#otherCategory2Select');
+                        $select.empty().append('<option value="">Select Other Category 2</option>');
+                        $.each(response.data, function (index, category) {
+                            $select.append(
+                                $('<option></option>')
+                                    .val(category.idType)
+                                    .text(category.typeName)
+                            );
+                        });
+                    }
+                } else {
+                    // Hide if API fails
+                    $('#otherCategory2Container').hide();
                 }
+            },
+            error: function () {
+                // Hide on error
+                $('#otherCategory2Container').hide();
             }
         });
     }
@@ -312,8 +326,8 @@
                     $.each(response.data, function (index, type) {
                         $select.append(
                             $('<option></option>')
-                                .val(type.value || type.name)
-                                .text(type.label || type.name)
+                                .val(type.idEnum)
+                                .text(type.enumName)
                         );
                     });
                 }
@@ -359,20 +373,20 @@
             method: 'GET',
             success: function (response) {
                 if (response.success && response.data) {
-                    const $container = $('[name="RequestMethod"]').first().closest('.mt-2');
+                    const $container = $('.col-md-6 .form-label:contains("Request Method")').siblings('.mt-2');
                     $container.empty();
                     $.each(response.data, function (index, method) {
-                        const radioId = 'method' + (method.id || index);
+                        const radioId = 'method' + method.idEnum;
                         const isFirst = index === 0;
                         $container.append(`
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio"
                                        name="RequestMethod"
                                        id="${radioId}"
-                                       value="${method.value || method.name}"
+                                       value="${method.idEnum}"
                                        ${isFirst ? 'required' : ''}>
                                 <label class="form-check-label" for="${radioId}">
-                                    ${method.label || method.name}
+                                    ${method.enumName}
                                 </label>
                             </div>
                         `);
@@ -394,21 +408,21 @@
             method: 'GET',
             success: function (response) {
                 if (response.success && response.data) {
-                    const $container = $('[name="Status"]').first().closest('.mt-2');
+                    const $container = $('.col-md-6 .form-label:contains("Status")').siblings('.mt-2');
                     $container.empty();
                     $.each(response.data, function (index, status) {
-                        const radioId = 'status' + (status.id || index);
-                        const isNew = (status.value || status.name) === 'New';
+                        const radioId = 'status' + status.idEnum;
+                        const isNew = status.enumName === 'New';
                         $container.append(`
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio"
                                        name="Status"
                                        id="${radioId}"
-                                       value="${status.value || status.name}"
+                                       value="${status.idEnum}"
                                        ${isNew ? 'checked' : ''}
                                        ${index === 0 ? 'required' : ''}>
                                 <label class="form-check-label" for="${radioId}">
-                                    ${status.label || status.name}
+                                    ${status.enumName}
                                 </label>
                             </div>
                         `);
@@ -440,11 +454,11 @@
                                 <div class="form-check">
                                     <input class="form-check-input important-checklist-item"
                                            type="checkbox"
-                                           id="checklist${item.id}"
-                                           data-type-id="${item.id}"
+                                           id="checklist${item.idType}"
+                                           data-type-id="${item.idType}"
                                            value="false">
-                                    <label class="form-check-label" for="checklist${item.id}">
-                                        ${item.label || item.name}
+                                    <label class="form-check-label" for="checklist${item.idType}">
+                                        ${item.typeName}
                                     </label>
                                 </div>
                             </div>

@@ -601,6 +601,49 @@ namespace cfm_frontend.Constants
 
         #endregion
 
+        #region Masters
+
+        /// <summary>
+        /// Masters API - Unified Types endpoint
+        /// </summary>
+        public static class Masters
+        {
+            private const string Base = ApiBase + "/masters";
+
+            /// <summary>
+            /// GET: Get types by category
+            /// Path params: {category}
+            /// Query params: idClient (required), parentTypeId (optional)
+            /// </summary>
+            /// <param name="category">Category type string</param>
+            /// <returns>Get types endpoint URL</returns>
+            public static string GetTypes(string category) => $"{Base}/types/{category}";
+
+            /// <summary>
+            /// GET: Get enums by category
+            /// Path params: {category}
+            /// </summary>
+            /// <param name="category">Category type string</param>
+            /// <returns>Get enums endpoint URL</returns>
+            public static string GetEnums(string category) => $"{Base}/enums/{category}";
+
+            /// <summary>
+            /// Category type constants for Masters API
+            /// </summary>
+            public static class CategoryTypes
+            {
+                public const string WorkCategory = "workCategory";
+                public const string WorkRequestCustomCategory = "workRequestCustomCategory";
+                public const string WorkRequestCustomCategory2 = "workRequestCustomCategory2";
+                public const string WorkRequestAdditionalInformation = "workRequestAdditionalInformation";
+                public const string WorkRequestMethod = "workRequestMethod";
+                public const string WorkRequestStatus = "workRequestStatus";
+                public const string WorkRequestFeedbackType = "workRequestFeedbackType";
+            }
+        }
+
+        #endregion
+
         #region Email Distribution
 
         /// <summary>
