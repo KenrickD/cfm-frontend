@@ -1,0 +1,954 @@
+@using cfm_frontend.Extensions
+@model cfm_frontend.ViewModels.InventoryViewModel
+@{
+    ViewBag.Title = "Inventory Management";
+    ViewBag.pTitle = "Helpdesk";
+    ViewBag.cTitle = "Inventory Transactions";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link href="~/assets/css/plugins/animate.min.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="~/assets/css/uikit.css">
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+
+    <style>
+        .date-group-row td {
+            padding: 12px 15px;
+            font-size: 14px;
+            color: #495057;
+            background-color: #f8f9fa !important;
+        }
+
+        .modal-footer.no-divider {
+            border-top: none;
+        }
+
+        .modal-header.no-divider {
+            border-bottom: none;
+        }
+
+        .filter-modal .modal-dialog {
+            max-width: 900px;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-section-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #04a9f5;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-checkbox-group {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+
+        .filter-checkbox-item {
+            margin-bottom: 10px;
+        }
+
+            .filter-checkbox-item:last-child {
+                margin-bottom: 0;
+            }
+
+            .filter-checkbox-item .form-check-input {
+                margin-top: 0.15em;
+            }
+
+            .filter-checkbox-item .form-check-label {
+                font-size: 14px;
+                cursor: pointer;
+            }
+
+        .filter-date-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+            .filter-date-group .form-label {
+                min-width: 80px;
+                margin-bottom: 0;
+                font-weight: 500;
+                font-size: 13px;
+            }
+
+            .filter-date-group .form-control {
+                flex: 1;
+            }
+
+        .modal-body {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .btn-clear-filter {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+            color: #6c757d;
+        }
+
+            .btn-clear-filter:hover {
+                background-color: #e2e6ea;
+                border-color: #dae0e5;
+                color: #545b62;
+            }
+
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+
+        .typeahead-dropdown {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            margin-top: 2px;
+            display: none;
+        }
+
+            .typeahead-dropdown.show {
+                display: block;
+            }
+
+        .typeahead-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+            .typeahead-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .typeahead-item:last-child {
+                border-bottom: none;
+            }
+
+        #materialSearchContainer {
+            position: relative;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>@ViewBag.cTitle</h5>
+                <p>This table shows all inventory transactions ordered by transaction date (most recent first).</p>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="grid gap-0 column-gap-2 d-flex flex-row" style="width: 100%">
+                        <div class="input-group w-100">
+                            <input placeholder="Search by material name or description..."
+                                   type="text" class="form-control" id="mainSearchInput"
+                                   value="@Context.Request.Query["search"]">
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                    data-bs-content="Search" data-bs-trigger="hover" id="searchButton">
+                                <i class="ti ti-search"></i>
+                            </button>
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-toggle="modal" data-bs-target="#filterModal"
+                                    data-bs-container="body" data-bs-original-title="Advanced Filters">
+                                <i class="ti ti-filter"></i>
+                            </button>
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                    data-bs-content="Clear Search" data-bs-trigger="hover" id="clearSearchButton">
+                                <i class="ti ti-list-search"></i>
+                            </button>
+                            @if (Context.Session.CanAdd("Helpdesk", "Inventory Management"))
+                            {
+                                <a href="@Url.Action("Add", "Inventory")" class="btn btn-light d-flex flex-row align-items-center"
+                                   data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                   data-bs-content="Add New Inventory Transaction" data-bs-trigger="hover">
+                                    <i class="ti ti-plus"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="inventoryTable" class="table nowrap table-hover m-x-0">
+                        <thead>
+                            <tr>
+                                <th class="text-capitalize">Transaction Date</th>
+                                <th class="text-capitalize">Status</th>
+                                <th class="text-capitalize">Material</th>
+                                <th class="text-capitalize">Quantity</th>
+                                <th class="text-capitalize">Description</th>
+                                <th class="text-capitalize">Work Request</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model?.Transactions != null && Model.Transactions.Any())
+                            {
+                                DateTime? lastDate = null;
+
+                                @foreach (var transaction in Model.Transactions)
+                                {
+                                    @if (lastDate == null || lastDate.Value.Date != transaction.transactionDate.Date)
+                                    {
+                                        <tr class="date-group-row">
+                                            <td colspan="7" class="fw-bold">
+                                                @transaction.transactionDate.ToString("dddd, dd MMMM yyyy")
+                                            </td>
+                                        </tr>
+                                        lastDate = transaction.transactionDate;
+                                    }
+
+                                    var statusClass = transaction.transactionStatus switch
+                                    {
+                                        "Stock Increase" => "bg-light-success",
+                                        "Stock Usage" => "bg-light-warning",
+                                        "Stock Return" => "bg-light-info",
+                                        _ => "bg-light"
+                                    };
+
+                                    <tr>
+                                        <td>
+                                            <span class="text-muted small">
+                                                @transaction.transactionDate.ToString("hh:mm tt")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @statusClass">@transaction.transactionStatus</span>
+                                        </td>
+                                        <td>
+                                            <span>@transaction.materialName</span>
+                                        </td>
+                                        <td>
+                                            <span>@transaction.quantity</span>
+                                        </td>
+                                        <td>
+                                            <div class="text-wrap" style="max-width: 300px">
+                                                @transaction.description
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(transaction.workRequestCode))
+                                            {
+                                                <a href="/helpdesk/work-requests/@transaction.idWorkRequest"
+                                                   class="text-primary">
+                                                    @transaction.workRequestCode
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="grid gap-0 column-gap-2 d-flex flex-row">
+                                                @if (string.IsNullOrEmpty(transaction.workRequestCode))
+                                                {
+                                                    @if (Context.Session.CanEdit("Helpdesk", "Inventory Management"))
+                                                    {
+                                                        <button class="btn btn-light btn-sm btn-edit-transaction"
+                                                                data-id="@transaction.idInventoryTransaction"
+                                                                data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                                                data-bs-content="Edit this Transaction" data-bs-trigger="hover">
+                                                            <i class="ti ti-edit-circle"></i>
+                                                        </button>
+                                                    }
+                                                    @if (Context.Session.CanDelete("Helpdesk", "Inventory Management"))
+                                                    {
+                                                        <button type="button" class="btn btn-light btn-sm btn-delete-transaction"
+                                                                data-id="@transaction.idInventoryTransaction"
+                                                                data-bs-toggle="popover" data-bs-placement="top"
+                                                                data-bs-content="Delete this Transaction" data-bs-trigger="hover">
+                                                            <i class="ti ti-trash"></i>
+                                                        </button>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small" title="Cannot edit/delete transactions connected to Work Requests">
+                                                        <i class="ti ti-lock"></i>
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="ti ti-inbox" style="font-size: 48px; opacity: 0.5;"></i>
+                                            <p class="mt-2">No inventory transactions found</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @await Html.PartialAsync("_Pagination", Model.Paging)
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade filter-modal" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">
+                    <i class="ti ti-filter me-2"></i>Advanced Filters
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="filter-section">
+                                <label class="filter-section-title">Transaction Status</label>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.FilterOptions?.TransactionStatuses != null && Model.FilterOptions.TransactionStatuses.Any())
+                                    {
+                                        @foreach (var status in Model.FilterOptions.TransactionStatuses)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       value="@status.Value"
+                                                       id="status_@status.Value.Replace(" ", "")"
+                                                       name="transactionStatuses">
+                                                <label class="form-check-label" for="status_@status.Value.Replace(" ", "")">
+                                                    @status.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No transaction statuses available</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="filter-section">
+                                <label class="filter-section-title">Work Request</label>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.FilterOptions?.WorkRequests != null && Model.FilterOptions.WorkRequests.Any())
+                                    {
+                                        @foreach (var wr in Model.FilterOptions.WorkRequests)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       value="@wr.idWorkRequest"
+                                                       id="wr_@wr.idWorkRequest"
+                                                       name="workRequestIds">
+                                                <label class="form-check-label" for="wr_@wr.idWorkRequest">
+                                                    <a href="/helpdesk/work-requests/@wr.idWorkRequest"
+                                                       target="_blank"
+                                                       class="text-primary"
+                                                       onclick="event.stopPropagation();">
+                                                        @wr.workRequestCode
+                                                    </a>
+                                                    @if (!string.IsNullOrEmpty(wr.workTitle))
+                                                    {
+                                                        <span class="text-muted small"> - @wr.workTitle</span>
+                                                    }
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No work requests with inventory transactions</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="filter-section">
+                                <label class="filter-section-title">Transaction Date</label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="filter-date-group">
+                                            <label class="form-label">From:</label>
+                                            <input type="date" class="form-control"
+                                                   id="transactionDateFrom" name="transactionDateFrom">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="filter-date-group">
+                                            <label class="form-label">To:</label>
+                                            <input type="date" class="form-control"
+                                                   id="transactionDateTo" name="transactionDateTo">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-clear-filter" id="clearFiltersBtn">
+                    <i class="ti ti-x me-1"></i>Clear All Filters
+                </button>
+                <button type="button" class="btn btn-primary" id="applyFiltersBtn">
+                    <i class="ti ti-check me-1"></i>Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Modal (Add/Edit) -->
+<div class="modal fade" id="transactionModal" tabindex="-1" aria-labelledby="transactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transactionModalLabel">Inventory Transaction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="transactionForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="transactionId" name="id" value="0">
+
+                    <!-- Stock Movement Type -->
+                    <div class="mb-3">
+                        <label for="stockMovementType" class="form-label fw-semibold required-field">Stock Movement Type</label>
+                        <select class="form-select form-select-sm" id="stockMovementType"
+                                name="stockMovementType" required>
+                            <option value="">Select Stock Movement Type</option>
+                        </select>
+                    </div>
+
+                    <!-- Transaction Date -->
+                    <div class="mb-3">
+                        <label for="transactionDate" class="form-label fw-semibold required-field">Inventory Transaction Date</label>
+                        <input type="date" class="form-control form-control-sm"
+                               id="transactionDate" name="transactionDate" required>
+                    </div>
+
+                    <!-- Material Search -->
+                    <div class="mb-3">
+                        <label for="materialSearch" class="form-label fw-semibold required-field">Material</label>
+
+                        <!-- Search Input (shown initially) -->
+                        <div id="materialSearchContainer">
+                            <input type="text" class="form-control form-control-sm"
+                                   id="materialSearch"
+                                   placeholder="Type to search material..."
+                                   autocomplete="off">
+                            <div id="materialDropdown" class="typeahead-dropdown"></div>
+                        </div>
+
+                        <!-- Selected Material Card (hidden initially) -->
+                        <div id="materialSelected" class="mt-2" style="display: none;">
+                            <div class="alert alert-info mb-0 p-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <strong id="selectedMaterialName" class="me-2"></strong>
+                                            <span class="badge bg-secondary" id="selectedMaterialCode"></span>
+                                        </div>
+                                        <div class="text-muted small">
+                                            Remaining Stock: <span id="selectedMaterialStock" class="fw-bold"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-danger" id="removeMaterialBtn">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="selectedMaterialId" name="idMaterial">
+                        <input type="hidden" id="selectedMaterialUnit" name="unit">
+                    </div>
+
+                    <!-- Quantity -->
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label fw-semibold required-field">Quantity</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control"
+                                   id="quantity" name="quantity"
+                                   step="0.01" min="0.01"
+                                   placeholder="1.00" required>
+                            <span class="input-group-text" id="quantityUnit">PCS</span>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control form-control-sm"
+                                  id="description" name="description"
+                                  rows="3"
+                                  placeholder="Write brief details and general information..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveTransactionBtn">
+                    <i class="ti ti-device-floppy me-1"></i>Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header no-divider">
+                <div class="d-flex flex-row align-items-center text-danger">
+                    <i class="ti ti-alert-octagon me-2 fs-5"></i>
+                    <span class="text-lg fw-semibold">Warning</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this inventory transaction? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer no-divider">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn">
+                    <i class="ti ti-trash me-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[data-bs-toggle="popover"]').popover({
+                container: 'body',
+                placement: 'top',
+                trigger: 'hover'
+            });
+
+            $('#clearFiltersBtn').on('click', function() {
+                $('#filterForm')[0].reset();
+                $('#filterForm input[type="checkbox"]').prop('checked', false);
+
+                var searchTerm = $('#mainSearchInput').val();
+                var url = new URL(window.location.origin + '/Inventory/Index');
+                if (searchTerm && searchTerm.trim() !== '') {
+                    url.searchParams.set('search', searchTerm.trim());
+                }
+                window.location.href = url.toString();
+            });
+
+            $('#applyFiltersBtn').on('click', function() {
+                var filters = {
+                    transactionStatuses: $('input[name="transactionStatuses"]:checked')
+                        .map(function() { return this.value; }).get(),
+                    workRequestIds: $('input[name="workRequestIds"]:checked')
+                        .map(function() { return this.value; }).get(),
+                    transactionDateFrom: $('#transactionDateFrom').val(),
+                    transactionDateTo: $('#transactionDateTo').val()
+                };
+
+                var url = new URL(window.location.origin + '/Inventory/Index');
+
+                if (filters.transactionDateFrom)
+                    url.searchParams.set('transactionDateFrom', filters.transactionDateFrom);
+                if (filters.transactionDateTo)
+                    url.searchParams.set('transactionDateTo', filters.transactionDateTo);
+
+                filters.transactionStatuses.forEach(s =>
+                    url.searchParams.append('transactionStatuses', s));
+                filters.workRequestIds.forEach(id =>
+                    url.searchParams.append('workRequestIds', id));
+
+                var searchTerm = $('#mainSearchInput').val();
+                if (searchTerm && searchTerm.trim() !== '') {
+                    url.searchParams.set('search', searchTerm.trim());
+                }
+
+                url.searchParams.set('page', '1');
+
+                window.location.href = url.toString();
+            });
+
+            $('#searchButton').on('click', function() {
+                var searchTerm = $('#mainSearchInput').val();
+                var currentUrl = new URL(window.location.href);
+
+                if (searchTerm && searchTerm.trim() !== '') {
+                    currentUrl.searchParams.set('search', searchTerm.trim());
+                } else {
+                    currentUrl.searchParams.delete('search');
+                }
+
+                currentUrl.searchParams.delete('page');
+                window.location.href = currentUrl.toString();
+            });
+
+            $('#mainSearchInput').on('keypress', function(e) {
+                if (e.which === 13) {
+                    $('#searchButton').click();
+                }
+            });
+
+            $('#clearSearchButton').on('click', function() {
+                $('#mainSearchInput').val('');
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('search');
+                currentUrl.searchParams.delete('page');
+                window.location.href = currentUrl.toString();
+            });
+
+            function getQueryParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.getAll(name);
+            }
+
+            const transactionStatuses = getQueryParam('transactionStatuses');
+            transactionStatuses.forEach(s =>
+                $(`input[name="transactionStatuses"][value="${s}"]`).prop('checked', true));
+
+            const workRequestIds = getQueryParam('workRequestIds');
+            workRequestIds.forEach(id =>
+                $(`input[name="workRequestIds"][value="${id}"]`).prop('checked', true));
+
+            const transactionDateFrom = getQueryParam('transactionDateFrom')[0];
+            if (transactionDateFrom) $('#transactionDateFrom').val(transactionDateFrom);
+
+            const transactionDateTo = getQueryParam('transactionDateTo')[0];
+            if (transactionDateTo) $('#transactionDateTo').val(transactionDateTo);
+
+            // Transaction Modal State Management
+            let currentTransactionId = 0;
+            let currentEditMode = 'create';
+            let selectedMaterial = null;
+            let materialSearchTimeout = null;
+
+            // Load stock movement types from filter options
+            function loadStockMovementTypes() {
+                const statuses = @Html.Raw(Model?.FilterOptions?.TransactionStatuses != null ? Json.Serialize(Model.FilterOptions.TransactionStatuses) : "[]");
+                const $select = $('#stockMovementType');
+                $select.empty().append('<option value="">Select Stock Movement Type</option>');
+
+                if (statuses && statuses.length > 0) {
+                    statuses.forEach(status => {
+                        $select.append($('<option></option>')
+                            .val(status.value)
+                            .text(status.label));
+                    });
+                }
+            }
+
+            // Open Add Modal
+            $('a[href="@Url.Action("Add", "Inventory")"]').on('click', function(e) {
+                e.preventDefault();
+                openTransactionModal('create');
+            });
+
+            // Open Edit Modal
+            $(document).on('click', '.btn-edit-transaction', function() {
+                const transactionId = $(this).data('id');
+                openTransactionModal('edit', transactionId);
+            });
+
+            function openTransactionModal(mode, transactionId = 0) {
+                currentEditMode = mode;
+                currentTransactionId = transactionId;
+                selectedMaterial = null;
+
+                $('#transactionForm')[0].reset();
+                $('#transactionId').val(transactionId);
+                $('#transactionModalLabel').text(mode === 'create' ? 'Add Inventory Transaction' : 'Edit Inventory Transaction');
+
+                // Reset material selection
+                $('#materialSearchContainer').show();
+                $('#materialSelected').hide();
+                $('#materialSearch').val('');
+                $('#materialDropdown').removeClass('show').empty();
+
+                // Set today's date as default
+                const today = new Date().toISOString().split('T')[0];
+                $('#transactionDate').val(today);
+
+                // Reset quantity unit
+                $('#quantityUnit').text('PCS');
+
+                if (mode === 'edit' && transactionId > 0) {
+                    loadTransactionData(transactionId);
+                }
+
+                $('#transactionModal').modal('show');
+            }
+
+            function loadTransactionData(id) {
+                $.ajax({
+                    url: '/Inventory/GetById',
+                    method: 'GET',
+                    data: { id: id },
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            const data = response.data;
+
+                            $('#stockMovementType').val(data.transactionStatus);
+                            $('#transactionDate').val(data.transactionDate.split('T')[0]);
+                            $('#quantity').val(Math.abs(data.quantity));
+                            $('#description').val(data.description);
+
+                            // Set material (show as selected card)
+                            selectedMaterial = {
+                                idMaterial: data.idMaterial || 0,
+                                materialName: data.materialName,
+                                materialCode: '',
+                                remainingStock: 0,
+                                unit: 'PCS'
+                            };
+                            showSelectedMaterial();
+                        } else {
+                            showNotification(response.message || 'Failed to load transaction data', 'error', 'Error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error loading transaction:', error);
+                        showNotification('Error loading transaction data', 'error', 'Error');
+                    }
+                });
+            }
+
+            // Material Search (Typeahead)
+            $('#materialSearch').on('keyup', function() {
+                clearTimeout(materialSearchTimeout);
+                const term = $(this).val().trim();
+
+                if (term.length < 2) {
+                    $('#materialDropdown').removeClass('show').empty();
+                    return;
+                }
+
+                materialSearchTimeout = setTimeout(function() {
+                    searchMaterials(term);
+                }, 300);
+            });
+
+            function searchMaterials(term) {
+                $.ajax({
+                    url: '/Inventory/SearchMaterials',
+                    method: 'GET',
+                    data: { term: term },
+                    success: function(response) {
+                        const $dropdown = $('#materialDropdown');
+                        $dropdown.empty();
+
+                        if (response.success && response.data && response.data.length > 0) {
+                            $.each(response.data, function(index, material) {
+                                const $item = $('<div></div>')
+                                    .addClass('typeahead-item')
+                                    .html(`
+                                        <div>
+                                            <strong>${material.materialCode || ''} ${material.materialName}</strong><br>
+                                            <small class="text-muted">Remaining Stock: ${material.remainingStock} ${material.unit}</small>
+                                        </div>
+                                    `)
+                                    .on('click', function() {
+                                        selectMaterial(material);
+                                    });
+                                $dropdown.append($item);
+                            });
+                            $dropdown.addClass('show');
+                        } else {
+                            $dropdown.append(
+                                $('<div></div>')
+                                    .addClass('typeahead-item text-muted')
+                                    .text('No materials found')
+                            );
+                            $dropdown.addClass('show');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error searching materials:', error);
+                        showNotification('Error searching materials', 'error', 'Error');
+                    }
+                });
+            }
+
+            function selectMaterial(material) {
+                selectedMaterial = material;
+                showSelectedMaterial();
+            }
+
+            function showSelectedMaterial() {
+                $('#materialSearchContainer').hide();
+                $('#materialDropdown').removeClass('show').empty();
+
+                $('#selectedMaterialName').text(selectedMaterial.materialName);
+                $('#selectedMaterialCode').text(selectedMaterial.materialCode || '');
+                $('#selectedMaterialStock').text(`${selectedMaterial.remainingStock} ${selectedMaterial.unit}`);
+                $('#selectedMaterialId').val(selectedMaterial.idMaterial);
+                $('#selectedMaterialUnit').val(selectedMaterial.unit);
+                $('#quantityUnit').text(selectedMaterial.unit);
+
+                $('#materialSelected').show();
+            }
+
+            // Remove Material Selection
+            $('#removeMaterialBtn').on('click', function() {
+                selectedMaterial = null;
+                $('#materialSelected').hide();
+                $('#materialSearchContainer').show();
+                $('#materialSearch').val('').focus();
+                $('#selectedMaterialId').val('');
+                $('#selectedMaterialUnit').val('');
+                $('#quantityUnit').text('PCS');
+            });
+
+            // Save Transaction
+            $('#saveTransactionBtn').on('click', function() {
+                if (!validateTransactionForm()) {
+                    return;
+                }
+
+                const formData = {
+                    stockMovementType: $('#stockMovementType').val(),
+                    transactionDate: $('#transactionDate').val(),
+                    idMaterial: parseInt($('#selectedMaterialId').val()),
+                    quantity: parseFloat($('#quantity').val()),
+                    description: $('#description').val()
+                };
+
+                const url = currentEditMode === 'create'
+                    ? '/Inventory/Create'
+                    : `/Inventory/Update?id=${currentTransactionId}`;
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: formData,
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showNotification(response.message || 'Transaction saved successfully!', 'success', 'Success');
+                            $('#transactionModal').modal('hide');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            showNotification(response.message || 'Failed to save transaction', 'error', 'Error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error saving transaction:', error);
+                        showNotification('Error saving transaction', 'error', 'Error');
+                    }
+                });
+            });
+
+            function validateTransactionForm() {
+                const stockMovementType = $('#stockMovementType').val();
+                if (!stockMovementType) {
+                    showNotification('Please select a stock movement type', 'error', 'Validation Error');
+                    return false;
+                }
+
+                const transactionDate = $('#transactionDate').val();
+                if (!transactionDate) {
+                    showNotification('Please select a transaction date', 'error', 'Validation Error');
+                    return false;
+                }
+
+                if (!selectedMaterial || !$('#selectedMaterialId').val()) {
+                    showNotification('Please select a material', 'error', 'Validation Error');
+                    return false;
+                }
+
+                const quantity = parseFloat($('#quantity').val());
+                if (!quantity || quantity <= 0) {
+                    showNotification('Please enter a valid quantity', 'error', 'Validation Error');
+                    return false;
+                }
+
+                return true;
+            }
+
+            // Delete Transaction
+            let deleteTransactionId = 0;
+
+            $(document).on('click', '.btn-delete-transaction', function() {
+                deleteTransactionId = $(this).data('id');
+                $('#deleteModal').modal('show');
+            });
+
+            $('#confirmDeleteBtn').on('click', function() {
+                $.ajax({
+                    url: '/Inventory/Delete',
+                    method: 'POST',
+                    data: { id: deleteTransactionId },
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showNotification(response.message || 'Transaction deleted successfully!', 'success', 'Success');
+                            $('#deleteModal').modal('hide');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            showNotification(response.message || 'Failed to delete transaction', 'error', 'Error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error deleting transaction:', error);
+                        showNotification('Error deleting transaction', 'error', 'Error');
+                    }
+                });
+            });
+
+            // Initialize
+            loadStockMovementTypes();
+        });
+    </script>
+}

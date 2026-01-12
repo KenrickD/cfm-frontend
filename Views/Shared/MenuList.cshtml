@@ -25,6 +25,10 @@
                 <li class="pc-item"><a class="pc-link" href="/helpdesk/workrequestadd">Add Work Request</a></li>
                 <li class="pc-item"><a class="pc-link" href="/helpdesk/index">Work Request Management</a></li>
             }
+            @if (Context.Session.CanView("Helpdesk", "Inventory Management"))
+            {
+                <li class="pc-item"><a class="pc-link" href="/inventory/index">Inventory Management</a></li>
+            }
             @if (Context.Session.CanView("Helpdesk", "Job Code Management"))
             {
                 <li class="pc-item"><a class="pc-link" href="/jobcode/index">Job Code Management</a></li>

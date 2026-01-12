@@ -690,5 +690,64 @@ namespace cfm_frontend.Constants
         }
 
         #endregion
+
+        #region Inventory Management
+
+        /// <summary>
+        /// Inventory transaction management endpoints
+        /// </summary>
+        public static class Inventory
+        {
+            private const string Base = ApiBase + "/inventory";
+
+            /// <summary>
+            /// POST: Get inventory transactions list with filtering
+            /// Request body: InventoryFilterModel
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get filter options for inventory transactions
+            /// Query params: idClient
+            /// </summary>
+            public const string GetFilterOptions = Base + "/filter-options";
+
+            /// <summary>
+            /// POST: Create new inventory transaction
+            /// </summary>
+            public const string Create = Base + "/create";
+
+            /// <summary>
+            /// PUT: Update inventory transaction
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Transaction ID</param>
+            /// <returns>Update endpoint URL</returns>
+            public static string Update(int id) => $"{Base}/update/{id}";
+
+            /// <summary>
+            /// DELETE: Delete inventory transaction by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Transaction ID</param>
+            /// <returns>Delete endpoint URL</returns>
+            public static string Delete(int id) => $"{Base}/delete/{id}";
+
+            /// <summary>
+            /// GET: Get inventory transaction by ID
+            /// Path params: {id}
+            /// </summary>
+            /// <param name="id">Transaction ID</param>
+            /// <returns>Get by ID endpoint URL</returns>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// GET: Search materials for autocomplete
+            /// Query params: idClient, term
+            /// </summary>
+            public const string SearchMaterials = Base + "/search-materials";
+        }
+
+        #endregion
     }
 }
