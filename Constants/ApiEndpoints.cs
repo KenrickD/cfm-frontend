@@ -38,17 +38,17 @@ namespace cfm_frontend.Constants
         #region SessionInfo
         public static class UserInfo
         {
-            private const string Base = Api + "/WebUser";
+            private const string Base = ApiBase + "/web-user";
 
             /// <summary>
             /// GET: Get user details
             /// </summary>
-            public const string GetUserDetail = Base + "/GetUserDetail";
+            public const string GetUserDetail = Base + "/info";
 
             /// <summary>
             /// GET: Get user privileges (uses bearer token for user identification)
             /// </summary>
-            public const string GetUserPrivileges = Base + "/GetUserPrivileges";
+            public const string GetUserPrivileges = Base + "/privileges";
         }
         #endregion
 

@@ -97,7 +97,7 @@ namespace cfm_frontend.Controllers
                                 PreferredClientId = userInfoResponse.Preferred_Client_idClient,
                                 TimeZoneName = userInfoResponse.TimeZoneName,
                                 PreferredTimezoneIdTimezone = userInfoResponse.Preferred_TimeZone_idTimeZone,
-                                IdCompany = userInfoResponse.IdCompany,
+                                IdCompany = userInfoResponse.Preferred_Company_idCompany,
                                 LoginTime = DateTime.UtcNow
                             };
 

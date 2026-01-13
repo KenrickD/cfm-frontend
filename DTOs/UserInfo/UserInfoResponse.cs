@@ -13,6 +13,6 @@
         //public string ProfilePicture { get; set; } = string.Empty;
         public int Preferred_Client_idClient { get; set; }
         public int Preferred_TimeZone_idTimeZone { get; set; }
-        public int IdCompany { get; set; }
+        public int Preferred_Company_idCompany { get; set; }
     }
 }

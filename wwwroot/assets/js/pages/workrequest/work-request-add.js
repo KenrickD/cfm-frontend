@@ -669,7 +669,7 @@
     }
 
     /**
-     * Initialize requestor search with typeahead
+     * Initialize requestor search with typeahead and card display
      */
     function initializeRequestorSearch() {
         const $requestorSearch = $('#requestorSearch');
@@ -689,9 +689,8 @@
 
             searchTimeout = setTimeout(function () {
                 searchEmployees(term, $requestorDropdown, function (employee) {
-                    $requestorSearch.val(employee.name);
-                    $requestorId.val(employee.id);
-                    state.selectedRequestor = employee;
+                    // Show card instead of just updating text
+                    showRequestorCard(employee);
                     $requestorDropdown.removeClass('show').empty();
                 });
             }, CONFIG.debounceDelay);
@@ -702,6 +701,11 @@
             if (!$(e.target).closest('#requestorSearch, #requestorDropdown').length) {
                 $requestorDropdown.removeClass('show').empty();
             }
+        });
+
+        // Delete button click handler
+        $('#deleteRequestorBtn').on('click', function () {
+            resetRequestorSelection();
         });
     }
 
@@ -745,7 +749,7 @@
     }
 
     /**
-     * Search requestors via API (updated endpoint)
+     * Search requestors via API (updated for new backend structure)
      */
     function searchEmployees(term, $dropdown, onSelectCallback) {
         $.ajax({
@@ -760,13 +764,18 @@
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${employee.fullName || employee.name}</strong>
-                                ${employee.department ? `<br><small class="text-muted">${employee.department}</small>` : ''}
+                                <strong>${employee.fullName || employee.FullName}</strong>
+                                <small class="text-muted">
+                                    ${employee.title || employee.Title || ''}<br>
+                                    ${employee.departmentName || employee.DepartmentName || ''}
+                                </small>
                             `)
                             .on('click', function () {
                                 onSelectCallback({
-                                    id: employee.id,
-                                    name: employee.fullName || employee.name
+                                    id: employee.idEmployee || employee.IdEmployee,
+                                    fullName: employee.fullName || employee.FullName,
+                                    department: employee.departmentName || employee.DepartmentName,
+                                    title: employee.title || employee.Title
                                 });
                             });
                         $dropdown.append($item);
@@ -786,6 +795,116 @@
                 showNotification('Error searching requestors. Please try again.', 'error');
             }
         });
+    }
+
+    /**
+     * Show requestor card with employee information
+     * Hides search box and displays card with avatar, name, department, title
+     */
+    function showRequestorCard(requestor) {
+        // Store selected requestor in state
+        state.selectedRequestor = requestor;
+
+        // Update hidden ID field
+        $('#requestorId').val(requestor.id);
+
+        // Generate avatar with initials
+        const initials = generateInitials(requestor.fullName);
+        const avatarColor = generateAvatarColor(requestor.fullName);
+
+        // Update card content
+        $('#requestorInitials').text(initials);
+        $('#requestorAvatar').css('background-color', avatarColor);
+        $('#requestorCardName').text(requestor.fullName);
+        $('#requestorCardDepartment').text(requestor.department || 'N/A');
+        $('#requestorCardTitle').text(requestor.title || 'N/A');
+
+        // Toggle visibility: hide search, show card
+        $('#requestorSearchContainer').hide();
+        $('#requestorCard').fadeIn(300);
+
+        // Mark the hidden input as having a value (for form validation)
+        $('#requestorSearch').removeAttr('required');
+    }
+
+    /**
+     * Reset requestor selection
+     * Hides card and shows search box again
+     */
+    function resetRequestorSelection() {
+        // Clear state
+        state.selectedRequestor = null;
+
+        // Clear hidden ID field
+        $('#requestorId').val('');
+
+        // Clear search input
+        $('#requestorSearch').val('').attr('required', 'required');
+
+        // Clear card content
+        $('#requestorCardName').text('');
+        $('#requestorCardDepartment').text('');
+        $('#requestorCardTitle').text('');
+
+        // Toggle visibility: show search, hide card
+        $('#requestorCard').hide();
+        $('#requestorSearchContainer').fadeIn(300);
+
+        // Focus back on search input
+        setTimeout(function() {
+            $('#requestorSearch').focus();
+        }, 350);
+
+        showNotification('Requestor selection cleared', 'info');
+    }
+
+    /**
+     * Generate initials from full name (first letter of first and last name)
+     * Examples: "Adi Hidayat" -> "AH", "John Doe Smith" -> "JS"
+     */
+    function generateInitials(fullName) {
+        if (!fullName) return '??';
+
+        const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+
+        if (nameParts.length === 0) return '??';
+        if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase();
+
+        // First letter of first name + first letter of last name
+        const firstInitial = nameParts[0].charAt(0);
+        const lastInitial = nameParts[nameParts.length - 1].charAt(0);
+
+        return (firstInitial + lastInitial).toUpperCase();
+    }
+
+    /**
+     * Generate consistent avatar color based on name
+     * Uses a predefined color palette for professional appearance
+     */
+    function generateAvatarColor(fullName) {
+        const colors = [
+            '#3498db', // Blue
+            '#e74c3c', // Red
+            '#2ecc71', // Green
+            '#f39c12', // Orange
+            '#9b59b6', // Purple
+            '#1abc9c', // Turquoise
+            '#e67e22', // Dark Orange
+            '#34495e', // Dark Blue Gray
+            '#16a085', // Dark Turquoise
+            '#c0392b'  // Dark Red
+        ];
+
+        if (!fullName) return colors[0];
+
+        // Generate consistent index based on name hash
+        let hash = 0;
+        for (let i = 0; i < fullName.length; i++) {
+            hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        const index = Math.abs(hash) % colors.length;
+        return colors[index];
     }
 
     /**

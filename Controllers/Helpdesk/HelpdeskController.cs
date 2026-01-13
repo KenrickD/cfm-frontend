@@ -868,14 +868,16 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
+                // Updated endpoint to match backend specification: /api/v1/employee with prefiks parameter
                 var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Employee.SearchRequestors}?term={Uri.EscapeDataString(term)}&idCompany={idCompany}"
+                    $"{backendUrl}/api/v1/employee?idCompany={idCompany}&prefiks={Uri.EscapeDataString(term)}"
                 );
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    var requestors = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
+                    // Use dynamic to handle backend response with IdEmployee, FullName, DepartmentName, Title
+                    var requestors = await JsonSerializer.DeserializeAsync<List<dynamic>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );

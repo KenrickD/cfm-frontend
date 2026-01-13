@@ -106,7 +106,7 @@ namespace cfm_frontend.Middleware
                     PreferredClientId = userInfoDto.Preferred_Client_idClient,
                     TimeZoneName = userInfoDto.TimeZoneName,
                     PreferredTimezoneIdTimezone = userInfoDto.Preferred_TimeZone_idTimeZone,
-                    IdCompany = userInfoDto.IdCompany,
+                    IdCompany = userInfoDto.Preferred_Company_idCompany,
                     LoginTime = DateTime.UtcNow // Update login time to reflect restore
                 };
 
