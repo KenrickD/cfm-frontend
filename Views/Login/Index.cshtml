@@ -22,6 +22,9 @@
 
     <link rel="stylesheet" href="~/assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="~/assets/css/style-preset.css" />
+
+    <!-- Toastr CSS for notifications -->
+    <link rel="stylesheet" href="~/lib/toastr/toastr.min.css" />
 </head>
 
 <body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme_contrast="" data-pc-theme="dark">
@@ -69,6 +72,12 @@
                         <form asp-controller="Login" asp-action="SignIn" method="post">
                             @Html.AntiForgeryToken()
 
+                            @* Include returnUrl if provided (user will be redirected back after login) *@
+                            @if (!string.IsNullOrEmpty(ViewBag.ReturnUrl))
+                            {
+                                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                            }
+
                             <div asp-validation-summary="ModelOnly" class="alert alert-danger d-flex align-items-center" role="alert">
                                 <i class="ti ti-alert-circle me-2"></i>
                             </div>
@@ -111,6 +120,29 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    <!-- Toastr for notifications -->
+    <script src="~/lib/toastr/toastr.min.js"></script>
+
+    <script>
+        // Configure toastr
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-top-right",
+            timeOut: 5000,
+            extendedTimeOut: 2000,
+            preventDuplicates: true
+        };
+
+        // Show session expired notification if redirected due to expired tokens
+        @if (ViewBag.SessionExpired == true)
+        {
+            <text>
+            toastr.warning('Your session has expired. Please log in again.', 'Session Expired');
+            </text>
+        }
+    </script>
 
 </body>
 </html>

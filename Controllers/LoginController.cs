@@ -34,17 +34,25 @@ namespace cfm_frontend.Controllers
             _privilegeService = privilegeService;
         }
 
-        public IActionResult Index()
+        public IActionResult Index(string? returnUrl = null, bool sessionExpired = false)
         {
+            // Store return URL in ViewBag so login form can include it
+            ViewBag.ReturnUrl = returnUrl;
+
+            // Store session expired flag in ViewBag for toast notification
+            ViewBag.SessionExpired = sessionExpired;
+
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SignIn(SignInViewModel model)
+        public async Task<IActionResult> SignIn(SignInViewModel model, string? returnUrl = null)
         {
             if (!ModelState.IsValid)
             {
+                // Preserve return URL in ViewBag when returning validation errors
+                ViewBag.ReturnUrl = returnUrl;
                 return View("Index", model);
             }
 
@@ -75,10 +83,10 @@ namespace cfm_frontend.Controllers
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    if (authResponse != null)
+                    if (authResponse?.data != null)
                     {
                         // Step 2: Fetch user info using the tokens
-                        var userInfoResponse = await FetchUserInfoAsync(authResponse.Token, authResponse.RefreshToken);
+                        var userInfoResponse = await FetchUserInfoAsync(authResponse.data.Token, authResponse.data.RefreshToken);
 
                         if (userInfoResponse != null)
                         {
@@ -104,7 +112,7 @@ namespace cfm_frontend.Controllers
                             HttpContext.Session.SetString("UserSession", JsonSerializer.Serialize(userInfo));
 
                             // Step 5: Load user privileges (pass token explicitly since auth cookie not created yet)
-                            var privileges = await _privilegeService.LoadUserPrivilegesAsync(authResponse.Token);
+                            var privileges = await _privilegeService.LoadUserPrivilegesAsync(authResponse.data.Token);
                             if (privileges != null)
                             {
                                 HttpContext.Session.SetPrivileges(privileges);
@@ -137,8 +145,8 @@ namespace cfm_frontend.Controllers
 
                             authProperties.StoreTokens(new List<AuthenticationToken>
                             {
-                                new AuthenticationToken { Name = "access_token", Value = authResponse.Token },
-                                new AuthenticationToken { Name = "refresh_token", Value = authResponse.RefreshToken }
+                                new AuthenticationToken { Name = "access_token", Value = authResponse.data.Token },
+                                new AuthenticationToken { Name = "refresh_token", Value = authResponse.data.RefreshToken }
                             });
 
                             await HttpContext.SignInAsync(
@@ -149,6 +157,13 @@ namespace cfm_frontend.Controllers
 
                             _logger.LogInformation("User {Username} (ID: {UserId}) logged in successfully at {Time}. RememberMe: {RememberMe}",
                                 userInfo.Username, userInfo.IdWebUser, DateTime.UtcNow, model.RememberMe);
+
+                            // Redirect to return URL if provided, otherwise go to dashboard
+                            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                            {
+                                _logger.LogInformation("Redirecting user to return URL: {ReturnUrl}", returnUrl);
+                                return Redirect(returnUrl);
+                            }
 
                             return RedirectToAction("Index", "Dashboard");
                         }

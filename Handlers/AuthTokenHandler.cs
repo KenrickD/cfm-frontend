@@ -199,14 +199,14 @@ namespace cfm_frontend.Handlers
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    if (newTokens != null)
+                    if (newTokens?.data != null)
                     {
                         var result = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                         var properties = result.Properties;
                         if (properties != null)
                         {
-                            properties.UpdateTokenValue("access_token", newTokens.Token);
-                            properties.UpdateTokenValue("refresh_token", newTokens.RefreshToken);
+                            properties.UpdateTokenValue("access_token", newTokens.data.Token);
+                            properties.UpdateTokenValue("refresh_token", newTokens.data.RefreshToken);
 
                             await context.SignInAsync(
                                 CookieAuthenticationDefaults.AuthenticationScheme,

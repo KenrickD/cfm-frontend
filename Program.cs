@@ -1,3 +1,4 @@
+using cfm_frontend.Filters;
 using cfm_frontend.Handlers;
 using cfm_frontend.Middleware;
 using cfm_frontend.Services;
@@ -6,7 +7,12 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+// Register global exception filter for authentication errors
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<AuthenticationExceptionFilter>();
+});
+
 builder.Services.AddHttpClient();
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
@@ -50,6 +56,11 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
+
+// Token expiration middleware - intercepts requests with expired tokens BEFORE controllers execute
+// This is the PRIMARY FIX for the bug where pages load with no data when tokens expire
+app.UseTokenExpiration();
+
 app.UseAuthorization();
 
 // Auto-restore session when expired but tokens still valid

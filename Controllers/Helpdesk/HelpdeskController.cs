@@ -224,17 +224,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                     viewmodel.WorkCategories?.Count ?? 0,
                     viewmodel.PriorityLevels?.Count ?? 0);
             }
-            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                // Authentication failed (tokens expired), redirect to login
-                _logger.LogWarning("Authentication failed while loading page data. Redirecting to login.");
-
-                // Clear session
-                HttpContext.Session.Remove("UserSession");
-                HttpContext.Session.Remove("UserPrivileges");
-
-                return RedirectToAction("Index", "Login");
-            }
+            // Manual 401 handling removed - now handled by AuthenticationExceptionFilter globally
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading work request add page data");
@@ -2223,7 +2213,6 @@ namespace cfm_frontend.Controllers.Helpdesk
             return model;
         }
 
-        // Legacy helper methods (still used by WorkRequestAdd, SendNewWorkRequest, etc.)
         private async Task<List<LocationModel>> GetLocationsAsync(HttpClient client, string backendUrl, int idClient)
         {
             try
