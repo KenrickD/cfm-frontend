@@ -1,7 +1,7 @@
 ﻿@model cfm_frontend.ViewModels.SignInViewModel
 @{
     ViewData["Title"] = "Sign In";
-    Layout = null; // Standalone layout for Login
+    Layout = null;
 }
 
 <!DOCTYPE html>
@@ -24,42 +24,62 @@
     <link rel="stylesheet" href="~/assets/css/style-preset.css" />
 </head>
 
-<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme_contrast="" data-pc-theme="light">
+<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme_contrast="" data-pc-theme="dark">
     <div class="loader-bg">
         <div class="loader-track">
             <div class="loader-fill"></div>
         </div>
     </div>
-    <div class="auth-main">
-        <div class="auth-wrapper v3">
+    <div class="auth-main v2">
+        <div class="bg-overlay bg-dark"></div>
+        <div class="auth-wrapper">
+            <div class="auth-sidecontent">
+                <div class="auth-sidefooter">
+                    <img src="~/assets/images/cfm-system-logo.png" class="w-25 mb-4 img-fluid" alt="CFM System Logo" />
+                    <hr class="mb-3 mt-4" />
+                    <div class="row">
+                        <div class="col my-1">
+                            <p class="m-0">
+                                Copyright &copy; 2024 <a href="https://colliers.id" target="_blank"> PT. Colliers International Indonesia</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="auth-form">
-                <div class="card my-5">
+                <div class="card my-5 mx-3 bg-dark">
+                    <div class="m-3">
+                        <a href="javascript:history.back()" type="button"
+                            class="d-inline-flex btn btn-outline-secondary justify-content-center align-items-center gap-2">
+                            <i class="fa fa-chevron-left fa-xs"></i>
+                            Back
+                        </a>
+                    </div>
+
                     <div class="card-body">
-
-                        <div class="text-center mb-4">
-                            <a href="#">
-                                <img src="~/assets/images/cfm-system-logo.png" alt="img" class="img-fluid brand-logo">
+                        <img src="~/assets/images/cfm-system-logo.png" class="w-25 mb-4 img-fluid" alt="CFM System Logo" />
+                        <h4 class="f-w-500 mb-1 text-white">Hi, welcome to CFM System</h4>
+                        <p class="mb-3 text-muted">
+                            Don't have an Account? <a href="#" class="link-primary ms-1">
+                                Create Account
                             </a>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-end mb-4">
-                            <h3 class="mb-0"><b>Sign In</b></h3>
-                        </div>
+                        </p>
 
                         <form asp-controller="Login" asp-action="SignIn" method="post">
                             @Html.AntiForgeryToken()
 
-                            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger d-flex align-items-center" role="alert">
+                                <i class="ti ti-alert-circle me-2"></i>
+                            </div>
 
                             <div class="form-group mb-3">
-                                <label asp-for="Username" class="form-label"></label>
-                                <input asp-for="Username" class="form-control" placeholder="Enter your username" />
+                                <input asp-for="Username" class="form-control bg-transparent text-white" placeholder="Username" />
                                 <span asp-validation-for="Username" class="text-danger small"></span>
                             </div>
 
                             <div class="form-group mb-3">
-                                <label asp-for="Password" class="form-label"></label>
-                                <input asp-for="Password" type="password" class="form-control" placeholder="Enter your password" />
+                                <input asp-for="Password" type="password" class="form-control bg-transparent text-white" placeholder="Password" />
                                 <span asp-validation-for="Password" class="text-danger small"></span>
                             </div>
 
@@ -68,19 +88,13 @@
                                     <input asp-for="RememberMe" class="form-check-input input-primary" type="checkbox" id="rememberMe">
                                     <label class="form-check-label text-muted" for="rememberMe">Remember me?</label>
                                 </div>
-                                <a href="#" class="text-secondary f-w-400 mb-0">Forgot Password?</a>
+                                <a href="#" class="text-muted">Forgot Password?</a>
                             </div>
 
                             <div class="d-grid mt-4">
                                 <button type="submit" class="btn btn-primary">Sign In</button>
                             </div>
                         </form>
-
-                        @* <div class="d-flex justify-content-center align-items-end mt-4">
-                            <h6 class="f-w-500 mb-0">Don't have an Account?</h6>
-                            <a href="#" class="link-primary ms-2">Create Account</a>
-                        </div> *@
-
                     </div>
                 </div>
             </div>

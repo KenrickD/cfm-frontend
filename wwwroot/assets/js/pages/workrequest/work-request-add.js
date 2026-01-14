@@ -62,19 +62,29 @@
     function init() {
         initializeDateTimePickers();
 
-        // Load all dropdown data from API
-        loadLocations();
-        loadWorkCategories();
-        loadOtherCategories();
-        loadServiceProviders();
-        loadPriorityLevels();
-        loadFeedbackTypes();
-        loadCurrencies();
-        loadRequestMethods();
-        loadStatuses();
-        loadImportantChecklist();
+        // Check if data is pre-loaded server-side
+        const hasServerData = $('#locationSelect option').length > 2; // More than just empty + "Not Specified"
 
-        // Initialize interactive features
+        if (!hasServerData) {
+            // Fallback: Load client-side if server-side loading failed
+            console.warn('Server-side data not loaded, falling back to client-side loading');
+            loadLocations();
+            loadWorkCategories();
+            loadOtherCategories();
+            loadServiceProviders();
+            loadPriorityLevels();
+            loadFeedbackTypes();
+            loadCurrencies();
+            loadRequestMethods();
+            loadStatuses();
+            loadImportantChecklist();
+        } else {
+            // Data already loaded server-side, just cache priority levels from DOM
+            console.log('Server-side data detected, caching priority level details');
+            cachePriorityLevelsFromDOM();
+        }
+
+        // Initialize interactive features (these always run)
         initializeLocationSearch();
         initializeLocationCascade();
         initializeRequestorSearch();
@@ -89,6 +99,32 @@
         setCurrentDateTime();
 
         console.log('Work Request Add page initialized');
+    }
+
+    /**
+     * Cache priority level data from server-rendered DOM
+     */
+    function cachePriorityLevelsFromDOM() {
+        try {
+            $('#priorityLevelSelect option[value!=""]').each(function () {
+                const $option = $(this);
+                const priorityId = $option.val();
+                const priorityDetailsJson = $option.attr('data-priority-details');
+
+                if (priorityDetailsJson) {
+                    try {
+                        const priorityData = JSON.parse(priorityDetailsJson);
+                        state.priorityLevelsCache[priorityId] = priorityData;
+                    } catch (e) {
+                        console.error('Error parsing priority level data for ID:', priorityId, e);
+                    }
+                }
+            });
+
+            console.log('Priority levels cached from DOM:', Object.keys(state.priorityLevelsCache).length);
+        } catch (error) {
+            console.error('Error caching priority levels from DOM:', error);
+        }
     }
 
     /**

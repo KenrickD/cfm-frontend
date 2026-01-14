@@ -102,7 +102,7 @@ namespace cfm_frontend.Constants
             /// GET: Get all filter options for work requests
             /// Query params: idClient
             /// </summary>
-            public const string GetFilterOptions = Base + "/GetFilterOptions";
+            public const string GetFilterOptions = Base + "/list-filter";
         }
 
         #endregion

@@ -54,6 +54,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             DateTime? workCompletionDateTo = null,
             List<string>? checklist = null,
             List<string>? feedback = null,
+            List<string>? requestMethods = null,
             bool? hasSentEmail = null,
             bool showDeleted = false)
         {
@@ -103,13 +104,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                     workCompletionTo = workCompletionDateTo,
                     ImportantChecklists = checklist ?? new List<string>(),
                     FeedbackTypes = feedback ?? new List<string>(),
+                    RequestMethods = requestMethods ?? new List<string>(),
                     isSendEmail = hasSentEmail ?? false,
                     showDeleted = showDeleted
                 };
 
                 // Load work requests and filter options in parallel
                 var workRequestTask = GetWorkRequestsAsync(client, backendUrl, requestBody);
-                var filterOptionsTask = GetFilterOptionsAsync(client, backendUrl, idClient);
+                var filterOptionsTask = GetFilterOptionsAsync(client, backendUrl, idClient, search);
 
                 await Task.WhenAll(workRequestTask, filterOptionsTask);
 
@@ -144,16 +146,103 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// GET: Work Request Add page
+        /// Pre-loads all static dropdown data server-side to eliminate concurrent API calls
         /// </summary>
         //[Authorize]
-        public IActionResult WorkRequestAdd()
+        public async Task<IActionResult> WorkRequestAdd()
         {
             // Check if user has permission to view Work Request Add page
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
             if (accessCheck != null) return accessCheck;
 
-            // Return view - all dropdown data is loaded client-side via JavaScript
-            return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml");
+            // Check if user is authenticated (has valid session)
+            if (!User.Identity?.IsAuthenticated ?? false)
+            {
+                _logger.LogWarning("User not authenticated, redirecting to login");
+                return RedirectToAction("Index", "Login");
+            }
+
+            var viewmodel = new WorkRequestViewModel();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    _logger.LogWarning("User session not found, redirecting to login");
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(
+                    userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null)
+                    return RedirectToAction("Index", "Login");
+
+                var idClient = userInfo.PreferredClientId;
+                var idCompany = userInfo.IdCompany;
+
+                // Pre-load all static dropdown data in parallel
+                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
+                var workCategoriesTask = GetWorkCategoriesByTypesAsync(client, backendUrl, idClient);
+                var otherCategoriesTask = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory");
+                var otherCategories2Task = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2");
+                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
+                var priorityLevelsTask = GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient);
+                var feedbackTypesTask = GetFeedbackTypesAsync(client, backendUrl);
+                var currenciesTask = GetCurrenciesAsync(client, backendUrl);
+                var requestMethodsTask = GetRequestMethodsAsync(client, backendUrl);
+                var statusesTask = GetStatusesAsync(client, backendUrl);
+                var checklistTask = GetImportantChecklistAsync(client, backendUrl, idClient);
+
+                await Task.WhenAll(
+                    locationsTask, workCategoriesTask, otherCategoriesTask, otherCategories2Task,
+                    serviceProvidersTask, priorityLevelsTask, feedbackTypesTask, currenciesTask,
+                    requestMethodsTask, statusesTask, checklistTask
+                );
+
+                // Populate ViewModel
+                viewmodel.Locations = await locationsTask;
+                viewmodel.WorkCategories = await workCategoriesTask;
+                viewmodel.OtherCategories = await otherCategoriesTask;
+                viewmodel.OtherCategories2 = await otherCategories2Task;
+                viewmodel.ServiceProviders = await serviceProvidersTask;
+                viewmodel.PriorityLevels = await priorityLevelsTask;
+                viewmodel.FeedbackTypes = await feedbackTypesTask;
+                viewmodel.Currencies = await currenciesTask;
+                viewmodel.RequestMethods = await requestMethodsTask;
+                viewmodel.Statuses = await statusesTask;
+                viewmodel.ImportantChecklist = await checklistTask;
+
+                _logger.LogInformation("Work Request Add page data loaded successfully: {LocationCount} locations, {CategoryCount} categories, {PriorityCount} priority levels",
+                    viewmodel.Locations?.Count ?? 0,
+                    viewmodel.WorkCategories?.Count ?? 0,
+                    viewmodel.PriorityLevels?.Count ?? 0);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                // Authentication failed (tokens expired), redirect to login
+                _logger.LogWarning("Authentication failed while loading page data. Redirecting to login.");
+
+                // Clear session
+                HttpContext.Session.Remove("UserSession");
+                HttpContext.Session.Remove("UserPrivileges");
+
+                return RedirectToAction("Index", "Login");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work request add page data");
+                // Return view with empty ViewModel - JavaScript can handle loading as fallback
+                viewmodel = new WorkRequestViewModel();
+            }
+
+            return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", viewmodel);
         }
 
         /// <summary>
@@ -1902,7 +1991,19 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         #endregion
 
-        #region Helper Functions 
+        #region Helper Functions
+
+        /// <summary>
+        /// Ensures the HTTP response is successful, throwing HttpRequestException with proper status code for 401 Unauthorized
+        /// </summary>
+        private void EnsureSuccessOrThrow(HttpResponseMessage response)
+        {
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                throw new HttpRequestException("Unauthorized - Session expired", null, System.Net.HttpStatusCode.Unauthorized);
+            }
+            response.EnsureSuccessStatusCode();
+        }
 
         private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(   
             HttpClient client,
@@ -1941,31 +2042,185 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
         }
 
-        private async Task<FilterOptionsModel?> GetFilterOptionsAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<FilterOptionsModel?> GetFilterOptionsAsync(
+            HttpClient client,
+            string backendUrl,
+            int idClient,
+            string keywords = "")
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.GetFilterOptions}?idClient={idClient}");
+                // Create request body with idClient and keywords
+                var requestBody = new Models.WorkRequest.FilterOptionsRequestModel
+                {
+                    IdClient = idClient,
+                    Keywords = keywords
+                };
+
+                // Serialize with camelCase naming policy
+                var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                // POST request instead of GET
+                var response = await client.PostAsync(
+                    $"{backendUrl}{ApiEndpoints.WorkRequest.GetFilterOptions}",
+                    content
+                );
+
+                var responseStream = await response.Content.ReadAsStreamAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var filterOptions = await JsonSerializer.DeserializeAsync<FilterOptionsModel>(
+                    // Deserialize success response with BaseSuccessResponse wrapper
+                    var successResponse = await JsonSerializer.DeserializeAsync<DTOs.BaseSuccessResponse<DTOs.WorkRequest.FilterOptionsDataDto>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    return filterOptions;
-                }
+                    if (successResponse != null && successResponse.data != null)
+                    {
+                        _logger.LogInformation("Filter options loaded successfully: {Message}", successResponse.msg);
+                        // Map DTO to Model (flatten nested structures)
+                        return MapToFilterOptionsModel(successResponse.data);
+                    }
 
-                _logger.LogWarning("Filter Options API returned status: {StatusCode}", response.StatusCode);
-                return null;
+                    _logger.LogWarning("Filter Options API returned null data");
+                    return new FilterOptionsModel();
+                }
+                else
+                {
+                    // Handle error response with BaseErrorResponse wrapper
+                    var errorResponse = await JsonSerializer.DeserializeAsync<DTOs.BaseErrorResponse>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (errorResponse != null)
+                    {
+                        _logger.LogWarning(
+                            "Filter Options API returned error. Status: {StatusCode}, Code: {ErrorCode}, Message: {Message}, Errors: {Errors}",
+                            response.StatusCode,
+                            errorResponse.errorCode,
+                            errorResponse.msg,
+                            errorResponse.errors
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Filter Options API returned status: {StatusCode}", response.StatusCode);
+                    }
+
+                    return new FilterOptionsModel();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching filter options");
-                return null;
+                // Return empty model so page still renders
+                return new FilterOptionsModel();
             }
+        }
+
+        /// <summary>
+        /// Maps backend filter options DTO to frontend filter options model.
+        /// Flattens nested location hierarchy (property groups → properties → room zones)
+        /// </summary>
+        private FilterOptionsModel MapToFilterOptionsModel(DTOs.WorkRequest.FilterOptionsDataDto dto)
+        {
+            var model = new FilterOptionsModel();
+
+            // Flatten location hierarchy
+            var propertyGroups = new List<PropertyGroupModel>();
+            var locations = new List<LocationModel>();
+            var roomZones = new List<RoomZoneModel>();
+
+            foreach (var locGroup in dto.Locations)
+            {
+                // Add property group
+                propertyGroups.Add(new PropertyGroupModel
+                {
+                    propertyGroupId = locGroup.PropertyGroupId,
+                    propertyGroupName = locGroup.PropertyGroup
+                });
+
+                foreach (var prop in locGroup.Properties)
+                {
+                    // Add location (property)
+                    locations.Add(new LocationModel
+                    {
+                        idProperty = prop.PropertyId,
+                        propertyName = prop.Property,
+                        idPropertyType = locGroup.PropertyGroupId
+                    });
+
+                    // Add room zones for this property
+                    roomZones.AddRange(prop.RoomZones.Select(rz => new RoomZoneModel
+                    {
+                        Id = rz.RoomZoneId,
+                        Name = rz.RoomZone,
+                        Description = rz.FloorUnit
+                    }));
+                }
+            }
+
+            // Remove duplicate property groups (in case multiple properties share same group)
+            model.PropertyGroups = propertyGroups.DistinctBy(pg => pg.propertyGroupId).ToList();
+            model.Locations = locations;
+            model.RoomZones = roomZones;
+
+            // Map simple collections
+            model.ServiceProviders = dto.ServiceProviders.Select(sp => new ServiceProviderModel
+            {
+                id = sp.IdServiceProvider,
+                name = sp.ServiceProvider
+            }).ToList();
+
+            model.WorkCategories = dto.WorkCategories.Select(wc => new WorkCategoryModel
+            {
+                id = wc.IdWorkCategory,
+                name = wc.WorkCategory
+            }).ToList();
+
+            model.OtherCategories = dto.OtherCategories.Select(oc => new OtherCategoryModel
+            {
+                id = oc.IdOtherCategory,
+                name = oc.OtherCategory
+            }).ToList();
+
+            model.PriorityLevels = dto.PriorityLevels.Select(pl => new FilterPriorityModel
+            {
+                Value = pl.IdPriorityLevel.ToString(),
+                Label = pl.PriorityLevel
+            }).ToList();
+
+            model.Statuses = dto.Statuses.Select(s => new FilterStatusModel
+            {
+                Value = s.IdWorkRequestStatus.ToString(),
+                Label = s.WorkRequestStatus
+            }).ToList();
+
+            model.ImportantChecklists = dto.ImportantChecklists.Select(ic => new FilterChecklistModel
+            {
+                Value = ic.IdImportantChecklist.ToString(),
+                Label = ic.ImportantChecklist
+            }).ToList();
+
+            model.FeedbackTypes = dto.FeedbackTypes.Select(ft => new FilterFeedbackModel
+            {
+                Value = ft.IdFeedbackType.ToString(),
+                Label = ft.FeedbackType
+            }).ToList();
+
+            model.RequestMethods = dto.RequestMethods.Select(rm => new FilterRequestMethodModel
+            {
+                Value = rm.IdRequestMethod.ToString(),
+                Label = rm.RequestMethod
+            }).ToList();
+
+            return model;
         }
 
         // Legacy helper methods (still used by WorkRequestAdd, SendNewWorkRequest, etc.)
@@ -1975,18 +2230,15 @@ namespace cfm_frontend.Controllers.Helpdesk
             {
                 var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<LocationModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                    return result ?? new List<LocationModel>();
-                }
+                // Throw on 401 to trigger auth failure handling
+                EnsureSuccessOrThrow(response);
 
-                _logger.LogWarning("Properties API returned status: {StatusCode}", response.StatusCode);
-                return new List<LocationModel>();
+                var responseStream = await response.Content.ReadAsStreamAsync();
+                var result = await JsonSerializer.DeserializeAsync<List<LocationModel>>(
+                    responseStream,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+                return result ?? new List<LocationModel>();
             }
             catch (Exception ex)
             {
@@ -2070,6 +2322,235 @@ namespace cfm_frontend.Controllers.Helpdesk
             {
                 _logger.LogError(ex, "Error fetching other categories");
                 return new List<OtherCategoryModel>();
+            }
+        }
+
+        private async Task<List<Models.PriorityLevelModel>> GetPriorityLevelsWithDetailsAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                // Step 1: Get list of priority levels
+                var listResponse = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}");
+
+                if (!listResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Priority Levels list API returned status: {StatusCode}", listResponse.StatusCode);
+                    return new List<cfm_frontend.Models.PriorityLevelModel>();
+                }
+
+                var listStream = await listResponse.Content.ReadAsStreamAsync();
+                var priorities = await JsonSerializer.DeserializeAsync<List<dynamic>>(
+                    listStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (priorities == null || priorities.Count == 0)
+                    return new List<cfm_frontend.Models.PriorityLevelModel>();
+
+                // Step 2: Fetch full details for each priority (N+1 calls, but cached server-side)
+                var detailTasks = priorities.Select(async p =>
+                {
+                    try
+                    {
+                        var priorityId = p.GetProperty("value").GetInt32();
+                        var detailResponse = await client.GetAsync(
+                            $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.GetById(priorityId)}?idClient={idClient}");
+
+                        if (detailResponse.IsSuccessStatusCode)
+                        {
+                            var stream = await detailResponse.Content.ReadAsStreamAsync();
+                            return await JsonSerializer.DeserializeAsync<cfm_frontend.Models.PriorityLevelModel>(
+                                stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        }
+                        return null;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error fetching priority level details");
+                        return null;
+                    }
+                });
+
+                var details = await Task.WhenAll(detailTasks);
+                return details.Where(d => d != null).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching priority levels with details");
+                return new List<cfm_frontend.Models.PriorityLevelModel>();
+            }
+        }
+
+        private async Task<List<EnumFormDetailResponse>> GetFeedbackTypesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<EnumFormDetailResponse>();
+                }
+
+                _logger.LogWarning("Feedback Types API returned status: {StatusCode}", response.StatusCode);
+                return new List<EnumFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching feedback types");
+                return new List<EnumFormDetailResponse>();
+            }
+        }
+
+        private async Task<List<LookupModel>> GetCurrenciesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.Currency}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<LookupModel>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<LookupModel>();
+                }
+
+                _logger.LogWarning("Currencies API returned status: {StatusCode}", response.StatusCode);
+                return new List<LookupModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching currencies");
+                return new List<LookupModel>();
+            }
+        }
+
+        private async Task<List<EnumFormDetailResponse>> GetRequestMethodsAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<EnumFormDetailResponse>();
+                }
+
+                _logger.LogWarning("Request Methods API returned status: {StatusCode}", response.StatusCode);
+                return new List<EnumFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching request methods");
+                return new List<EnumFormDetailResponse>();
+            }
+        }
+
+        private async Task<List<EnumFormDetailResponse>> GetStatusesAsync(HttpClient client, string backendUrl)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<EnumFormDetailResponse>();
+                }
+
+                _logger.LogWarning("Statuses API returned status: {StatusCode}", response.StatusCode);
+                return new List<EnumFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching statuses");
+                return new List<EnumFormDetailResponse>();
+            }
+        }
+
+        private async Task<List<TypeFormDetailResponse>> GetImportantChecklistAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<TypeFormDetailResponse>();
+                }
+
+                _logger.LogWarning("Important Checklist API returned status: {StatusCode}", response.StatusCode);
+                return new List<TypeFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching important checklist");
+                return new List<TypeFormDetailResponse>();
+            }
+        }
+
+        private async Task<List<TypeFormDetailResponse>> GetOtherCategoriesByTypeAsync(HttpClient client, string backendUrl, int idClient, string categoryType)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<TypeFormDetailResponse>();
+                }
+
+                _logger.LogWarning("{CategoryType} API returned status: {StatusCode}", categoryType, response.StatusCode);
+                return new List<TypeFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching {CategoryType}", categoryType);
+                return new List<TypeFormDetailResponse>();
+            }
+        }
+
+        private async Task<List<TypeFormDetailResponse>> GetWorkCategoriesByTypesAsync(HttpClient client, string backendUrl, int idClient)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
+                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
+                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return result ?? new List<TypeFormDetailResponse>();
+                }
+
+                _logger.LogWarning("Work Categories (Types) API returned status: {StatusCode}", response.StatusCode);
+                return new List<TypeFormDetailResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work categories by types");
+                return new List<TypeFormDetailResponse>();
             }
         }
 

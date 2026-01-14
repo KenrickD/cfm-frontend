@@ -16,6 +16,7 @@
         public List<string> Statuses { get; set; } = new List<string>();
         public List<string> ImportantChecklists { get; set; } = new List<string>();
         public List<string> FeedbackTypes { get; set; } = new List<string>();
+        public List<string> RequestMethods { get; set; } = new List<string>();
 
         // Legacy filter properties (keep for backward compatibility)
         public int idPropertyType { get; set; } = -1;

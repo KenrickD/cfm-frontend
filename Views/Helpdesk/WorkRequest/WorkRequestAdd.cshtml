@@ -239,7 +239,16 @@
                                     data-search-placeholder="Search location..."
                                     required>
                                 <option value="">Select Location</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                <option value="-1">Not Specified</option>
+                                @if (Model?.Locations != null && Model.Locations.Any())
+                                {
+                                    foreach (var location in Model.Locations)
+                                    {
+                                        <option value="@location.idProperty" data-property-group="@location.idPropertyType">
+                                            @location.propertyName
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -371,7 +380,22 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold required-field">Request Method</label>
                             <div class="mt-2">
-                                <!-- Radio buttons loaded dynamically via JavaScript -->
+                                @if (Model?.RequestMethods != null && Model.RequestMethods.Any())
+                                {
+                                    bool isFirst = true;
+                                    foreach (var method in Model.RequestMethods)
+                                    {
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="RequestMethod"
+                                                   id="method@(method.IdEnum)" value="@method.IdEnum"
+                                                   @(isFirst ? "required" : "")>
+                                            <label class="form-check-label" for="method@(method.IdEnum)">
+                                                @method.EnumName
+                                            </label>
+                                        </div>
+                                        isFirst = false;
+                                    }
+                                }
                             </div>
                         </div>
 
@@ -379,7 +403,23 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold required-field">Status</label>
                             <div class="mt-2">
-                                <!-- Radio buttons loaded dynamically via JavaScript -->
+                                @if (Model?.Statuses != null && Model.Statuses.Any())
+                                {
+                                    bool isFirst = true;
+                                    foreach (var status in Model.Statuses)
+                                    {
+                                        bool isNew = status.EnumName?.Equals("New", StringComparison.OrdinalIgnoreCase) ?? false;
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="Status"
+                                                   id="status@(status.IdEnum)" value="@status.IdEnum"
+                                                   @(isNew ? "checked" : "") @(isFirst ? "required" : "")>
+                                            <label class="form-check-label" for="status@(status.IdEnum)">
+                                                @status.EnumName
+                                            </label>
+                                        </div>
+                                        isFirst = false;
+                                    }
+                                }
                             </div>
                         </div>
                     </div>
@@ -405,7 +445,15 @@
                                     data-search-placeholder="Search category..."
                                     required>
                                 <option value="">Select Work Category</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
+                                {
+                                    foreach (var category in Model.WorkCategories)
+                                    {
+                                        <option value="@category.IdType">
+                                            @category.TypeName
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -419,7 +467,15 @@
                                     data-placeholder="Select Other Category"
                                     data-search-placeholder="Search category...">
                                 <option value="">Select Other Category</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
+                                {
+                                    foreach (var category in Model.OtherCategories)
+                                    {
+                                        <option value="@category.IdType">
+                                            @category.TypeName
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -433,7 +489,15 @@
                                     data-placeholder="Select Other Category 2"
                                     data-search-placeholder="Search category...">
                                 <option value="">Select Other Category 2</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                @if (Model?.OtherCategories2 != null && Model.OtherCategories2.Any())
+                                {
+                                    foreach (var category in Model.OtherCategories2)
+                                    {
+                                        <option value="@category.IdType">
+                                            @category.TypeName
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -483,7 +547,17 @@
                                     data-placeholder="Select Service Provider"
                                     data-search-placeholder="Search provider...">
                                 <option value="">Select Service Provider</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                <option value="-1">Internal Company Worker</option>
+                                <option value="-2">Not Specified</option>
+                                @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
+                                {
+                                    foreach (var provider in Model.ServiceProviders)
+                                    {
+                                        <option value="@provider.id">
+                                            @provider.name @(!string.IsNullOrEmpty(provider.companyName) ? $"({provider.companyName})" : "")
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -527,7 +601,22 @@
                 </div>
                 <div class="card-body">
                     <div class="row" id="importantChecklistContainer">
-                        <!-- Checklist items loaded dynamically with data-type-id attributes -->
+                        @if (Model?.ImportantChecklist != null && Model.ImportantChecklist.Any())
+                        {
+                            foreach (var item in Model.ImportantChecklist)
+                            {
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input important-checklist-item"
+                                               type="checkbox" id="checklist@(item.IdType)"
+                                               data-type-id="@item.IdType" value="false">
+                                        <label class="form-check-label" for="checklist@(item.IdType)">
+                                            @item.TypeName
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             </div>
@@ -589,6 +678,15 @@
                                     data-placeholder="Select Currency"
                                     data-search-placeholder="Search currency...">
                                 <option value="">Select Currency</option>
+                                @if (Model?.Currencies != null && Model.Currencies.Any())
+                                {
+                                    foreach (var currency in Model.Currencies)
+                                    {
+                                        <option value="@currency.Value">
+                                            @currency.Label
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
@@ -624,7 +722,16 @@
                                     data-search-placeholder="Search priority..."
                                     required>
                                 <option value="">Select Priority Level</option>
-                                <!-- Options loaded dynamically via JavaScript -->
+                                @if (Model?.PriorityLevels != null && Model.PriorityLevels.Any())
+                                {
+                                    foreach (var priority in Model.PriorityLevels)
+                                    {
+                                        <option value="@priority.Id"
+                                                data-priority-details='@System.Text.Json.JsonSerializer.Serialize(priority)'>
+                                            @priority.Name
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 
@@ -842,7 +949,15 @@
                                 data-placeholder="No Feedback"
                                 data-search-placeholder="Search status...">
                             <option value="">No Feedback</option>
-                            <!-- Options loaded dynamically via JavaScript -->
+                            @if (Model?.FeedbackTypes != null && Model.FeedbackTypes.Any())
+                            {
+                                foreach (var feedback in Model.FeedbackTypes)
+                                {
+                                    <option value="@feedback.IdEnum">
+                                        @feedback.EnumName
+                                    </option>
+                                }
+                            }
                         </select>
                     </div>
                     <textarea class="form-control form-control-sm"

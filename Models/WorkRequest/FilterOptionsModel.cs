@@ -14,6 +14,7 @@ namespace cfm_frontend.Models.WorkRequest
         public List<FilterStatusModel> Statuses { get; set; } = new List<FilterStatusModel>();
         public List<FilterChecklistModel> ImportantChecklists { get; set; } = new List<FilterChecklistModel>();
         public List<FilterFeedbackModel> FeedbackTypes { get; set; } = new List<FilterFeedbackModel>();
+        public List<FilterRequestMethodModel> RequestMethods { get; set; } = new List<FilterRequestMethodModel>();
     }
 
     public class FilterPriorityModel
@@ -47,5 +48,11 @@ namespace cfm_frontend.Models.WorkRequest
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+    }
+
+    public class FilterRequestMethodModel
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
     }
 }

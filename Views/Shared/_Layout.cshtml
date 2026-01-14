@@ -107,7 +107,12 @@
             // Call appropriate toastr method
             toastr[type](message, title, options);
         }
+    </script>
 
+    <!-- Global Session Expiration Handler -->
+    <script src="~/assets/js/global-session-handler.js"></script>
+
+    <script>
         function refreshPrivileges() {
             // Show loading indicator
             showNotification('Refreshing permissions...', 'info', 'Please wait');

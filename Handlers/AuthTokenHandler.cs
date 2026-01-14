@@ -1,6 +1,7 @@
 ﻿using cfm_frontend.Constants;
 using cfm_frontend.Controllers;
 using cfm_frontend.DTOs.Login;
+using cfm_frontend.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -29,11 +30,70 @@ namespace cfm_frontend.Handlers
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+
             var context = _httpContextAccessor.HttpContext;
             if (context == null) return await base.SendAsync(request, cancellationToken);
 
+            // Proactive token refresh if near expiry (< 5 minutes remaining)
             var accessToken = await context.GetTokenAsync("access_token");
+            if (!string.IsNullOrEmpty(accessToken) && JwtTokenHelper.IsTokenNearExpiry(accessToken, 5))
+            {
+                _logger.LogInformation("Token near expiry detected, initiating proactive refresh at {Time}", DateTime.UtcNow);
+                var refreshToken = await context.GetTokenAsync("refresh_token");
 
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    await _refreshSemaphore.WaitAsync(cancellationToken);
+                    try
+                    {
+                        // Re-check after acquiring lock (another thread may have refreshed it)
+                        var currentToken = await context.GetTokenAsync("access_token");
+                        if (JwtTokenHelper.IsTokenNearExpiry(currentToken, 5))
+                        {
+                            _logger.LogInformation("Executing proactive token refresh at {Time}", DateTime.UtcNow);
+                            var refreshSuccess = await RefreshTokensAsync(context, currentToken, refreshToken);
+                            if (refreshSuccess)
+                            {
+                                accessToken = await context.GetTokenAsync("access_token");
+                                _logger.LogInformation("Proactive token refresh successful at {Time}", DateTime.UtcNow);
+                            }
+                            else
+                            {
+                                // CRITICAL: Proactive refresh failed (both tokens expired), force logout immediately
+                                _logger.LogWarning("Proactive token refresh failed at {Time}. Forcing user logout.", DateTime.UtcNow);
+
+                                // Clear session data
+                                context.Session.Remove("UserSession");
+                                context.Session.Remove("UserPrivileges");
+
+                                // Clear authentication cookie
+                                await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                                // Return 401 to trigger client-side redirect to login
+                                return new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized)
+                                {
+                                    Content = new StringContent(
+                                        "{\"error\":\"Session expired\",\"message\":\"Your session has expired. Please log in again.\"}",
+                                        System.Text.Encoding.UTF8,
+                                        "application/json")
+                                };
+                            }
+                        }
+                        else
+                        {
+                            // Another thread already refreshed it
+                            accessToken = currentToken;
+                            _logger.LogInformation("Token was already refreshed by another thread at {Time}", DateTime.UtcNow);
+                        }
+                    }
+                    finally
+                    {
+                        _refreshSemaphore.Release();
+                    }
+                }
+            }
+
+            // Add bearer token to request header
             if (!string.IsNullOrEmpty(accessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

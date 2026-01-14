@@ -42,10 +42,16 @@
         .filter-checkbox-group {
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--bs-border-color, #e9ecef);
             border-radius: 6px;
             padding: 15px;
-            background-color: #f8f9fa;
+            background-color: var(--bs-secondary-bg, #f8f9fa);
+        }
+
+        /* Dark mode support */
+        [data-pc-theme="dark"] .filter-checkbox-group {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .filter-checkbox-item {
@@ -88,15 +94,28 @@
         }
 
         .btn-clear-filter {
-            background-color: #f8f9fa;
-            border-color: #dee2e6;
-            color: #6c757d;
+            background-color: var(--bs-secondary-bg, #f8f9fa);
+            border-color: var(--bs-border-color, #dee2e6);
+            color: var(--bs-secondary-color, #6c757d);
         }
 
             .btn-clear-filter:hover {
-                background-color: #e2e6ea;
-                border-color: #dae0e5;
-                color: #545b62;
+                background-color: var(--bs-tertiary-bg, #e2e6ea);
+                border-color: var(--bs-border-color, #dae0e5);
+                color: var(--bs-body-color, #545b62);
+            }
+
+        /* Dark mode support */
+        [data-pc-theme="dark"] .btn-clear-filter {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+            [data-pc-theme="dark"] .btn-clear-filter:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.15);
+                color: rgba(255, 255, 255, 0.9);
             }
 
     </style>
@@ -157,6 +176,15 @@
                         </div>
                     </div>
                 </div>
+
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            showNotification('@TempData["ErrorMessage"]', 'error', 'Error');
+                        });
+                    </script>
+                }
 
                 <div class="table-responsive">
                     <table id="simpletable" class="table nowrap table-hover m-x-0">
@@ -579,6 +607,31 @@
                                 </div>
                             </div>
 
+                            <!-- Request Method - FROM SERVER -->
+                            <div class="filter-section">
+                                <label class="filter-section-title">Request Method</label>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.FilterOptions?.RequestMethods != null && Model.FilterOptions.RequestMethods.Any())
+                                    {
+                                        @foreach (var method in Model.FilterOptions.RequestMethods)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@method.Value" id="method_@method.Value" name="requestMethods">
+                                                <label class="form-check-label" for="method_@method.Value">
+                                                    @method.Label
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No request methods available</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
                             <!-- Has Sent Email - STATIC -->
                             <div class="filter-section">
                                 <label class="filter-section-title">Has Sent Email</label>
@@ -719,6 +772,7 @@
                     workCompletionDateTo: $('#workCompletionDateTo').val(),
                     checklist: $('input[name="checklist"]:checked').map(function() { return this.value; }).get(),
                     feedback: $('input[name="feedback"]:checked').map(function() { return this.value; }).get(),
+                    requestMethods: $('input[name="requestMethods"]:checked').map(function() { return this.value; }).get(),
                     hasSentEmail: $('#emailYes').is(':checked'),
                     showDeleted: $('#showDeleted').is(':checked')
                 };
@@ -745,6 +799,7 @@
                 filters.statuses.forEach(s => url.searchParams.append('statuses', s));
                 filters.checklist.forEach(c => url.searchParams.append('checklist', c));
                 filters.feedback.forEach(f => url.searchParams.append('feedback', f));
+                filters.requestMethods.forEach(m => url.searchParams.append('requestMethods', m));
 
                 // Preserve search term if exists
                 var searchTerm = $('#mainSearchInput').val();
@@ -829,6 +884,9 @@
 
             const feedback = getQueryParam('feedback');
             feedback.forEach(f => $(`input[name="feedback"][value="${f}"]`).prop('checked', true));
+
+            const requestMethods = getQueryParam('requestMethods');
+            requestMethods.forEach(m => $(`input[name="requestMethods"][value="${m}"]`).prop('checked', true));
 
             // Restore date inputs
             const requestDateFrom = getQueryParam('requestDateFrom')[0];
