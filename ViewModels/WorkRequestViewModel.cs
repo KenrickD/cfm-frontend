@@ -1,4 +1,5 @@
-﻿using cfm_frontend.Models;
+﻿using cfm_frontend.DTOs.ServiceProvider;
+using cfm_frontend.Models;
 using cfm_frontend.Models.WorkRequest;
 using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
 
@@ -13,7 +14,7 @@ namespace cfm_frontend.ViewModels
 
         // Location and Service Provider
         public List<LocationModel>? Locations { get; set; }
-        public List<ServiceProviderModel>? ServiceProviders { get; set; }
+        public List<ServiceProviderFormDetailResponse>? ServiceProviders { get; set; }
 
         // Work Categories
         public List<TypeFormDetailResponse>? WorkCategories { get; set; }

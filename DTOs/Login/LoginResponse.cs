@@ -10,9 +10,9 @@
     }
 
     /// <summary>
-    /// Login response wrapper using BaseSuccessResponse format
+    /// Login response wrapper using ApiResponseDto format
     /// </summary>
-    public class LoginResponse : BaseSuccessResponse<TokenData>
+    public class LoginResponse : ApiResponseDto<TokenData>
     {
     }
 }

@@ -1,0 +1,710 @@
+protected void calculateHelpdeskResponseTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtRequestDate, txtRequestTime;
+    LinkButton btnHelpdeskResponseTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        txtRequestDate = txtRequestDateAdd;
+        txtRequestTime = txtRequestTimeAdd;
+        btnHelpdeskResponseTarget = btnHelpdeskResponseTargetAdd;
+    }
+    else // Edit Mode
+    {
+        txtRequestDate = txtRequestDateEdit;
+        txtRequestTime = txtRequestTimeEdit;
+        btnHelpdeskResponseTarget = btnHelpdeskResponseTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of bad input, e.g. time "02:90 PM"
+    {
+        DateTime helpdeskResponse = Convert.ToDateTime(txtRequestDate.Text.Trim() + " " + txtRequestTime.Text.Trim()); // Starting point (Request Date)
+
+        /** If there exist predefined Helpdesk Response Target in this Priority Level */
+        if (priorityLevel.helpdeskResponseTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.helpdeskResponseTarget.Value); // Helpdesk Response Target duration
+
+            helpdeskResponse = SharedFunctions.addDateBasedOnOfficeHour(helpdeskResponse, duration, priorityLevel.helpdeskResponseTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (Request Date)
+            btnHelpdeskResponseTarget.Text = helpdeskResponse.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnHelpdeskResponseTarget.ToolTip = "Max " + toolTip + "after Request Date";
+
+            if (priorityLevel.helpdeskResponseTargetIsWithinOfficeHours.Value)
+                btnHelpdeskResponseTarget.ToolTip += " (within office hours only)";
+
+            btnHelpdeskResponseTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No Helpdesk Response Target in this Priority Level */
+        else
+        {
+            btnHelpdeskResponseTarget.Text = "No Target";
+            btnHelpdeskResponseTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { }
+}
+
+/** Calculate Initial Follow Up Target based on selected Priority Level */
+protected void calculateInitialFollowUpTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtRequestDate, txtRequestTime, txtHelpdeskResponseTargetDate, txtHelpdeskResponseTargetTime;
+    MultiView mvHelpdeskResponseTarget;
+    View vwHelpdeskResponsePredefinedTarget;
+    LinkButton btnHelpdeskResponseTarget, btnInitialFollowUpTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        txtRequestDate = txtRequestDateAdd;
+        txtRequestTime = txtRequestTimeAdd;
+        mvHelpdeskResponseTarget = mvHelpdeskResponseTargetAdd;
+        vwHelpdeskResponsePredefinedTarget = vwHelpdeskResponsePredefinedTargetAdd;
+        btnHelpdeskResponseTarget = btnHelpdeskResponseTargetAdd;
+        txtHelpdeskResponseTargetDate = txtHelpdeskResponseTargetDateAdd;
+        txtHelpdeskResponseTargetTime = txtHelpdeskResponseTargetTimeAdd;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetAdd;
+    }
+    else // Edit Mode
+    {
+        txtRequestDate = txtRequestDateEdit;
+        txtRequestTime = txtRequestTimeEdit;
+        mvHelpdeskResponseTarget = mvHelpdeskResponseTargetEdit;
+        vwHelpdeskResponsePredefinedTarget = vwHelpdeskResponsePredefinedTargetEdit;
+        btnHelpdeskResponseTarget = btnHelpdeskResponseTargetEdit;
+        txtHelpdeskResponseTargetDate = txtHelpdeskResponseTargetDateEdit;
+        txtHelpdeskResponseTargetTime = txtHelpdeskResponseTargetTimeEdit;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of wrong/malicious input, e.g. time "02:90 PM"
+    {
+        DateTime initialFollowUp = new DateTime();
+
+        /** If there exist predefined Initial Follow Up Target in this Priority Level */
+        if (priorityLevel.initialFollowUpTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.initialFollowUpTarget.Value); // Initial Follow Up Target duration
+            string toolTip_since = "";
+
+            /** If Initial Follow Up Target is calculated 'After Helpdesk Response Target' */
+            if (priorityLevel.Enum.text == "After Helpdesk Response Target")
+            {
+                btnInitialFollowUpTarget.ToolTip = "";
+
+                if (mvHelpdeskResponseTarget.GetActiveView() == vwHelpdeskResponsePredefinedTarget) // If using target from Priority Level
+                {
+                    if (btnHelpdeskResponseTarget.Text == "No Target") // If Helpdesk Response Target is "No Target", ...
+                    {
+                        btnInitialFollowUpTarget.Text = "No Target"; // ... then this Initial Follow Up Target is also "No Target", ...
+                        btnInitialFollowUpTarget.ToolTip = "";
+                        return; // .. and do nothing further
+                    }
+                    initialFollowUp = Convert.ToDateTime(btnHelpdeskResponseTarget.Text.Trim()); // Starting Point (Helpdesk Response Target)
+                }
+                else // if (mvHelpdeskResponseTarget.GetActiveView == vwHelpdeskResponseManualTarget) // If user change it with new target
+                    initialFollowUp = Convert.ToDateTime(txtHelpdeskResponseTargetDate.Text.Trim() + " " + txtHelpdeskResponseTargetTime.Text.Trim()); // Starting Point (Helpdesk Response Target)
+
+                toolTip_since = "after Helpdesk Response Target";
+            }
+
+            /** If Initial Follow Up Target is calculated 'After Request Date' */
+            else
+            {
+                initialFollowUp = Convert.ToDateTime(txtRequestDate.Text.Trim() + " " + txtRequestTime.Text.Trim()); // Starting Point (Request Date)
+                toolTip_since = "after Request Date";
+            }
+
+            initialFollowUp = SharedFunctions.addDateBasedOnOfficeHour(initialFollowUp, duration, priorityLevel.initialFollowUpTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (either Request Date or Helpdesk Response Target)
+            btnInitialFollowUpTarget.Text = initialFollowUp.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnInitialFollowUpTarget.ToolTip = "Max " + toolTip + toolTip_since;
+
+            if (priorityLevel.initialFollowUpTargetIsWithinOfficeHours.Value)
+                btnInitialFollowUpTarget.ToolTip += " (within office hours only)";
+
+            btnInitialFollowUpTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No Initial Follow Up Target in this Priority Level */
+        else
+        {
+            btnInitialFollowUpTarget.Text = "No Target";
+            btnInitialFollowUpTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { } // If error found, do nothing
+}
+
+/** Calculate Quotation Submission Target based on selected Priority Level */
+protected void calculateQuotationSubmissionTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtRequestDate, txtRequestTime, txtInitialFollowUpTargetDate, txtInitialFollowUpTargetTime, txtInitialFollowUpDate, txtInitialFollowUpTime;
+    MultiView mvInitialFollowUpTarget;
+    View vwInitialFollowUpPredefinedTarget;
+    LinkButton btnInitialFollowUpTarget, btnQuotationSubmissionTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        txtRequestDate = txtRequestDateAdd;
+        txtRequestTime = txtRequestTimeAdd;
+        mvInitialFollowUpTarget = mvInitialFollowUpTargetAdd;
+        vwInitialFollowUpPredefinedTarget = vwInitialFollowUpPredefinedTargetAdd;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetAdd;
+        txtInitialFollowUpTargetDate = txtInitialFollowUpTargetDateAdd;
+        txtInitialFollowUpTargetTime = txtInitialFollowUpTargetTimeAdd;
+        txtInitialFollowUpDate = txtInitialFollowUpDateAdd;
+        txtInitialFollowUpTime = txtInitialFollowUpTimeAdd;
+        btnQuotationSubmissionTarget = btnQuotationSubmissionTargetAdd;
+    }
+    else // Edit Mode
+    {
+        txtRequestDate = txtRequestDateEdit;
+        txtRequestTime = txtRequestTimeEdit;
+        mvInitialFollowUpTarget = mvInitialFollowUpTargetEdit;
+        vwInitialFollowUpPredefinedTarget = vwInitialFollowUpPredefinedTargetEdit;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetEdit;
+        txtInitialFollowUpTargetDate = txtInitialFollowUpTargetDateEdit;
+        txtInitialFollowUpTargetTime = txtInitialFollowUpTargetTimeEdit;
+        txtInitialFollowUpDate = txtInitialFollowUpDateEdit;
+        txtInitialFollowUpTime = txtInitialFollowUpTimeEdit;
+        btnQuotationSubmissionTarget = btnQuotationSubmissionTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of wrong/malicious input, e.g. time "02:90 PM"
+    {
+        DateTime quotationSubmission = new DateTime();
+
+        /** If there exist predefined Quotation Submission Target in this Priority Level */
+        if (priorityLevel.quotationSubmissionTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.quotationSubmissionTarget.Value); // Quotation Submission Target duration
+            string toolTip_since = "";
+
+            /** If Quotation Submission Target is calculated 'After Initial Follow Up Target' */
+            if (priorityLevel.Enum1.text == "After Initial Follow Up Target")
+            {
+                btnQuotationSubmissionTarget.ToolTip = "";
+
+                if (mvInitialFollowUpTarget.GetActiveView() == vwInitialFollowUpPredefinedTarget) // If using target from Priority Level
+                {
+                    if (btnInitialFollowUpTarget.Text == "No Target") // If Initial Follow Up Target is "No Target", ...
+                    {
+                        btnQuotationSubmissionTarget.Text = "No Target"; // ... then this Quotation Submission Target is also "No Target", ...
+                        btnQuotationSubmissionTarget.ToolTip = "";
+                        return; // .. and do nothing further
+                    }
+                    quotationSubmission = Convert.ToDateTime(btnInitialFollowUpTarget.Text.Trim()); // Starting Point (Initial Follow Up Target)
+                }
+                else // if (mvInitialFollowUpTarget.GetActiveView == vwInitialFollowUpManualTarget) // If user change it with new target
+                    quotationSubmission = Convert.ToDateTime(txtInitialFollowUpTargetDate.Text.Trim() + " " + txtInitialFollowUpTargetTime.Text.Trim()); // Starting Point (Initial Follow Up Target)
+
+                toolTip_since = "after Initial Follow Up Target";
+            }
+
+            else if (priorityLevel.Enum1.text == "After Initial Follow Up")
+            {
+                btnQuotationSubmissionTarget.ToolTip = "";
+
+                /** If user already filled actual Initial Follow date and time, use them instead of the Initial Follow Target */
+                if (txtInitialFollowUpDate.Text.Trim() != "" && txtInitialFollowUpTime.Text.Trim() != "")
+                {
+                    quotationSubmission = Convert.ToDateTime(txtInitialFollowUpDate.Text.Trim() + " " + txtInitialFollowUpTime.Text.Trim()); // Starting Point (Initial Follow)
+                    toolTip_since = "After Initial Follow Up";
+                }
+                /** If Initial Follow is still empty, then use the Initial Follow Target */
+                else
+                {
+                    if (mvInitialFollowUpTarget.GetActiveView() == vwInitialFollowUpPredefinedTarget) // If using target from Priority Level
+                    {
+                        if (btnInitialFollowUpTarget.Text == "No Target") // If Initial Follow Target is "No Target", ...
+                        {
+                            btnQuotationSubmissionTarget.Text = "No Target"; // ... then this Quotation Target is also "No Target", ...
+                            btnQuotationSubmissionTarget.ToolTip = "";
+                            return; // .. and do nothing further
+                        }
+                        quotationSubmission = Convert.ToDateTime(btnInitialFollowUpTarget.Text.Trim()); // Starting Point (Initial Follow Target)
+                    }
+                    else // if (mvInitialFollowTarget.GetActiveView == vwInitialFollowManualTarget) // If user change it with new target
+                        quotationSubmission = Convert.ToDateTime(txtInitialFollowUpTargetDate.Text.Trim() + " " + txtInitialFollowUpTargetTime.Text.Trim()); // Starting Point (Initial Follow Target)
+
+                    toolTip_since = "After Initial Follow Up Target";
+                }
+            }
+
+            /** If Quotation Submission Target is calculated 'After Request Date' */
+            else
+            {
+                quotationSubmission = Convert.ToDateTime(txtRequestDate.Text.Trim() + " " + txtRequestTime.Text.Trim()); // Starting Point (Request Date)
+                toolTip_since = "after Request Date";
+            }
+
+            quotationSubmission = SharedFunctions.addDateBasedOnOfficeHour(quotationSubmission, duration, priorityLevel.quotationSubmissionTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (either Request Date or Initial Follow Up Target)
+            btnQuotationSubmissionTarget.Text = quotationSubmission.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnQuotationSubmissionTarget.ToolTip = "Max " + toolTip + toolTip_since;
+
+            if (priorityLevel.quotationSubmissionTargetIsWithinOfficeHours.Value)
+                btnQuotationSubmissionTarget.ToolTip += " (within office hours only)";
+
+            btnQuotationSubmissionTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No Quotation Submission Target in this Priority Level */
+        else
+        {
+            btnQuotationSubmissionTarget.Text = "No Target";
+            btnQuotationSubmissionTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { } // If error found, do nothing
+}
+
+/** Calculate Cost Approval Target based on selected Priority Level */
+protected void calculateCostApprovalTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtRequestDate, txtRequestTime, txtQuotationSubmissionDate, txtQuotationSubmissionTime, txtQuotationSubmissionTargetDate, txtQuotationSubmissionTargetTime;
+    MultiView mvQuotationSubmissionTarget;
+    View vwQuotationSubmissionPredefinedTarget;
+    LinkButton btnQuotationSubmissionTarget, btnCostApprovalTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        txtRequestDate = txtRequestDateAdd;
+        txtRequestTime = txtRequestTimeAdd;
+        mvQuotationSubmissionTarget = mvQuotationSubmissionTargetAdd;
+        vwQuotationSubmissionPredefinedTarget = vwQuotationSubmissionPredefinedTargetAdd;
+        btnQuotationSubmissionTarget = btnQuotationSubmissionTargetAdd;
+        txtQuotationSubmissionDate = txtQuotationSubmissionDateAdd;
+        txtQuotationSubmissionTime = txtQuotationSubmissionTimeAdd;
+        txtQuotationSubmissionTargetDate = txtQuotationSubmissionTargetDateAdd;
+        txtQuotationSubmissionTargetTime = txtQuotationSubmissionTargetTimeAdd;
+        btnCostApprovalTarget = btnCostApprovalTargetAdd;
+    }
+    else // Edit Mode
+    {
+        txtRequestDate = txtRequestDateEdit;
+        txtRequestTime = txtRequestTimeEdit;
+        mvQuotationSubmissionTarget = mvQuotationSubmissionTargetEdit;
+        vwQuotationSubmissionPredefinedTarget = vwQuotationSubmissionPredefinedTargetEdit;
+        btnQuotationSubmissionTarget = btnQuotationSubmissionTargetEdit;
+        txtQuotationSubmissionDate = txtQuotationSubmissionDateEdit;
+        txtQuotationSubmissionTime = txtQuotationSubmissionTimeEdit;
+        txtQuotationSubmissionTargetDate = txtQuotationSubmissionTargetDateEdit;
+        txtQuotationSubmissionTargetTime = txtQuotationSubmissionTargetTimeEdit;
+        btnCostApprovalTarget = btnCostApprovalTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of wrong/malicious input, e.g. time "02:90 PM"
+    {
+        DateTime costApproval = new DateTime();
+
+        /** If there exist predefined Cost Approval Target in this Priority Level */
+        if (priorityLevel.costApprovalTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.costApprovalTarget.Value); // Cost Approval Target duration
+            string toolTip_since = "";
+
+            /** If Cost Approval Target is calculated 'After Quotation Submission' */
+            if (priorityLevel.Enum2.text == "After Quotation Submission")
+            {
+                btnCostApprovalTarget.ToolTip = "";
+
+                /** If user already filled actual Quotation Submission date and time, use them instead of the Quotation Submission Target */
+                if (txtQuotationSubmissionDate.Text.Trim() != "" && txtQuotationSubmissionTime.Text.Trim() != "")
+                {
+                    costApproval = Convert.ToDateTime(txtQuotationSubmissionDate.Text.Trim() + " " + txtQuotationSubmissionTime.Text.Trim()); // Starting Point (Quotation Submission)
+                    toolTip_since = "after Quotation Submission";
+                }
+
+                /** If Quotation Submission is still empty, then use the Quotation Submission Target */
+                else
+                {
+                    if (mvQuotationSubmissionTarget.GetActiveView() == vwQuotationSubmissionPredefinedTarget) // If using target from Priority Level
+                    {
+                        if (btnQuotationSubmissionTarget.Text == "No Target") // If Quotation Submission Target is "No Target", ...
+                        {
+                            btnCostApprovalTarget.Text = "No Target"; // ... then this Cost Approval Target is also "No Target", ...
+                            btnCostApprovalTarget.ToolTip = "";
+                            return; // .. and do nothing further
+                        }
+                        costApproval = Convert.ToDateTime(btnQuotationSubmissionTarget.Text.Trim()); // Starting Point (Quotation Submission Target)
+                    }
+                    else // if (mvQuotationSubmissionTarget.GetActiveView == vwQuotationSubmissionManualTarget) // If user change it with new target
+                        costApproval = Convert.ToDateTime(txtQuotationSubmissionTargetDate.Text.Trim() + " " + txtQuotationSubmissionTargetTime.Text.Trim()); // Starting Point (Quotation Submission Target)
+
+                    toolTip_since = "after Quotation Submission Target";
+                }
+            }
+
+            /** If Cost Approval Target is calculated 'After Request Date' */
+            else
+            {
+                costApproval = Convert.ToDateTime(txtRequestDate.Text.Trim() + " " + txtRequestTime.Text.Trim()); // Starting Point (Request Date)
+                toolTip_since = "after Request Date";
+            }
+
+            costApproval = SharedFunctions.addDateBasedOnOfficeHour(costApproval, duration, priorityLevel.costApprovalTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (either Request Date or Quotation Submission Target)
+            btnCostApprovalTarget.Text = costApproval.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnCostApprovalTarget.ToolTip = "Max " + toolTip + toolTip_since;
+
+            if (priorityLevel.costApprovalTargetIsWithinOfficeHours.Value)
+                btnCostApprovalTarget.ToolTip += " (within office hours only)";
+
+            btnCostApprovalTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No Cost Approval Target in this Priority Level */
+        else
+        {
+            btnCostApprovalTarget.Text = "No Target";
+            btnCostApprovalTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { } // If error found, do nothing
+}
+
+/** Calculate Work Completion Target based on selected Priority Level */
+protected void calculateWorkCompletionTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtRequestDate, txtRequestTime, txtInitialFollowUpTargetDate, txtInitialFollowUpTargetTime, txtCostApprovalDate, txtCostApprovalTime, txtCostApprovalTargetDate, txtCostApprovalTargetTime, txtInitialFollowUpDate, txtInitialFollowUpTime;
+    MultiView mvInitialFollowUpTarget, mvCostApprovalTarget;
+    View vwInitialFollowUpPredefinedTarget, vwCostApprovalPredefinedTarget;
+    LinkButton btnInitialFollowUpTarget, btnCostApprovalTarget, btnWorkCompletionTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        txtRequestDate = txtRequestDateAdd;
+        txtRequestTime = txtRequestTimeAdd;
+        mvInitialFollowUpTarget = mvInitialFollowUpTargetAdd;
+        vwInitialFollowUpPredefinedTarget = vwInitialFollowUpPredefinedTargetAdd;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetAdd;
+        txtInitialFollowUpTargetDate = txtInitialFollowUpTargetDateAdd;
+        txtInitialFollowUpTargetTime = txtInitialFollowUpTargetTimeAdd;
+        mvCostApprovalTarget = mvCostApprovalTargetAdd;
+        vwCostApprovalPredefinedTarget = vwCostApprovalPredefinedTargetAdd;
+        btnCostApprovalTarget = btnCostApprovalTargetAdd;
+        txtCostApprovalDate = txtCostApprovalDateAdd;
+        txtCostApprovalTime = txtCostApprovalTimeAdd;
+        txtCostApprovalTargetDate = txtCostApprovalTargetDateAdd;
+        txtCostApprovalTargetTime = txtCostApprovalTargetTimeAdd;
+        txtInitialFollowUpDate = txtInitialFollowUpDateAdd;
+        txtInitialFollowUpTime = txtInitialFollowUpTimeAdd;
+        btnWorkCompletionTarget = btnWorkCompletionTargetAdd;
+    }
+    else // Edit Mode
+    {
+        txtRequestDate = txtRequestDateEdit;
+        txtRequestTime = txtRequestTimeEdit;
+        mvInitialFollowUpTarget = mvInitialFollowUpTargetEdit;
+        vwInitialFollowUpPredefinedTarget = vwInitialFollowUpPredefinedTargetEdit;
+        btnInitialFollowUpTarget = btnInitialFollowUpTargetEdit;
+        txtInitialFollowUpTargetDate = txtInitialFollowUpTargetDateEdit;
+        txtInitialFollowUpTargetTime = txtInitialFollowUpTargetTimeEdit;
+        mvCostApprovalTarget = mvCostApprovalTargetEdit;
+        vwCostApprovalPredefinedTarget = vwCostApprovalPredefinedTargetEdit;
+        btnCostApprovalTarget = btnCostApprovalTargetEdit;
+        txtCostApprovalDate = txtCostApprovalDateEdit;
+        txtCostApprovalTime = txtCostApprovalTimeEdit;
+        txtCostApprovalTargetDate = txtCostApprovalTargetDateEdit;
+        txtCostApprovalTargetTime = txtCostApprovalTargetTimeEdit;
+        txtInitialFollowUpDate = txtInitialFollowUpDateEdit;
+        txtInitialFollowUpTime = txtInitialFollowUpTimeEdit;
+        btnWorkCompletionTarget = btnWorkCompletionTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of wrong/malicious input, e.g. time "02:90 PM"
+    {
+        DateTime workCompletion = new DateTime();
+
+        /** If there exist predefined Work Completion Target in this Priority Level */
+        if (priorityLevel.workCompletionTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.workCompletionTarget.Value); // Work Completion Target duration
+            string toolTip_since = "";
+
+            /** If Work Completion Target is calculated 'After Initial Follow Up Target' */
+            if (priorityLevel.Enum3.text == "After Initial Follow Up Target")
+            {
+                btnWorkCompletionTarget.ToolTip = "";
+
+                if (mvInitialFollowUpTarget.GetActiveView() == vwInitialFollowUpPredefinedTarget) // If using target from Priority Level
+                {
+                    if (btnInitialFollowUpTarget.Text == "No Target") // If Initial Follow Up Target is "No Target", ...
+                    {
+                        btnWorkCompletionTarget.Text = "No Target"; // ... then this Work Completion Target is also "No Target", ...
+                        btnWorkCompletionTarget.ToolTip = "";
+                        return; // .. and do nothing further
+                    }
+                    workCompletion = Convert.ToDateTime(btnInitialFollowUpTarget.Text.Trim()); // Starting Point (Initial Follow Up Target)
+                }
+                else // if (mvInitialFollowUpTarget.GetActiveView == vwInitialFollowUpManualTarget) // If user change it with new target
+                    workCompletion = Convert.ToDateTime(txtInitialFollowUpTargetDate.Text.Trim() + " " + txtInitialFollowUpTargetTime.Text.Trim()); // Starting Point (Initial Follow Up Target)
+
+                toolTip_since = "after Initial Follow Up Target";
+            }
+
+            else if (priorityLevel.Enum3.text == "After Initial Follow Up")
+            {
+                btnWorkCompletionTarget.ToolTip = "";
+
+                /** If user already filled actual Initial Follow date and time, use them instead of the Initial Follow Target */
+                if (txtInitialFollowUpDate.Text.Trim() != "" && txtInitialFollowUpTime.Text.Trim() != "")
+                {
+                    workCompletion = Convert.ToDateTime(txtInitialFollowUpDate.Text.Trim() + " " + txtInitialFollowUpTime.Text.Trim()); // Starting Point (Cost Approval)
+                    toolTip_since = "After Initial Follow Up";
+                }
+                /** If Initial Follow is still empty, then use the Initial Follow Target */
+                else
+                {
+                    if (mvInitialFollowUpTarget.GetActiveView() == vwInitialFollowUpPredefinedTarget) // If using target from Priority Level
+                    {
+                        if (btnInitialFollowUpTarget.Text == "No Target") // If Initial Follow Target is "No Target", ...
+                        {
+                            btnWorkCompletionTarget.Text = "No Target"; // ... then this Work Completion Target is also "No Target", ...
+                            btnWorkCompletionTarget.ToolTip = "";
+                            return; // .. and do nothing further
+                        }
+                        workCompletion = Convert.ToDateTime(btnInitialFollowUpTarget.Text.Trim()); // Starting Point (Initial Follow Target)
+                    }
+                    else // if (mvInitialFollowTarget.GetActiveView == vwInitialFollowManualTarget) // If user change it with new target
+                        workCompletion = Convert.ToDateTime(txtInitialFollowUpTargetDate.Text.Trim() + " " + txtInitialFollowUpTargetTime.Text.Trim()); // Starting Point (Initial Follow Target)
+
+                    toolTip_since = "After Initial Follow Up Target";
+                }
+            }
+
+            /** If Work Completion Target is calculated 'After Cost Approval' */
+            else if (priorityLevel.Enum3.text == "After Cost Approval")
+            {
+                btnWorkCompletionTarget.ToolTip = "";
+
+                /** If user already filled actual Cost Approval date and time, use them instead of the Cost Approval Target */
+                if (txtCostApprovalDate.Text.Trim() != "" && txtCostApprovalTime.Text.Trim() != "")
+                {
+                    workCompletion = Convert.ToDateTime(txtCostApprovalDate.Text.Trim() + " " + txtCostApprovalTime.Text.Trim()); // Starting Point (Cost Approval)
+                    toolTip_since = "after Cost Approval";
+                }
+
+                /** If Cost Approval is still empty, then use the Cost Approval Target */
+                else
+                {
+                    if (mvCostApprovalTarget.GetActiveView() == vwCostApprovalPredefinedTarget) // If using target from Priority Level
+                    {
+                        if (btnCostApprovalTarget.Text == "No Target") // If Cost Approval Target is "No Target", ...
+                        {
+                            btnWorkCompletionTarget.Text = "No Target"; // ... then this Work Completion Target is also "No Target", ...
+                            btnWorkCompletionTarget.ToolTip = "";
+                            return; // .. and do nothing further
+                        }
+                        workCompletion = Convert.ToDateTime(btnCostApprovalTarget.Text.Trim()); // Starting Point (Cost Approval Target)
+                    }
+                    else // if (mvCostApprovalTarget.GetActiveView == vwCostApprovalManualTarget) // If user change it with new target
+                        workCompletion = Convert.ToDateTime(txtCostApprovalTargetDate.Text.Trim() + " " + txtCostApprovalTargetTime.Text.Trim()); // Starting Point (Cost Approval Target)
+
+                    toolTip_since = "after Cost Approval Target";
+                }
+            }
+
+            /** If Work Completion Target is calculated 'After Request Date' */
+            else
+            {
+                workCompletion = Convert.ToDateTime(txtRequestDate.Text.Trim() + " " + txtRequestTime.Text.Trim()); // Starting Point (Request Date)
+                toolTip_since = "after Request Date";
+            }
+
+            workCompletion = SharedFunctions.addDateBasedOnOfficeHour(workCompletion, duration, priorityLevel.workCompletionTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (either Request Date, Initial Follow Up Target, or Cost Approval)
+            btnWorkCompletionTarget.Text = workCompletion.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnWorkCompletionTarget.ToolTip = "Max " + toolTip + toolTip_since;
+
+            if (priorityLevel.workCompletionTargetIsWithinOfficeHours.Value)
+                btnWorkCompletionTarget.ToolTip += " (within office hours only)";
+
+            btnWorkCompletionTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No Work Completion Target in this Priority Level */
+        else
+        {
+            btnWorkCompletionTarget.Text = "No Target";
+            btnWorkCompletionTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { } // If error found, do nothing
+}
+
+/** Calculate After Work Follow Up Target based on selected Priority Level */
+protected void calculateAfterWorkFollowUpTarget(PriorityLevel priorityLevel)
+{
+    #region Variables Preparation
+
+    CFMSystemTextBox txtWorkCompletionDate, txtWorkCompletionTime, txtWorkCompletionTargetDate, txtWorkCompletionTargetTime;
+    MultiView mvWorkCompletionTarget;
+    View vwWorkCompletionPredefinedTarget;
+    LinkButton btnWorkCompletionTarget, btnAfterWorkFollowUpTarget;
+
+    if (mvWorkRequestDetail.GetActiveView() == vwAddMode) // Add Mode
+    {
+        mvWorkCompletionTarget = mvWorkCompletionTargetAdd;
+        vwWorkCompletionPredefinedTarget = vwWorkCompletionPredefinedTargetAdd;
+        btnWorkCompletionTarget = btnWorkCompletionTargetAdd;
+        txtWorkCompletionDate = txtWorkCompletionDateAdd;
+        txtWorkCompletionTime = txtWorkCompletionTimeAdd;
+        txtWorkCompletionTargetDate = txtWorkCompletionTargetDateAdd;
+        txtWorkCompletionTargetTime = txtWorkCompletionTargetTimeAdd;
+        btnAfterWorkFollowUpTarget = btnAfterWorkFollowUpTargetAdd;
+    }
+    else // Edit Mode
+    {
+        mvWorkCompletionTarget = mvWorkCompletionTargetEdit;
+        vwWorkCompletionPredefinedTarget = vwWorkCompletionPredefinedTargetEdit;
+        btnWorkCompletionTarget = btnWorkCompletionTargetEdit;
+        txtWorkCompletionDate = txtWorkCompletionDateEdit;
+        txtWorkCompletionTime = txtWorkCompletionTimeEdit;
+        txtWorkCompletionTargetDate = txtWorkCompletionTargetDateEdit;
+        txtWorkCompletionTargetTime = txtWorkCompletionTargetTimeEdit;
+        btnAfterWorkFollowUpTarget = btnAfterWorkFollowUpTargetEdit;
+    }
+
+    #endregion
+
+    try // Sometimes Convert.ToDateTime() fails because of wrong/malicious input, e.g. time "02:90 PM"
+    {
+        DateTime afterWorkFollowUp = new DateTime();
+
+        /** If there exist predefined After Work Follow Up Target in this Priority Level */
+        if (priorityLevel.afterWorkFollowUpTarget != null)
+        {
+            TimeSpan duration = new TimeSpan(priorityLevel.afterWorkFollowUpTarget.Value); // After Work Follow Up Target duration
+            string toolTip_since = "";
+
+            /** If Quotation Submission Target is calculated 'After Work Completion' (Note: Right now this is the only option) */
+            // if (priorityLevel.Enum4.text == "After Work Completion")
+            // {
+
+            btnAfterWorkFollowUpTarget.ToolTip = "";
+
+            /** If user already filled actual Work Completion date and time, use them instead of the Work Completion Target */
+            if (txtWorkCompletionDate.Text.Trim() != "" && txtWorkCompletionTime.Text.Trim() != "")
+            {
+                afterWorkFollowUp = Convert.ToDateTime(txtWorkCompletionDate.Text.Trim() + " " + txtWorkCompletionTime.Text.Trim()); // Starting Point (Work Completion)
+                toolTip_since = "after Work Completion";
+            }
+
+            /** If Work Completion is still empty, then use the Work Completion Target */
+            else
+            {
+                if (mvWorkCompletionTarget.GetActiveView() == vwWorkCompletionPredefinedTarget) // If using target from Priority Level
+                {
+                    if (btnWorkCompletionTarget.Text == "No Target") // If Work Completion Target is "No Target", ...
+                    {
+                        btnAfterWorkFollowUpTarget.Text = "No Target"; // ... then this Work Completion Target is also "No Target", ...
+                        btnAfterWorkFollowUpTarget.ToolTip = "";
+                        return; // .. and do nothing further
+                    }
+                    afterWorkFollowUp = Convert.ToDateTime(btnWorkCompletionTarget.Text.Trim()); // Starting Point (Work Completion Target)
+                }
+                else // if (mvWorkCompletionTarget.GetActiveView() == vwWorkCompletionManualTarget) // If user change it with new target
+                    afterWorkFollowUp = Convert.ToDateTime(txtWorkCompletionTargetDate.Text.Trim() + " " + txtWorkCompletionTargetTime.Text.Trim()); // Starting Point (Work Completion Target)
+
+                toolTip_since = "after Work Completion Target";
+            }
+
+            // }
+
+            afterWorkFollowUp = SharedFunctions.addDateBasedOnOfficeHour(afterWorkFollowUp, duration, priorityLevel.afterWorkFollowUpTargetIsWithinOfficeHours.Value); // Add the duration to the starting point (either Work Completion or Work Completion Target)
+            btnAfterWorkFollowUpTarget.Text = afterWorkFollowUp.ToString("dd MMM yyyy hh:mm tt"); // Set the button
+
+            /** The button's tool tip */
+            string toolTip = "";
+            if (duration.Days > 0)
+                toolTip += duration.Days + (duration.Days == 1 ? " day " : " days ");
+            if (duration.Hours > 0)
+                toolTip += duration.Hours + (duration.Hours == 1 ? " hour " : " hours ");
+            if (duration.Minutes > 0)
+                toolTip += duration.Minutes + (duration.Minutes == 1 ? " minute " : " minutes ");
+
+            btnAfterWorkFollowUpTarget.ToolTip = "Max " + toolTip + toolTip_since;
+
+            if (priorityLevel.afterWorkFollowUpTargetIsWithinOfficeHours.Value)
+                btnAfterWorkFollowUpTarget.ToolTip += " (within office hours only)";
+
+            btnAfterWorkFollowUpTarget.ToolTip += ". Click to change this target";
+        }
+
+        /** No After Work Follow Up Target in this Priority Level */
+        else
+        {
+            btnAfterWorkFollowUpTarget.Text = "No Target";
+            btnAfterWorkFollowUpTarget.ToolTip = "";
+        }
+    }
+    catch (Exception) { } // If error found, do nothing
+}

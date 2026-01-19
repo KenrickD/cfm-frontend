@@ -128,6 +128,7 @@
         .requestor-card {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
+            border-left: 4px solid #9b59b6;
             border-radius: 0.375rem;
             padding: 1rem;
             transition: all 0.3s ease;
@@ -136,16 +137,17 @@
         [data-pc-theme="dark"] .requestor-card {
             background-color: #2d3748;
             border-color: #4a5568;
+            border-left-color: #9b59b6;
         }
 
         .requestor-avatar {
-            width: 60px;
-            height: 60px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1rem;
             font-weight: 600;
             color: white;
             flex-shrink: 0;
@@ -153,7 +155,8 @@
         }
 
         .requestor-card h6 {
-            font-size: 1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
             color: #2c3e50;
         }
 
@@ -161,12 +164,27 @@
             color: #e5e7eb;
         }
 
-        .requestor-card .text-muted {
-            font-size: 0.875rem;
+        .requestor-details {
+            font-size: 0.8rem;
+            color: #6c757d;
+            line-height: 1.5;
         }
 
-        .requestor-card .btn-danger {
-            white-space: nowrap;
+        .requestor-details div {
+            margin-bottom: 0.125rem;
+        }
+
+        .requestor-details div:last-child {
+            margin-bottom: 0;
+        }
+
+        .requestor-card .btn-remove-requestor {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .requestor-card:hover .btn-remove-requestor {
+            opacity: 1;
         }
 
         /* Enhanced typeahead dropdown for requestors */
@@ -182,6 +200,130 @@
         #requestorDropdown .typeahead-item small {
             display: block;
             line-height: 1.4;
+        }
+
+        /* Worker search wrapper for modal dropdown positioning */
+        .worker-search-wrapper {
+            position: relative;
+        }
+
+        .worker-search-wrapper .typeahead-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1055; /* Higher than modal z-index (1050) */
+        }
+
+        /* Worker Card Styles */
+        .worker-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.875rem;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .worker-card.worker-company {
+            border-left: 4px solid #3498db;
+        }
+
+        .worker-card.worker-provider {
+            border-left: 4px solid #e67e22;
+        }
+
+        [data-pc-theme="dark"] .worker-card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+
+        [data-pc-theme="dark"] .worker-card.worker-company {
+            border-left-color: #3498db;
+        }
+
+        [data-pc-theme="dark"] .worker-card.worker-provider {
+            border-left-color: #e67e22;
+        }
+
+        .worker-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .worker-card .worker-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.125rem;
+        }
+
+        [data-pc-theme="dark"] .worker-card .worker-name {
+            color: #e5e7eb;
+        }
+
+        .worker-card .worker-details {
+            font-size: 0.8rem;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        .worker-card .worker-source-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+
+        .worker-card .worker-source-badge.badge-company {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .worker-card .worker-source-badge.badge-provider {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+
+        [data-pc-theme="dark"] .worker-card .worker-source-badge.badge-company {
+            background-color: #1e3a5f;
+            color: #90caf9;
+        }
+
+        [data-pc-theme="dark"] .worker-card .worker-source-badge.badge-provider {
+            background-color: #4a3728;
+            color: #ffcc80;
+        }
+
+        .worker-card .worker-chat-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        [data-pc-theme="dark"] .worker-card .worker-chat-badge {
+            background-color: #1b4332;
+            color: #81c784;
+        }
+
+        .worker-card .btn-remove-worker {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .worker-card:hover .btn-remove-worker {
+            opacity: 1;
         }
     </style>
 }
@@ -311,21 +453,24 @@
 
                             <!-- Requestor Card (hidden by default) -->
                             <div id="requestorCard" class="requestor-card" style="display: none;">
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-start">
                                     <div class="requestor-avatar me-3" id="requestorAvatar">
                                         <span id="requestorInitials"></span>
                                     </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 fw-semibold" id="requestorCardName"></h6>
-                                        <p class="mb-0 text-muted small" id="requestorCardDepartment"></p>
-                                        <p class="mb-0 text-muted small" id="requestorCardTitle"></p>
+                                    <div class="flex-grow-1 min-width-0">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <h6 class="mb-0 fw-semibold text-truncate" id="requestorCardName"></h6>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-link text-danger p-0 ms-2 btn-remove-requestor"
+                                                    id="deleteRequestorBtn"
+                                                    title="Remove requestor">
+                                                <i class="ti ti-x"></i>
+                                            </button>
+                                        </div>
+                                        <div class="requestor-details" id="requestorCardDetails">
+                                            <!-- Details populated by JavaScript -->
+                                        </div>
                                     </div>
-                                    <button type="button"
-                                            class="btn btn-sm btn-danger"
-                                            id="deleteRequestorBtn"
-                                            title="Remove requestor">
-                                        <i class="ti ti-trash"></i> Delete
-                                    </button>
                                 </div>
                             </div>
 
@@ -547,21 +692,20 @@
                                     data-placeholder="Select Service Provider"
                                     data-search-placeholder="Search provider...">
                                 <option value="">Select Service Provider</option>
-                                <option value="-1">Internal Company Worker</option>
-                                <option value="-2">Not Specified</option>
+                                <option value="-1">Not Specified</option>
                                 @if (Model?.ServiceProviders != null && Model.ServiceProviders.Any())
                                 {
                                     foreach (var provider in Model.ServiceProviders)
                                     {
-                                        <option value="@provider.id">
-                                            @provider.name @(!string.IsNullOrEmpty(provider.companyName) ? $"({provider.companyName})" : "")
+                                        <option value="@provider.IdServiceProvider">
+                                            @provider.AliasCompanyName
                                         </option>
                                     }
                                 }
                             </select>
                         </div>
 
-                        <!-- Workers Table -->
+                        <!-- Workers Cards -->
                         <div class="col-md-12 mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label fw-semibold">Workers</label>
@@ -569,24 +713,12 @@
                                     <i class="ti ti-plus me-1"></i>Add Worker
                                 </button>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm" id="workersTable">
-                                    <thead>
-                                        <tr>
-                                            <th width="40%">Worker Name</th>
-                                            <th width="30%">Source</th>
-                                            <th width="20%">Join Chat Room</th>
-                                            <th width="10%">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted">
-                                                <em>No workers added yet</em>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div id="workersContainer">
+                                <div id="workersEmptyState" class="text-center text-muted py-3 border rounded">
+                                    <i class="ti ti-users-group fs-3 d-block mb-2"></i>
+                                    <em>No workers added yet</em>
+                                </div>
+                                <div id="workersCardList" class="row g-2" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -1298,7 +1430,7 @@
                             <input class="form-check-input" type="radio" name="workerSource" id="sourceCompany" value="company" checked>
                             <label class="form-check-label" for="sourceCompany">Company Worker</label>
                         </div>
-                        <div class="form-check form-check-inline">
+                        <div class="form-check form-check-inline" id="serviceProviderSourceOption" style="display: none;">
                             <input class="form-check-input" type="radio" name="workerSource" id="sourceServiceProvider" value="serviceProvider">
                             <label class="form-check-label" for="sourceServiceProvider">Service Provider Worker</label>
                         </div>
@@ -1307,8 +1439,10 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold required-field">Worker Name</label>
-                    <input type="text" class="form-control form-control-sm" id="workerSearchModal" placeholder="Type to search worker..." autocomplete="off">
-                    <div id="workerSearchDropdownModal" class="typeahead-dropdown"></div>
+                    <div class="worker-search-wrapper">
+                        <input type="text" class="form-control form-control-sm" id="workerSearchModal" placeholder="Type to search worker..." autocomplete="off">
+                        <div id="workerSearchDropdownModal" class="typeahead-dropdown"></div>
+                    </div>
                     <input type="hidden" id="selectedWorkerId">
                     <input type="hidden" id="selectedWorkerSide">
                 </div>

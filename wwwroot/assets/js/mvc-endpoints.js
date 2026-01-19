@@ -56,6 +56,7 @@
                 GetFeedbackTypesByEnums: '/Helpdesk/GetFeedbackTypesByEnums',
                 GetServiceProvidersByClient: '/Helpdesk/GetServiceProvidersByClient',
                 GetPriorityLevels: '/Helpdesk/GetPriorityLevels',
+                GetPriorityLevelById: '/Helpdesk/GetPriorityLevelById',
                 GetPersonsInChargeByFilters: '/Helpdesk/GetPersonsInChargeByFilters'
             },
 

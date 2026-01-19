@@ -1,13 +1,17 @@
 ﻿using cfm_frontend.Constants;
+using cfm_frontend.DTOs;
+using cfm_frontend.DTOs.Employee;
+using cfm_frontend.DTOs.PriorityLevel;
+using cfm_frontend.DTOs.ServiceProvider;
 using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Extensions;
 using cfm_frontend.Models;
+using cfm_frontend.Models.Asset;
 using cfm_frontend.Models.WorkRequest;
 using cfm_frontend.Services;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
@@ -84,29 +88,34 @@ namespace cfm_frontend.Controllers.Helpdesk
 
                 var idClient = userInfo.PreferredClientId;
 
-                // Build request body with all filters (using backend API naming convention)
-                var requestBody = new WorkRequestBodyModel
+                // Build request body with nested filter structure for new API
+                var requestBody = new WorkRequestListParam
                 {
                     Client_idClient = idClient,
                     page = page,
-                    keyWordSearch = search,
-                    idPropertyType = propertyGroup ?? -1,
-                    LocationIds = locations ?? new List<int>(),
-                    ServiceProviderIds = serviceProviders ?? new List<int>(),
-                    RoomZone_idRoomZone = roomZone ?? -1,
-                    WorkCategoryIds = workCategories ?? new List<int>(),
-                    OtherCategoryIds = otherCategories ?? new List<int>(),
-                    PriorityLevels = priorities ?? new List<string>(),
-                    Statuses = statuses ?? new List<string>(),
-                    requestDateFrom = requestDateFrom,
-                    requestDateTo = requestDateTo,
-                    workCompletionFrom = workCompletionDateFrom,
-                    workCompletionTo = workCompletionDateTo,
-                    ImportantChecklists = checklist ?? new List<string>(),
-                    FeedbackTypes = feedback ?? new List<string>(),
-                    RequestMethods = requestMethods ?? new List<string>(),
-                    isSendEmail = hasSentEmail ?? false,
-                    showDeleted = showDeleted
+                    keywords = search,
+                    filter = new WorkRequestList_Filter
+                    {
+                        idPropertyType = propertyGroup ?? -1,
+                        idRoomZone = roomZone ?? -1,
+                        showDeletedData = showDeleted,
+                        requestDateFrom = requestDateFrom,
+                        requestDateTo = requestDateTo,
+                        workCompletionFrom = workCompletionDateFrom,
+                        workCompletionTo = workCompletionDateTo,
+                        hasEmailSent = hasSentEmail ?? false,
+                        isActiveData = true,
+                        locations = locations?.ToArray() ?? Array.Empty<int>(),
+                        serviceProviders = serviceProviders?.ToArray() ?? Array.Empty<int>(),
+                        workCategories = workCategories?.ToArray() ?? Array.Empty<int>(),
+                        otherCategories = otherCategories?.ToArray() ?? Array.Empty<int>(),
+                        otherCategories2 = Array.Empty<int>(),
+                        priorityLevels = priorities?.Select(int.Parse).ToArray() ?? Array.Empty<int>(),
+                        statuses = statuses?.Select(int.Parse).ToArray() ?? Array.Empty<int>(),
+                        importantChecklists = checklist?.Select(int.Parse).ToArray() ?? Array.Empty<int>(),
+                        feedbackTypes = feedback?.Select(int.Parse).ToArray() ?? Array.Empty<int>(),
+                        requestMethods = requestMethods?.Select(int.Parse).ToArray() ?? Array.Empty<int>()
+                    }
                 };
 
                 // Load work requests and filter options in parallel
@@ -187,37 +196,51 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var idClient = userInfo.PreferredClientId;
                 var idCompany = userInfo.IdCompany;
 
-                // Pre-load all static dropdown data in parallel
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient);
-                var workCategoriesTask = GetWorkCategoriesByTypesAsync(client, backendUrl, idClient);
-                var otherCategoriesTask = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory");
-                var otherCategories2Task = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2");
-                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient);
-                var priorityLevelsTask = GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient);
-                var feedbackTypesTask = GetFeedbackTypesAsync(client, backendUrl);
-                var currenciesTask = GetCurrenciesAsync(client, backendUrl);
-                var requestMethodsTask = GetRequestMethodsAsync(client, backendUrl);
-                var statusesTask = GetStatusesAsync(client, backendUrl);
-                var checklistTask = GetImportantChecklistAsync(client, backendUrl, idClient);
+                // Create cancellation token with overall timeout for all parallel tasks (60 seconds)
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                var ct = cts.Token;
 
-                await Task.WhenAll(
-                    locationsTask, workCategoriesTask, otherCategoriesTask, otherCategories2Task,
-                    serviceProvidersTask, priorityLevelsTask, feedbackTypesTask, currenciesTask,
-                    requestMethodsTask, statusesTask, checklistTask
-                );
+                // Pre-load all static dropdown data in parallel with cancellation support
+                var locationsTask = GetLocationsAsync(client, backendUrl, idClient, ct);
+                var workCategoriesTask = GetWorkCategoriesByTypesAsync(client, backendUrl, idClient, ct);
+                var otherCategoriesTask = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory", ct);
+                var otherCategories2Task = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2", ct);
+                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient, idCompany, ct);
+                var priorityLevelsTask = GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient, ct);
+                var feedbackTypesTask = GetFeedbackTypesAsync(client, backendUrl, ct);
+                var currenciesTask = GetCurrenciesAsync(client, backendUrl, ct);
+                var requestMethodsTask = GetRequestMethodsAsync(client, backendUrl, ct);
+                var statusesTask = GetStatusesAsync(client, backendUrl, ct);
+                var checklistTask = GetImportantChecklistAsync(client, backendUrl, idClient, ct);
 
-                // Populate ViewModel
-                viewmodel.Locations = await locationsTask;
-                viewmodel.WorkCategories = await workCategoriesTask;
-                viewmodel.OtherCategories = await otherCategoriesTask;
-                viewmodel.OtherCategories2 = await otherCategories2Task;
-                viewmodel.ServiceProviders = await serviceProvidersTask;
-                viewmodel.PriorityLevels = await priorityLevelsTask;
-                viewmodel.FeedbackTypes = await feedbackTypesTask;
-                viewmodel.Currencies = await currenciesTask;
-                viewmodel.RequestMethods = await requestMethodsTask;
-                viewmodel.Statuses = await statusesTask;
-                viewmodel.ImportantChecklist = await checklistTask;
+                // Wait for all tasks - use WhenAll to run in parallel
+                // Wrap in try-catch to handle any faulted tasks gracefully
+                try
+                {
+                    await Task.WhenAll(
+                        locationsTask, workCategoriesTask, otherCategoriesTask, otherCategories2Task,
+                        serviceProvidersTask, priorityLevelsTask, feedbackTypesTask, currenciesTask,
+                        requestMethodsTask, statusesTask, checklistTask
+                    );
+                }
+                catch (Exception taskEx)
+                {
+                    // Log but don't rethrow - we'll check each task individually below
+                    _logger.LogWarning(taskEx, "One or more dropdown data tasks failed, will use partial results");
+                }
+
+                // Populate ViewModel - safely get result from each completed task
+                viewmodel.Locations = locationsTask.IsCompletedSuccessfully ? locationsTask.Result : [];
+                viewmodel.WorkCategories = workCategoriesTask.IsCompletedSuccessfully ? workCategoriesTask.Result : [];
+                viewmodel.OtherCategories = otherCategoriesTask.IsCompletedSuccessfully ? otherCategoriesTask.Result : [];
+                viewmodel.OtherCategories2 = otherCategories2Task.IsCompletedSuccessfully ? otherCategories2Task.Result : [];
+                viewmodel.ServiceProviders = serviceProvidersTask.IsCompletedSuccessfully ? serviceProvidersTask.Result : [];
+                viewmodel.PriorityLevels = priorityLevelsTask.IsCompletedSuccessfully ? priorityLevelsTask.Result : [];
+                viewmodel.FeedbackTypes = feedbackTypesTask.IsCompletedSuccessfully ? feedbackTypesTask.Result : [];
+                viewmodel.Currencies = currenciesTask.IsCompletedSuccessfully ? currenciesTask.Result : [];
+                viewmodel.RequestMethods = requestMethodsTask.IsCompletedSuccessfully ? requestMethodsTask.Result : [];
+                viewmodel.Statuses = statusesTask.IsCompletedSuccessfully ? statusesTask.Result : [];
+                viewmodel.ImportantChecklist = checklistTask.IsCompletedSuccessfully ? checklistTask.Result : [];
 
                 _logger.LogInformation("Work Request Add page data loaded successfully: {LocationCount} locations, {CategoryCount} categories, {PriorityCount} priority levels",
                     viewmodel.Locations?.Count ?? 0,
@@ -643,31 +666,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetFloorsByLocation(int locationId)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetFloors(locationId)}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<FloorModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetFloors(locationId)}"),
+                "Failed to load floors");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var floors = await JsonSerializer.DeserializeAsync<List<FloorModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = floors });
-                }
-
-                return Json(new { success = false, message = "Failed to load floors" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching floors for property {LocationId}", locationId);
-                return Json(new { success = false, message = "Error loading floors" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -676,31 +682,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetRoomsByFloor(int propertyId, int floorId)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetRoomZones(propertyId, floorId)}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<RoomModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.GetRoomZones(propertyId, floorId)}"),
+                "Failed to load room zones");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var rooms = await JsonSerializer.DeserializeAsync<List<RoomModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = rooms });
-                }
-
-                return Json(new { success = false, message = "Failed to load room zones" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching room zones for property {PropertyId} and floor {FloorId}", propertyId, floorId);
-                return Json(new { success = false, message = "Error loading room zones" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -709,33 +698,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchEmployees(string term, int idClient)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/employee/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+                () => client.GetAsync($"{backendUrl}/api/employee/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                "Failed to search employees");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var employees = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = employees });
-                }
-
-                return Json(new { success = false, message = "Failed to search employees" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching employees with term {Term}", term);
-                return Json(new { success = false, message = "Error searching employees" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -744,33 +714,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPersonsInCharge(int idClient)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}"),
+                "Failed to load persons in charge");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var employees = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = employees });
-                }
-
-                return Json(new { success = false, message = "Failed to load persons in charge" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching persons in charge for client {IdClient}", idClient);
-                return Json(new { success = false, message = "Error loading persons in charge" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -779,37 +730,20 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchWorkers(string term, int? idServiceProvider)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var url = $"{backendUrl}/api/worker/search?term={Uri.EscapeDataString(term)}";
+            if (idServiceProvider.HasValue)
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var url = $"{backendUrl}/api/worker/search?term={Uri.EscapeDataString(term)}";
-                if (idServiceProvider.HasValue)
-                {
-                    url += $"&idServiceProvider={idServiceProvider.Value}";
-                }
-
-                var response = await client.GetAsync(url);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var workers = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = workers });
-                }
-
-                return Json(new { success = false, message = "Failed to search workers" });
+                url += $"&idServiceProvider={idServiceProvider.Value}";
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching workers with term {Term}", term);
-                return Json(new { success = false, message = "Error searching workers" });
-            }
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+                () => client.GetAsync(url),
+                "Failed to search workers");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -818,47 +752,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetLocationsByClient()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-                var userId = userInfo.IdWebUser;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var locations = await JsonSerializer.DeserializeAsync<List<LocationModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = locations });
-                }
-
-                return Json(new { success = false, message = "Failed to load properties" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching locations");
-                return Json(new { success = false, message = "Error loading locations" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<LocationModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}"),
+                "Failed to load properties");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -868,56 +784,39 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPersonsInChargeByFilters(int? idWorkCategory = null, int? idLocation = null)
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var url = $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}";
-                if (idWorkCategory.HasValue)
-                {
-                    url += $"&idWorkCategory={idWorkCategory.Value}";
-                }
-                if (idLocation.HasValue)
-                {
-                    url += $"&idLocation={idLocation.Value}";
-                }
-
-                var response = await client.GetAsync(url);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var employees = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = employees });
-                }
-
-                return Json(new { success = false, message = "Failed to load persons in charge" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching persons in charge with filters");
-                return Json(new { success = false, message = "Error loading persons in charge" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var url = $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}";
+            if (idWorkCategory.HasValue)
+            {
+                url += $"&idWorkCategory={idWorkCategory.Value}";
+            }
+            if (idLocation.HasValue)
+            {
+                url += $"&idLocation={idLocation.Value}";
+            }
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+                () => client.GetAsync(url),
+                "Failed to load persons in charge");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -927,50 +826,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchRequestors(string term)
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idCompany = userInfo.IdCompany;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Updated endpoint to match backend specification: /api/v1/employee with prefiks parameter
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/v1/employee?idCompany={idCompany}&prefiks={Uri.EscapeDataString(term)}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    // Use dynamic to handle backend response with IdEmployee, FullName, DepartmentName, Title
-                    var requestors = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = requestors });
-                }
-
-                return Json(new { success = false, message = "Failed to search requestors" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error searching requestors with term {Term}", term);
-                return Json(new { success = false, message = "Error searching requestors" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idCompany = userInfo.IdCompany;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<dynamic>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchRequestors}?idCompany={idCompany}&prefiks={Uri.EscapeDataString(term)}"),
+                "Error searching requestors");
+
+            return Json(new { success, data, message });
         }
 
 
@@ -981,98 +859,63 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetServiceProvidersByClient()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-                var idCompany = userInfo.IdCompany;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var providers = await JsonSerializer.DeserializeAsync<List<ServiceProviderModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = providers });
-                }
-
-                return Json(new { success = false, message = "Failed to load service providers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching service providers");
-                return Json(new { success = false, message = "Error loading service providers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+            var idCompany = userInfo.IdCompany;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<ServiceProviderFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}"),
+                "Failed to load service providers");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
         /// API: Search workers from company by location
         /// idCompany is retrieved from session
+        /// Uses backend endpoint: /api/v1/employee/worker
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> SearchWorkersByCompany(string term, int idLocation)
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idCompany = userInfo.IdCompany;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/worker/search-by-company?term={Uri.EscapeDataString(term)}&idLocation={idLocation}&idCompany={idCompany}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var workers = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = workers });
-                }
-
-                return Json(new { success = false, message = "Failed to search workers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error searching workers by company with term {Term}", term);
-                return Json(new { success = false, message = "Error searching workers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idCompany = userInfo.IdCompany;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<WorkerFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idCompany}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
+                "Error searching workers");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1082,67 +925,42 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchWorkersByServiceProvider(string term, int idLocation, int idServiceProvider)
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // First get the service provider's company ID
-                var spResponse = await client.GetAsync(
-                    $"{backendUrl}/api/serviceprovider/get-company-id?idClient={idClient}&idServiceProvider={idServiceProvider}"
-                );
-
-                if (!spResponse.IsSuccessStatusCode)
-                {
-                    return Json(new { success = false, message = "Failed to get service provider details" });
-                }
-
-                var spStream = await spResponse.Content.ReadAsStreamAsync();
-                var spData = await JsonSerializer.DeserializeAsync<dynamic>(
-                    spStream,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-
-                int idCompany = spData.GetProperty("idCompany").GetInt32();
-
-                // Now search workers with the company ID
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/worker/search-by-company?term={Uri.EscapeDataString(term)}&idLocation={idLocation}&idCompany={idCompany}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var workers = await JsonSerializer.DeserializeAsync<List<EmployeeModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = workers });
-                }
-
-                return Json(new { success = false, message = "Failed to search workers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error searching workers by service provider");
-                return Json(new { success = false, message = "Error searching workers" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // First get the service provider's company ID
+            var (spSuccess, spData, spMessage) = await SafeExecuteApiAsync<ServiceProviderCompanyResponse>(
+                () => client.GetAsync($"{backendUrl}/api/serviceprovider/get-company-id?idClient={idClient}&idServiceProvider={idServiceProvider}"),
+                "Failed to get service provider details");
+
+            if (!spSuccess || spData == null)
+            {
+                return Json(new { success = false, message = spMessage });
+            }
+
+            int idCompany = spData.IdCompany;
+
+            // Now search workers with the company ID
+            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+                () => client.GetAsync($"{backendUrl}/api/worker/search-by-company?term={Uri.EscapeDataString(term)}&idLocation={idLocation}&idCompany={idCompany}"),
+                "Failed to search workers");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1151,42 +969,25 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetImportantChecklistByTypes()
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = types });
-                }
-
-                return Json(new { success = false, message = "Failed to load important checklist" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching important checklist");
-                return Json(new { success = false, message = "Error loading important checklist" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
+            var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                "Failed to load important checklist");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1195,42 +996,25 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetWorkCategoriesByTypes()
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = types });
-                }
-
-                return Json(new { success = false, message = "Failed to load work categories" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work categories");
-                return Json(new { success = false, message = "Error loading work categories" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
+            var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                "Failed to load work categories");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1239,42 +1023,25 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetOtherCategoriesByTypes(string categoryType)
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var types = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = types });
-                }
-
-                return Json(new { success = false, message = "Failed to load categories" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error fetching categories for type {categoryType}");
-                return Json(new { success = false, message = "Error loading categories" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
+            var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                "Failed to load categories");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1295,48 +1062,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevels()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var priorities = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = priorities });
-                }
-
-                return Json(new { success = false, message = "Failed to load priority levels" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching priority levels");
-                return Json(new { success = false, message = "Error loading priority levels" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<DropdownOption>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}"),
+                "Failed to load priority levels");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1345,32 +1093,15 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetWorkRequestMethodsByEnums()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
+                "Failed to load work request methods");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = enums });
-                }
-
-                return Json(new { success = false, message = "Failed to load work request methods" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work request methods");
-                return Json(new { success = false, message = "Error loading work request methods" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1379,32 +1110,15 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetWorkRequestStatusesByEnums()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
+                "Failed to load work request statuses");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = enums });
-                }
-
-                return Json(new { success = false, message = "Failed to load work request statuses" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work request statuses");
-                return Json(new { success = false, message = "Error loading work request statuses" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1413,32 +1127,15 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetFeedbackTypesByEnums()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
+                "Failed to load feedback types");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var enums = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = enums });
-                }
-
-                return Json(new { success = false, message = "Failed to load feedback types" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching feedback types");
-                return Json(new { success = false, message = "Error loading feedback types" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1448,49 +1145,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetOfficeHours()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.OfficeHour.List}?idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var officeHours = await JsonSerializer.DeserializeAsync<List<OfficeHourModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = officeHours ?? new List<OfficeHourModel>() });
-                }
-
-                _logger.LogWarning("Failed to load office hours. Status: {StatusCode}", response.StatusCode);
-                return Json(new { success = false, message = "Failed to load office hours" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching office hours");
-                return Json(new { success = false, message = "Error loading office hours" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<OfficeHourModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.OfficeHour.List}?idClient={idClient}"),
+                "Failed to load office hours");
+
+            return Json(new { success, data = data ?? new List<OfficeHourModel>(), message });
         }
 
         /// <summary>
@@ -1501,80 +1178,56 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPublicHolidays()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Load 2-year window (current year + next year) to handle year boundaries
-                var currentYear = DateTime.Now.Year;
-                var nextYear = currentYear + 1;
-
-                // Fetch both years in parallel
-                var currentYearTask = client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.PublicHoliday.List}?idClient={idClient}&year={currentYear}&isActiveData=true"
-                );
-                var nextYearTask = client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.PublicHoliday.List}?idClient={idClient}&year={nextYear}&isActiveData=true"
-                );
-
-                await Task.WhenAll(currentYearTask, nextYearTask);
-
-                var currentYearResponse = await currentYearTask;
-                var nextYearResponse = await nextYearTask;
-
-                var allPublicHolidays = new List<PublicHolidayModel>();
-
-                if (currentYearResponse.IsSuccessStatusCode)
-                {
-                    var responseStream = await currentYearResponse.Content.ReadAsStreamAsync();
-                    var holidays = await JsonSerializer.DeserializeAsync<List<PublicHolidayModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (holidays != null)
-                    {
-                        allPublicHolidays.AddRange(holidays);
-                    }
-                }
-
-                if (nextYearResponse.IsSuccessStatusCode)
-                {
-                    var responseStream = await nextYearResponse.Content.ReadAsStreamAsync();
-                    var holidays = await JsonSerializer.DeserializeAsync<List<PublicHolidayModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (holidays != null)
-                    {
-                        allPublicHolidays.AddRange(holidays);
-                    }
-                }
-
-                return Json(new { success = true, data = allPublicHolidays });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching public holidays");
-                return Json(new { success = false, message = "Error loading public holidays" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Load 2-year window (current year + next year) to handle year boundaries
+            var currentYear = DateTime.Now.Year;
+            var nextYear = currentYear + 1;
+
+            // Fetch both years in parallel using SafeExecuteApiAsync
+            // Using /api/v1/masters/public-holidays/{year}?idClient={idClient}
+            var currentYearTask = SafeExecuteApiAsync<List<PublicHolidayModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(currentYear)}?idClient={idClient}"),
+                "Failed to load public holidays for current year");
+
+            var nextYearTask = SafeExecuteApiAsync<List<PublicHolidayModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(nextYear)}?idClient={idClient}"),
+                "Failed to load public holidays for next year");
+
+            await Task.WhenAll(currentYearTask, nextYearTask);
+
+            var currentYearResult = await currentYearTask;
+            var nextYearResult = await nextYearTask;
+
+            var allPublicHolidays = new List<PublicHolidayModel>();
+
+            if (currentYearResult.Success && currentYearResult.Data != null)
+            {
+                allPublicHolidays.AddRange(currentYearResult.Data);
+            }
+
+            if (nextYearResult.Success && nextYearResult.Data != null)
+            {
+                allPublicHolidays.AddRange(nextYearResult.Data);
+            }
+
+            return Json(new { success = true, data = allPublicHolidays });
         }
 
         /// <summary>
@@ -1601,53 +1254,36 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// API: Get priority level by ID
+        /// API: Get priority level by ID for target date calculation
+        /// Uses /api/v1/priority-level?idClient={idClient}&id={id}
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelById(int id)
         {
-            try
+            // Get user session for idClient
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session for idClient
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.GetById(id)}?idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var priorityLevel = await JsonSerializer.DeserializeAsync<dynamic>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = priorityLevel });
-                }
-
-                return Json(new { success = false, message = "Failed to load priority level details" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching priority level by ID {Id}", id);
-                return Json(new { success = false, message = "Error loading priority level details" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Using /api/v1/priority-level?idClient={idClient}&id={id} per MD-002 spec
+            var (success, data, message) = await SafeExecuteApiAsync<PriorityLevelResponse>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.Get}?idClient={idClient}&id={id}"),
+                "Failed to load priority level details");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1657,33 +1293,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelDropdownOptions(string type)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.DropdownOptions}?type={type}"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<DropdownOption>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.DropdownOptions}?type={type}"),
+                "Failed to load dropdown options");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var options = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = options });
-                }
-
-                return Json(new { success = false, message = "Failed to load dropdown options" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching dropdown options for type {Type}", type);
-                return Json(new { success = false, message = "Error loading dropdown options" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1748,42 +1365,23 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchJobCode(string term)
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired" });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/jobcode/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var jobCodes = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = jobCodes });
-                }
-
-                return Json(new { success = false, message = "Failed to search job codes" });
+                return Json(new { success = false, message = "Session expired" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching job codes");
-                return Json(new { success = false, message = "Error searching job codes" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.Models.JobCode.JobCodeModel>>(
+                () => client.GetAsync($"{backendUrl}/api/jobcode/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                "Failed to search job codes");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1792,33 +1390,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetCurrencies()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=currency"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
+                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=currency"),
+                "Failed to load currencies");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var currencies = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = currencies });
-                }
-
-                return Json(new { success = false, message = "Failed to load currencies" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching currencies");
-                return Json(new { success = false, message = "Error loading currencies" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1827,33 +1406,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetMeasurementUnits()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=measurementUnit"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
+                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=measurementUnit"),
+                "Failed to load measurement units");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var units = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = units });
-                }
-
-                return Json(new { success = false, message = "Failed to load measurement units" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching measurement units");
-                return Json(new { success = false, message = "Error loading measurement units" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1862,33 +1422,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetLaborMaterialLabels()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/lookup/list?type=laborMaterialLabel"
-                );
+            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
+                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=laborMaterialLabel"),
+                "Failed to load labor/material labels");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var labels = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = labels });
-                }
-
-                return Json(new { success = false, message = "Failed to load labor/material labels" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching labor/material labels");
-                return Json(new { success = false, message = "Error loading labor/material labels" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1897,42 +1438,23 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchAsset(string term)
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired" });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/asset/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var assets = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = assets });
-                }
-
-                return Json(new { success = false, message = "Failed to search assets" });
+                return Json(new { success = false, message = "Session expired" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching assets");
-                return Json(new { success = false, message = "Error searching assets" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<AssetSearchResult>>(
+                () => client.GetAsync($"{backendUrl}/api/asset/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                "Failed to search assets");
+
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -1941,42 +1463,23 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> SearchAssetGroup(string term)
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired" });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}/api/assetgroup/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var assetGroups = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = assetGroups });
-                }
-
-                return Json(new { success = false, message = "Failed to search asset groups" });
+                return Json(new { success = false, message = "Session expired" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching asset groups");
-                return Json(new { success = false, message = "Error searching asset groups" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<AssetGroupSearchResult>>(
+                () => client.GetAsync($"{backendUrl}/api/assetgroup/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                "Failed to search asset groups");
+
+            return Json(new { success, data, message });
         }
 
         #endregion
@@ -1995,41 +1498,22 @@ namespace cfm_frontend.Controllers.Helpdesk
             response.EnsureSuccessStatusCode();
         }
 
-        private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(   
+        private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(
             HttpClient client,
             string backendUrl,
-            WorkRequestBodyModel requestBody)
+            WorkRequestListParam requestBody)
         {
-            try
+            var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
             {
-                var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync(
-                    $"{backendUrl}{ApiEndpoints.WorkRequest.List}",
-                    content
-                );
+            var (success, data, _) = await SafeExecuteApiAsync<WorkRequestListApiResponse>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.List}", content),
+                "Error fetching work requests");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    return await JsonSerializer.DeserializeAsync<WorkRequestListApiResponse>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                }
-
-                _logger.LogWarning("Work Request API returned status: {StatusCode}", response.StatusCode);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work requests");
-                return null;
-            }
+            return success ? data : null;
         }
 
         private async Task<FilterOptionsModel?> GetFilterOptionsAsync(
@@ -2061,50 +1545,32 @@ namespace cfm_frontend.Controllers.Helpdesk
                 );
 
                 var responseStream = await response.Content.ReadAsStreamAsync();
+                var apiResponse = await JsonSerializer.DeserializeAsync<DTOs.ApiResponseDto<DTOs.WorkRequest.FilterOptionsDataDto>>(
+                    responseStream,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
 
-                if (response.IsSuccessStatusCode)
+                if (apiResponse?.Success == true && apiResponse.Data != null)
                 {
-                    // Deserialize success response with BaseSuccessResponse wrapper
-                    var successResponse = await JsonSerializer.DeserializeAsync<DTOs.BaseSuccessResponse<DTOs.WorkRequest.FilterOptionsDataDto>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    _logger.LogInformation("Filter options loaded successfully: {Message}", apiResponse.Message);
+                    // Map DTO to Model (flatten nested structures)
+                    return MapToFilterOptionsModel(apiResponse.Data);
+                }
+                else if (apiResponse != null)
+                {
+                    _logger.LogWarning(
+                        "Filter Options API returned error. Status: {StatusCode}, Message: {Message}, Errors: {Errors}",
+                        response.StatusCode,
+                        apiResponse.Message,
+                        string.Join(", ", apiResponse.Errors)
                     );
-
-                    if (successResponse != null && successResponse.data != null)
-                    {
-                        _logger.LogInformation("Filter options loaded successfully: {Message}", successResponse.msg);
-                        // Map DTO to Model (flatten nested structures)
-                        return MapToFilterOptionsModel(successResponse.data);
-                    }
-
-                    _logger.LogWarning("Filter Options API returned null data");
-                    return new FilterOptionsModel();
                 }
                 else
                 {
-                    // Handle error response with BaseErrorResponse wrapper
-                    var errorResponse = await JsonSerializer.DeserializeAsync<DTOs.BaseErrorResponse>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (errorResponse != null)
-                    {
-                        _logger.LogWarning(
-                            "Filter Options API returned error. Status: {StatusCode}, Code: {ErrorCode}, Message: {Message}, Errors: {Errors}",
-                            response.StatusCode,
-                            errorResponse.errorCode,
-                            errorResponse.msg,
-                            errorResponse.errors
-                        );
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Filter Options API returned status: {StatusCode}", response.StatusCode);
-                    }
-
-                    return new FilterOptionsModel();
+                    _logger.LogWarning("Filter Options API returned null or invalid response. Status: {StatusCode}", response.StatusCode);
                 }
+
+                return new FilterOptionsModel();
             }
             catch (Exception ex)
             {
@@ -2213,143 +1679,82 @@ namespace cfm_frontend.Controllers.Helpdesk
             return model;
         }
 
-        private async Task<List<LocationModel>> GetLocationsAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<List<LocationModel>> GetLocationsAsync(HttpClient client, string backendUrl, int idClient, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}");
+            var (success, data, _) = await SafeExecuteApiAsync<List<LocationModel>>(
+                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}", ct),
+                "Error fetching properties",
+                cancellationToken);
 
-                // Throw on 401 to trigger auth failure handling
-                EnsureSuccessOrThrow(response);
-
-                var responseStream = await response.Content.ReadAsStreamAsync();
-                var result = await JsonSerializer.DeserializeAsync<List<LocationModel>>(
-                    responseStream,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-                return result ?? new List<LocationModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching properties");
-                return new List<LocationModel>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<ServiceProviderModel>> GetServiceProvidersAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<List<ServiceProviderFormDetailResponse>> GetServiceProvidersAsync(HttpClient client, string backendUrl, int idClient, int idCompany, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}");
+            var (success, data, _) = await SafeExecuteApiAsync<List<ServiceProviderFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}", ct),
+                "Error fetching service providers",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<ServiceProviderModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                    return result ?? new List<ServiceProviderModel>();
-                }
-
-                _logger.LogWarning("Service Providers API returned status: {StatusCode}", response.StatusCode);
-                return new List<ServiceProviderModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching service providers");
-                return new List<ServiceProviderModel>();
-            }
+            return success && data != null ? data : [];
         }
 
         private async Task<List<WorkCategoryModel>> GetWorkCategoriesAsync(HttpClient client, string backendUrl)
         {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}");
+            var (success, data, _) = await SafeExecuteApiAsync<List<WorkCategoryModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}"),
+                "Error fetching work categories");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<WorkCategoryModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                    return result ?? new List<WorkCategoryModel>();
-                }
-
-                _logger.LogWarning("Work Categories API returned status: {StatusCode}", response.StatusCode);
-                return new List<WorkCategoryModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work categories");
-                return new List<WorkCategoryModel>();
-            }
+            return success && data != null ? data : new List<WorkCategoryModel>();
         }
 
         private async Task<List<OtherCategoryModel>> GetOtherCategoriesAsync(HttpClient client, string backendUrl)
         {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.OtherCategory.List}");
+            var (success, data, _) = await SafeExecuteApiAsync<List<OtherCategoryModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.OtherCategory.List}"),
+                "Error fetching other categories");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<OtherCategoryModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-                    return result ?? new List<OtherCategoryModel>();
-                }
-
-                _logger.LogWarning("Other Categories API returned status: {StatusCode}", response.StatusCode);
-                return new List<OtherCategoryModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching other categories");
-                return new List<OtherCategoryModel>();
-            }
+            return success && data != null ? data : new List<OtherCategoryModel>();
         }
 
-        private async Task<List<Models.PriorityLevelModel>> GetPriorityLevelsWithDetailsAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<List<Models.PriorityLevelModel>> GetPriorityLevelsWithDetailsAsync(HttpClient client, string backendUrl, int idClient, CancellationToken cancellationToken = default)
         {
             try
             {
-                // Step 1: Get list of priority levels
-                var listResponse = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}");
+                // Step 1: Get list of priority levels using SafeExecuteApiAsync
+                var (listSuccess, listData, listMessage) = await SafeExecuteApiAsync<List<DropdownOption>>(
+                    ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}", ct),
+                    "Failed to load priority levels list",
+                    cancellationToken);
 
-                if (!listResponse.IsSuccessStatusCode)
+                if (!listSuccess || listData == null || listData.Count == 0)
                 {
-                    _logger.LogWarning("Priority Levels list API returned status: {StatusCode}", listResponse.StatusCode);
-                    return new List<cfm_frontend.Models.PriorityLevelModel>();
+                    _logger.LogWarning("Priority Levels list API failed or returned empty: {Message}", listMessage);
+                    return [];
                 }
 
-                var listStream = await listResponse.Content.ReadAsStreamAsync();
-                var priorities = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                    listStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (priorities == null || priorities.Count == 0)
-                    return new List<cfm_frontend.Models.PriorityLevelModel>();
-
-                // Step 2: Fetch full details for each priority (N+1 calls, but cached server-side)
-                var detailTasks = priorities.Select(async p =>
+                // Step 2: Fetch full details for each priority using SafeExecuteApiAsync
+                // Using /api/v1/priority-level?idClient={idClient}&id={id} per MD-002 spec
+                var detailTasks = listData.Select(async p =>
                 {
                     try
                     {
-                        var priorityId = p.GetProperty("value").GetInt32();
-                        var detailResponse = await client.GetAsync(
-                            $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.GetById(priorityId)}?idClient={idClient}");
-
-                        if (detailResponse.IsSuccessStatusCode)
+                        if (!int.TryParse(p.Value, out var priorityId))
                         {
-                            var stream = await detailResponse.Content.ReadAsStreamAsync();
-                            return await JsonSerializer.DeserializeAsync<cfm_frontend.Models.PriorityLevelModel>(
-                                stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                            _logger.LogWarning("Invalid priority level value: {Value}", p.Value);
+                            return null;
                         }
+
+                        var (success, data, message) = await SafeExecuteApiAsync<Models.PriorityLevelModel>(
+                            ct => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.Get}?idClient={idClient}&id={priorityId}", ct),
+                            $"Failed to load priority level {priorityId}",
+                            cancellationToken);
+
+                        if (success && data != null)
+                        {
+                            return data;
+                        }
+                        _logger.LogWarning("Priority level {Id} fetch failed: {Message}", priorityId, message);
                         return null;
                     }
                     catch (Exception ex)
@@ -2357,190 +1762,92 @@ namespace cfm_frontend.Controllers.Helpdesk
                         _logger.LogWarning(ex, "Error fetching priority level details");
                         return null;
                     }
-                });
+                }).ToList(); // Materialize the query to avoid deferred execution issues
 
                 var details = await Task.WhenAll(detailTasks);
-                return details.Where(d => d != null).ToList();
+                return details.Where(d => d != null).ToList()!;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching priority levels with details");
-                return new List<cfm_frontend.Models.PriorityLevelModel>();
+                return [];
             }
         }
 
-        private async Task<List<EnumFormDetailResponse>> GetFeedbackTypesAsync(HttpClient client, string backendUrl)
+        private async Task<List<EnumFormDetailResponse>> GetFeedbackTypesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType);
+            var (success, data, _) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}", ct),
+                "Error fetching feedback types",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<EnumFormDetailResponse>();
-                }
-
-                _logger.LogWarning("Feedback Types API returned status: {StatusCode}", response.StatusCode);
-                return new List<EnumFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching feedback types");
-                return new List<EnumFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<LookupModel>> GetCurrenciesAsync(HttpClient client, string backendUrl)
+        private async Task<List<LookupModel>> GetCurrenciesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.Currency}");
+            var (success, data, _) = await SafeExecuteApiAsync<List<LookupModel>>(
+                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.Currency}", ct),
+                "Error fetching currencies",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<LookupModel>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<LookupModel>();
-                }
-
-                _logger.LogWarning("Currencies API returned status: {StatusCode}", response.StatusCode);
-                return new List<LookupModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching currencies");
-                return new List<LookupModel>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<EnumFormDetailResponse>> GetRequestMethodsAsync(HttpClient client, string backendUrl)
+        private async Task<List<EnumFormDetailResponse>> GetRequestMethodsAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod);
+            var (success, data, _) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}", ct),
+                "Error fetching request methods",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<EnumFormDetailResponse>();
-                }
-
-                _logger.LogWarning("Request Methods API returned status: {StatusCode}", response.StatusCode);
-                return new List<EnumFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching request methods");
-                return new List<EnumFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<EnumFormDetailResponse>> GetStatusesAsync(HttpClient client, string backendUrl)
+        private async Task<List<EnumFormDetailResponse>> GetStatusesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}");
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus);
+            var (success, data, _) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}", ct),
+                "Error fetching statuses",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<EnumFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<EnumFormDetailResponse>();
-                }
-
-                _logger.LogWarning("Statuses API returned status: {StatusCode}", response.StatusCode);
-                return new List<EnumFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching statuses");
-                return new List<EnumFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<TypeFormDetailResponse>> GetImportantChecklistAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<List<TypeFormDetailResponse>> GetImportantChecklistAsync(HttpClient client, string backendUrl, int idClient, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+            var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
+            var (success, data, _) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}", ct),
+                "Error fetching important checklist",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<TypeFormDetailResponse>();
-                }
-
-                _logger.LogWarning("Important Checklist API returned status: {StatusCode}", response.StatusCode);
-                return new List<TypeFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching important checklist");
-                return new List<TypeFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<TypeFormDetailResponse>> GetOtherCategoriesByTypeAsync(HttpClient client, string backendUrl, int idClient, string categoryType)
+        private async Task<List<TypeFormDetailResponse>> GetOtherCategoriesByTypeAsync(HttpClient client, string backendUrl, int idClient, string categoryType, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+            var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
+            var (success, data, _) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}", ct),
+                $"Error fetching {categoryType}",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<TypeFormDetailResponse>();
-                }
-
-                _logger.LogWarning("{CategoryType} API returned status: {StatusCode}", categoryType, response.StatusCode);
-                return new List<TypeFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching {CategoryType}", categoryType);
-                return new List<TypeFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
-        private async Task<List<TypeFormDetailResponse>> GetWorkCategoriesByTypesAsync(HttpClient client, string backendUrl, int idClient)
+        private async Task<List<TypeFormDetailResponse>> GetWorkCategoriesByTypesAsync(HttpClient client, string backendUrl, int idClient, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
-                var response = await client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}");
+            var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
+            var (success, data, _) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}", ct),
+                "Error fetching work categories by types",
+                cancellationToken);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<List<TypeFormDetailResponse>>(
-                        stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    return result ?? new List<TypeFormDetailResponse>();
-                }
-
-                _logger.LogWarning("Work Categories (Types) API returned status: {StatusCode}", response.StatusCode);
-                return new List<TypeFormDetailResponse>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work categories by types");
-                return new List<TypeFormDetailResponse>();
-            }
+            return success && data != null ? data : [];
         }
 
         #endregion
@@ -2579,31 +1886,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetWorkCategories()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<WorkCategoryModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}"),
+                "Failed to load work categories");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var categories = await JsonSerializer.DeserializeAsync<List<WorkCategoryModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = categories });
-                }
-
-                return Json(new { success = false, message = "Failed to load work categories" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching work categories");
-                return Json(new { success = false, message = "Error loading work categories" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -2612,40 +1902,25 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateWorkCategory([FromBody] WorkCategoryModel model)
         {
-            try
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Category name is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Create}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Work category created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to create work category. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to create work category" });
+                return Json(new { success = false, message = "Category name is required" });
             }
-            catch (Exception ex)
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                _logger.LogError(ex, "Error creating work category");
-                return Json(new { success = false, message = "Error creating work category" });
-            }
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Create}", content),
+                "Failed to create work category");
+
+            return Json(new { success, message = success ? "Work category created successfully" : message });
         }
 
         /// <summary>
@@ -2654,45 +1929,30 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateWorkCategory([FromBody] WorkCategoryModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid category ID" });
-                }
-
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Category name is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Update}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Work category updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to update work category. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to update work category" });
+                return Json(new { success = false, message = "Invalid category ID" });
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                _logger.LogError(ex, "Error updating work category");
-                return Json(new { success = false, message = "Error updating work category" });
+                return Json(new { success = false, message = "Category name is required" });
             }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Update}", content),
+                "Failed to update work category");
+
+            return Json(new { success, message = success ? "Work category updated successfully" : message });
         }
 
         /// <summary>
@@ -2701,34 +1961,19 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteWorkCategory([FromBody] WorkCategoryModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid category ID" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Delete(model.id)}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Work category deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to delete work category. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to delete work category" });
+                return Json(new { success = false, message = "Invalid category ID" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting work category");
-                return Json(new { success = false, message = "Error deleting work category" });
-            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Delete(model.id)}"),
+                "Failed to delete work category");
+
+            return Json(new { success, message = success ? "Work category deleted successfully" : message });
         }
 
         #region Other Category
@@ -2840,231 +2085,152 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetImportantChecklists()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var checklist = await JsonSerializer.DeserializeAsync<List<ImportantChecklistItemModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    // Sort by displayOrder
-                    var sortedChecklist = checklist?.OrderBy(x => x.displayOrder).ToList();
-
-                    return Json(new { success = true, data = sortedChecklist });
-                }
-
-                return Json(new { success = false, message = "Failed to load important checklist" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching important checklist");
-                return Json(new { success = false, message = "Error loading important checklist" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<ImportantChecklistItemModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"),
+                "Failed to load important checklist");
+
+            // Sort by displayOrder if data exists
+            var sortedData = data?.OrderBy(x => x.displayOrder).ToList();
+
+            return Json(new { success, data = sortedData, message });
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateImportantChecklist([FromBody] ImportantChecklistItemModel model)
         {
-            try
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Checklist name is required" });
-                }
-
-                // Get user session for idClient
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Set label to name if not provided
-                if (string.IsNullOrWhiteSpace(model.label))
-                {
-                    model.label = model.name;
-                }
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Important checklist item created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to create important checklist. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to create important checklist item" });
+                return Json(new { success = false, message = "Checklist name is required" });
             }
-            catch (Exception ex)
+
+            // Get user session for idClient
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                _logger.LogError(ex, "Error creating important checklist");
-                return Json(new { success = false, message = "Error creating important checklist item" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Set label to name if not provided
+            if (string.IsNullOrWhiteSpace(model.label))
+            {
+                model.label = model.name;
+            }
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
+                "Failed to create important checklist item");
+
+            return Json(new { success, message = success ? "Important checklist item created successfully" : message });
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateImportantChecklist([FromBody] ImportantChecklistItemModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid checklist ID" });
-                }
-
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Checklist name is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Set label to name if not provided
-                if (string.IsNullOrWhiteSpace(model.label))
-                {
-                    model.label = model.name;
-                }
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Important checklist item updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to update important checklist. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to update important checklist item" });
+                return Json(new { success = false, message = "Invalid checklist ID" });
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                _logger.LogError(ex, "Error updating important checklist");
-                return Json(new { success = false, message = "Error updating important checklist item" });
+                return Json(new { success = false, message = "Checklist name is required" });
             }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Set label to name if not provided
+            if (string.IsNullOrWhiteSpace(model.label))
+            {
+                model.label = model.name;
+            }
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
+                "Failed to update important checklist item");
+
+            return Json(new { success, message = success ? "Important checklist item updated successfully" : message });
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteImportantChecklist([FromBody] ImportantChecklistItemModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid checklist ID" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Important checklist item deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to delete important checklist. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to delete important checklist item" });
+                return Json(new { success = false, message = "Invalid checklist ID" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting important checklist");
-                return Json(new { success = false, message = "Error deleting important checklist item" });
-            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}"),
+                "Failed to delete important checklist item");
+
+            return Json(new { success, message = success ? "Important checklist item deleted successfully" : message });
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateImportantChecklistOrder([FromBody] ImportantChecklistUpdateOrderRequest request)
         {
-            try
+            if (request.items == null || !request.items.Any())
             {
-                if (request.items == null || !request.items.Any())
-                {
-                    return Json(new { success = false, message = "No items to update" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var jsonPayload = JsonSerializer.Serialize(request, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.UpdateOrder}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Checklist order updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to update checklist order. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to update checklist order" });
+                return Json(new { success = false, message = "No items to update" });
             }
-            catch (Exception ex)
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(request, new JsonSerializerOptions
             {
-                _logger.LogError(ex, "Error updating checklist order");
-                return Json(new { success = false, message = "Error updating checklist order" });
-            }
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.UpdateOrder}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
+                "Failed to update checklist order");
+
+            return Json(new { success, message = success ? "Checklist order updated successfully" : message });
         }
 
         #endregion
@@ -3082,189 +2248,125 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetRelatedDocuments()
         {
-            try
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                // Get user session
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync(
-                    $"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}&idClient={idClient}"
-                );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var documents = await JsonSerializer.DeserializeAsync<List<RelatedDocumentModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = documents });
-                }
-
-                return Json(new { success = false, message = "Failed to load related documents" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
-            catch (Exception ex)
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
             {
-                _logger.LogError(ex, "Error fetching related documents");
-                return Json(new { success = false, message = "Error loading related documents" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<RelatedDocumentModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}&idClient={idClient}"),
+                "Failed to load related documents");
+
+            return Json(new { success, data, message });
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateRelatedDocument([FromBody] RelatedDocumentModel model)
         {
-            try
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Document name is required" });
-                }
-
-                // Get user session for idClient
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (userInfo == null)
-                {
-                    return Json(new { success = false, message = "Session expired. Please login again." });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Set label to name if not provided
-                if (string.IsNullOrWhiteSpace(model.label))
-                {
-                    model.label = model.name;
-                }
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Related document created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to create related document. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to create related document" });
+                return Json(new { success = false, message = "Document name is required" });
             }
-            catch (Exception ex)
+
+            // Get user session for idClient
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                _logger.LogError(ex, "Error creating related document");
-                return Json(new { success = false, message = "Error creating related document" });
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Set label to name if not provided
+            if (string.IsNullOrWhiteSpace(model.label))
+            {
+                model.label = model.name;
+            }
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content),
+                "Failed to create related document");
+
+            return Json(new { success, message = success ? "Related document created successfully" : message });
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateRelatedDocument([FromBody] RelatedDocumentModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid document ID" });
-                }
-
-                if (string.IsNullOrWhiteSpace(model.name))
-                {
-                    return Json(new { success = false, message = "Document name is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                // Set label to name if not provided
-                if (string.IsNullOrWhiteSpace(model.label))
-                {
-                    model.label = model.name;
-                }
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Related document updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to update related document. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to update related document" });
+                return Json(new { success = false, message = "Invalid document ID" });
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(model.name))
             {
-                _logger.LogError(ex, "Error updating related document");
-                return Json(new { success = false, message = "Error updating related document" });
+                return Json(new { success = false, message = "Document name is required" });
             }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Set label to name if not provided
+            if (string.IsNullOrWhiteSpace(model.label))
+            {
+                model.label = model.name;
+            }
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content),
+                "Failed to update related document");
+
+            return Json(new { success, message = success ? "Related document updated successfully" : message });
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteRelatedDocument([FromBody] RelatedDocumentModel model)
         {
-            try
+            if (model.id <= 0)
             {
-                if (model.id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid document ID" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Related document deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to delete related document. Status: {StatusCode}, Content: {Content}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to delete related document" });
+                return Json(new { success = false, message = "Invalid document ID" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting related document");
-                return Json(new { success = false, message = "Error deleting related document" });
-            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}"),
+                "Failed to delete related document");
+
+            return Json(new { success, message = success ? "Related document deleted successfully" : message });
         }
 
         #endregion
@@ -3273,117 +2375,70 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         private async Task<IActionResult> GetCategoriesGeneric(string endpoint, string entityName)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.GenericCategory.List(endpoint)}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.GenericCategory.List(endpoint)}"),
+                $"Failed to load {entityName}");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var categories = await JsonSerializer.DeserializeAsync<List<dynamic>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = categories });
-                }
-
-                return Json(new { success = false, message = $"Failed to load {entityName}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error fetching {entityName}");
-                return Json(new { success = false, message = $"Error loading {entityName}" });
-            }
+            return Json(new { success, data, message });
         }
 
         private async Task<IActionResult> CreateCategoryGeneric(dynamic model, string endpoint, string entityName)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Create(endpoint)}", content),
+                $"Failed to create {entityName}");
 
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Create(endpoint)}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} created successfully" });
-                }
-
-                return Json(new { success = false, message = $"Failed to create {entityName}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error creating {entityName}");
-                return Json(new { success = false, message = $"Error creating {entityName}" });
-            }
+            var successMessage = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} created successfully";
+            return Json(new { success, message = success ? successMessage : message });
         }
 
         private async Task<IActionResult> UpdateCategoryGeneric(dynamic model, string endpoint, string entityName)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Update(endpoint)}", content),
+                $"Failed to update {entityName}");
 
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Update(endpoint)}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} updated successfully" });
-                }
-
-                return Json(new { success = false, message = $"Failed to update {entityName}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error updating {entityName}");
-                return Json(new { success = false, message = $"Error updating {entityName}" });
-            }
+            var successMessage = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} updated successfully";
+            return Json(new { success, message = success ? successMessage : message });
         }
 
         private async Task<IActionResult> DeleteCategoryGeneric(int id, string endpoint, string entityName)
         {
-            try
+            if (id <= 0)
             {
-                if (id <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid ID" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Delete(endpoint, id)}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} deleted successfully" });
-                }
-
-                return Json(new { success = false, message = $"Failed to delete {entityName}" });
+                return Json(new { success = false, message = "Invalid ID" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error deleting {entityName}");
-                return Json(new { success = false, message = $"Error deleting {entityName}" });
-            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.GenericCategory.Delete(endpoint, id)}"),
+                $"Failed to delete {entityName}");
+
+            var successMessage = $"{char.ToUpper(entityName[0]) + entityName.Substring(1)} deleted successfully";
+            return Json(new { success, message = success ? successMessage : message });
         }
 
         #endregion
@@ -3401,189 +2456,104 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPersonsInCharge()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.List}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.List}"),
+                "Failed to load persons in charge");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var data = await JsonSerializer.DeserializeAsync<List<object>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data });
-                }
-
-                return Json(new { success = false, message = "Failed to load persons in charge" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading persons in charge");
-                return Json(new { success = false, message = "An error occurred while loading persons in charge" });
-            }
+            return Json(new { success, data, message });
         }
 
         [HttpGet]
         public async Task<IActionResult> GetPersonInChargeById(int id)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.GetById(id)}");
+            var (success, data, message) = await SafeExecuteApiAsync<object>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.GetById(id)}"),
+                "Failed to load person in charge details");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var data = await JsonSerializer.DeserializeAsync<object>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data });
-                }
-
-                return Json(new { success = false, message = "Failed to load person in charge details" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading person in charge details");
-                return Json(new { success = false, message = "An error occurred while loading person in charge details" });
-            }
+            return Json(new { success, data, message });
         }
 
         [HttpGet]
         public async Task<IActionResult> GetProperties()
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired" });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.Properties}?idClient={userInfo.PreferredClientId}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var data = await JsonSerializer.DeserializeAsync<List<object>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data });
-                }
-
-                return Json(new { success = false, message = "Failed to load properties" });
+                return Json(new { success = false, message = "Session expired" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading properties");
-                return Json(new { success = false, message = "An error occurred while loading properties" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.Properties}?idClient={userInfo.PreferredClientId}"),
+                "Failed to load properties");
+
+            return Json(new { success, data, message });
         }
 
         [HttpPost]
         public async Task<IActionResult> CreatePersonInCharge([FromBody] dynamic model)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
 
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Create}", content);
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Create}", content),
+                "Failed to add person in charge");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Person in charge added successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = $"Failed to add person in charge: {errorContent}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating person in charge");
-                return Json(new { success = false, message = "An error occurred while adding person in charge" });
-            }
+            return Json(new { success, message = success ? "Person in charge added successfully" : message });
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdatePersonInCharge([FromBody] dynamic model)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
 
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Update}", content);
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Update}", content),
+                "Failed to update person in charge");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Person in charge updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = $"Failed to update person in charge: {errorContent}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating person in charge");
-                return Json(new { success = false, message = "An error occurred while updating person in charge" });
-            }
+            return Json(new { success, message = success ? "Person in charge updated successfully" : message });
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeletePersonInCharge([FromBody] dynamic model)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var id = ((JsonElement)model.GetProperty("id")).GetInt32();
+            var id = ((JsonElement)model.GetProperty("id")).GetInt32();
 
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(id)}");
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(id)}"),
+                "Failed to delete person in charge");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Person in charge deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = $"Failed to delete person in charge: {errorContent}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting person in charge");
-                return Json(new { success = false, message = "An error occurred while deleting person in charge" });
-            }
+            return Json(new { success, message = success ? "Person in charge deleted successfully" : message });
         }
 
         #endregion
@@ -3609,98 +2579,58 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetCostApproverGroups()
         {
-            try
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
             {
-                var userSessionJson = HttpContext.Session.GetString("UserSession");
-                if (string.IsNullOrEmpty(userSessionJson))
-                {
-                    return Json(new { success = false, message = "Session expired" });
-                }
-
-                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var idClient = userInfo.PreferredClientId;
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.List}?idClient={idClient}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var costApproverGroups = await JsonSerializer.DeserializeAsync<List<object>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data = costApproverGroups });
-                }
-
-                return Json(new { success = false, message = "Failed to load cost approver groups" });
+                return Json(new { success = false, message = "Session expired" });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching cost approver groups");
-                return Json(new { success = false, message = "Error loading cost approver groups" });
-            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.List}?idClient={idClient}"),
+                "Failed to load cost approver groups");
+
+            return Json(new { success, data, message });
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateCostApproverGroup([FromBody] dynamic model)
         {
-            try
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
 
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Create}", content);
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Create}", content),
+                "Failed to create cost approver group");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Cost approver group created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = $"Failed to create cost approver group: {errorContent}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating cost approver group");
-                return Json(new { success = false, message = "An error occurred while creating cost approver group" });
-            }
+            return Json(new { success, message = success ? "Cost approver group created successfully" : message });
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteCostApproverGroup([FromBody] dynamic model)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var id = ((JsonElement)model.GetProperty("id")).GetInt32();
+            var id = ((JsonElement)model.GetProperty("id")).GetInt32();
 
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Delete(id)}");
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Delete(id)}"),
+                "Failed to delete cost approver group");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Cost approver group deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = $"Failed to delete cost approver group: {errorContent}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting cost approver group");
-                return Json(new { success = false, message = "An error occurred while deleting cost approver group" });
-            }
+            return Json(new { success, message = success ? "Cost approver group deleted successfully" : message });
         }
 
         #region Email Distribution List Management
@@ -3727,32 +2657,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetEmailDistributionList()
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetPageReferences}");
+            var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.DTOs.EmailDistribution.EmailDistributionReferenceModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetPageReferences}"),
+                "Failed to load email distribution list");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var data = await JsonSerializer.DeserializeAsync<List<cfm_frontend.DTOs.EmailDistribution.EmailDistributionReferenceModel>>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data });
-                }
-
-                _logger.LogError("Failed to load email distribution list. Status: {StatusCode}", response.StatusCode);
-                return Json(new { success = false, message = "Failed to load email distribution list" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading email distribution list");
-                return Json(new { success = false, message = "An error occurred while loading the data" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -3803,32 +2715,14 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetEmailDistributionById(int id)
         {
-            try
-            {
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetById(id)}");
+            var (success, data, message) = await SafeExecuteApiAsync<cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetById(id)}"),
+                "Failed to load email distribution details");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var data = await JsonSerializer.DeserializeAsync<cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel>(
-                        responseStream,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    return Json(new { success = true, data });
-                }
-
-                _logger.LogError("Failed to load email distribution. ID: {Id}, Status: {StatusCode}", id, response.StatusCode);
-                return Json(new { success = false, message = "Failed to load email distribution details" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading email distribution. ID: {Id}", id);
-                return Json(new { success = false, message = "An error occurred while loading the data" });
-            }
+            return Json(new { success, data, message });
         }
 
         /// <summary>
@@ -3837,49 +2731,34 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model)
         {
-            try
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
+            if (accessCheck != null)
+                return Json(new { success = false, message = "You do not have permission to create" });
+
+            if (string.IsNullOrWhiteSpace(model.PageReference))
             {
-                var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
-                if (accessCheck != null)
-                    return Json(new { success = false, message = "You do not have permission to create" });
-
-                if (string.IsNullOrWhiteSpace(model.PageReference))
-                {
-                    return Json(new { success = false, message = "Page reference is required" });
-                }
-
-                if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
-                {
-                    return Json(new { success = false, message = "At least one 'To' recipient is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Create}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Email distribution created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to create email distribution. Status: {StatusCode}, Error: {Error}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to create email distribution" });
+                return Json(new { success = false, message = "Page reference is required" });
             }
-            catch (Exception ex)
+
+            if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
             {
-                _logger.LogError(ex, "Error creating email distribution");
-                return Json(new { success = false, message = "An error occurred while creating" });
+                return Json(new { success = false, message = "At least one 'To' recipient is required" });
             }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Create}", content),
+                "Failed to create email distribution");
+
+            return Json(new { success, message = success ? "Email distribution created successfully" : message });
         }
 
         /// <summary>
@@ -3888,44 +2767,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model, int id)
         {
-            try
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
+            if (accessCheck != null)
+                return Json(new { success = false, message = "You do not have permission to update" });
+
+            if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
             {
-                var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
-                if (accessCheck != null)
-                    return Json(new { success = false, message = "You do not have permission to update" });
-
-                if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
-                {
-                    return Json(new { success = false, message = "At least one 'To' recipient is required" });
-                }
-
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
-
-                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Update(id)}", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Email distribution updated successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to update email distribution. ID: {Id}, Status: {StatusCode}, Error: {Error}",
-                    id, response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to update email distribution" });
+                return Json(new { success = false, message = "At least one 'To' recipient is required" });
             }
-            catch (Exception ex)
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
             {
-                _logger.LogError(ex, "Error updating email distribution. ID: {Id}", id);
-                return Json(new { success = false, message = "An error occurred while updating" });
-            }
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Update(id)}", content),
+                "Failed to update email distribution");
+
+            return Json(new { success, message = success ? "Email distribution updated successfully" : message });
         }
 
         /// <summary>
@@ -3934,35 +2798,20 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteEmailDistribution([FromBody] dynamic model)
         {
-            try
-            {
-                var accessCheck = this.CheckDeleteAccess("Helpdesk", "Settings");
-                if (accessCheck != null)
-                    return Json(new { success = false, message = "You do not have permission to delete" });
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Settings");
+            if (accessCheck != null)
+                return Json(new { success = false, message = "You do not have permission to delete" });
 
-                var client = _httpClientFactory.CreateClient("BackendAPI");
-                var backendUrl = _configuration["BackendBaseUrl"];
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
 
-                var id = ((JsonElement)model.GetProperty("id")).GetInt32();
+            var id = ((JsonElement)model.GetProperty("id")).GetInt32();
 
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Delete(id)}");
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Delete(id)}"),
+                "Failed to delete email distribution");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Email distribution deleted successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete email distribution. ID: {Id}, Status: {StatusCode}, Error: {Error}",
-                    id, response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to delete email distribution" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting email distribution");
-                return Json(new { success = false, message = "An error occurred while deleting" });
-            }
+            return Json(new { success, message = success ? "Email distribution deleted successfully" : message });
         }
 
         #endregion

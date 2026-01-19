@@ -285,8 +285,9 @@
                     $.each(response.data, function (index, provider) {
                         $select.append(
                             $('<option></option>')
-                                .val(provider.id)
-                                .text(provider.name)
+                                .val(provider.idServiceProvider)
+                                .text(provider.aliasCompanyName)
+                                .attr('data-id-company', provider.idCompany)
                         );
                     });
                 }
@@ -320,7 +321,7 @@
                 const priorityId = priority.value || priority.id;
 
                 // Fetch full priority level details
-                const detailResponse = await fetch(`/Helpdesk/GetPriorityLevelById?id=${priorityId}`);
+                const detailResponse = await fetch(MvcEndpoints.Helpers.buildUrl(MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevelById, { id: priorityId }));
                 const detailData = await detailResponse.json();
 
                 if (detailData.success && detailData.data) {
@@ -786,6 +787,8 @@
 
     /**
      * Search requestors via API (updated for new backend structure)
+     * Response model: RequestorFormDetailResponse
+     * Fields: IdEmployee, FullName, DepartmentName, Title, EmailAddress, PhoneNumber
      */
     function searchEmployees(term, $dropdown, onSelectCallback) {
         $.ajax({
@@ -797,21 +800,26 @@
 
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, employee) {
+                        const name = employee.fullName || employee.FullName;
+                        const title = employee.title || employee.Title || '';
+                        const department = employee.departmentName || employee.DepartmentName || '';
+
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${employee.fullName || employee.FullName}</strong>
+                                <strong>${name}</strong>
                                 <small class="text-muted">
-                                    ${employee.title || employee.Title || ''}<br>
-                                    ${employee.departmentName || employee.DepartmentName || ''}
+                                    ${title ? title + '<br>' : ''}${department}
                                 </small>
                             `)
                             .on('click', function () {
                                 onSelectCallback({
                                     id: employee.idEmployee || employee.IdEmployee,
-                                    fullName: employee.fullName || employee.FullName,
-                                    department: employee.departmentName || employee.DepartmentName,
-                                    title: employee.title || employee.Title
+                                    fullName: name,
+                                    departmentName: department,
+                                    title: title,
+                                    emailAddress: employee.emailAddress || employee.EmailAddress || '',
+                                    phoneNumber: employee.phoneNumber || employee.PhoneNumber || ''
                                 });
                             });
                         $dropdown.append($item);
@@ -835,7 +843,8 @@
 
     /**
      * Show requestor card with employee information
-     * Hides search box and displays card with avatar, name, department, title
+     * Displays card with avatar, name, title, department, email, phone
+     * Model: RequestorFormDetailResponse
      */
     function showRequestorCard(requestor) {
         // Store selected requestor in state
@@ -852,8 +861,23 @@
         $('#requestorInitials').text(initials);
         $('#requestorAvatar').css('background-color', avatarColor);
         $('#requestorCardName').text(requestor.fullName);
-        $('#requestorCardDepartment').text(requestor.department || 'N/A');
-        $('#requestorCardTitle').text(requestor.title || 'N/A');
+
+        // Build details HTML
+        let detailsHtml = '';
+        if (requestor.title) {
+            detailsHtml += `<div><i class="ti ti-briefcase me-1"></i>${requestor.title}</div>`;
+        }
+        if (requestor.departmentName) {
+            detailsHtml += `<div><i class="ti ti-building me-1"></i>${requestor.departmentName}</div>`;
+        }
+        if (requestor.emailAddress) {
+            detailsHtml += `<div><i class="ti ti-mail me-1"></i>${requestor.emailAddress}</div>`;
+        }
+        if (requestor.phoneNumber) {
+            detailsHtml += `<div><i class="ti ti-phone me-1"></i>${requestor.phoneNumber}</div>`;
+        }
+
+        $('#requestorCardDetails').html(detailsHtml || '<div class="text-muted fst-italic">No details available</div>');
 
         // Toggle visibility: hide search, show card
         $('#requestorSearchContainer').hide();
@@ -879,8 +903,7 @@
 
         // Clear card content
         $('#requestorCardName').text('');
-        $('#requestorCardDepartment').text('');
-        $('#requestorCardTitle').text('');
+        $('#requestorCardDetails').empty();
 
         // Toggle visibility: show search, hide card
         $('#requestorCard').hide();
@@ -945,6 +968,8 @@
 
     /**
      * Search workers from company via API
+     * Uses backend endpoint: /api/v1/employee/worker
+     * Response includes: IdEmployee, FullName, DepartmentName, Title
      */
     function searchWorkers(term, serviceProviderId, $dropdown, onSelectCallback) {
         const idLocation = state.selectedLocation;
@@ -969,13 +994,16 @@
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${worker.fullName || worker.name}</strong>
-                                ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}
+                                <strong>${worker.fullName || worker.FullName}</strong>
+                                <small class="text-muted">
+                                    ${worker.title || worker.Title || ''}<br>
+                                    ${worker.departmentName || worker.DepartmentName || ''}
+                                </small>
                             `)
                             .on('click', function () {
                                 onSelectCallback({
-                                    id: worker.id,
-                                    name: worker.fullName || worker.name
+                                    id: worker.idEmployee || worker.IdEmployee,
+                                    name: worker.fullName || worker.FullName
                                 });
                             });
                         $dropdown.append($item);
@@ -1055,10 +1083,32 @@
             // Show worker from service provider if not "Not Specified" or "Self-Performed"
             if (value && value !== '-1' && value !== '-2') {
                 showWorkerFromServiceProvider(value, idLocation);
+                // Show Service Provider Worker option in Add Worker modal
+                updateWorkerSourceOptions(true);
             } else {
                 hideWorkerFromServiceProvider();
+                // Hide Service Provider Worker option in Add Worker modal
+                updateWorkerSourceOptions(false);
             }
         });
+    }
+
+    /**
+     * Update worker source options visibility in Add Worker modal
+     * @param {boolean} showServiceProvider - Whether to show Service Provider Worker option
+     */
+    function updateWorkerSourceOptions(showServiceProvider) {
+        const $serviceProviderOption = $('#serviceProviderSourceOption');
+
+        if (showServiceProvider) {
+            $serviceProviderOption.show();
+        } else {
+            $serviceProviderOption.hide();
+            // If Service Provider was selected, switch back to Company
+            if ($('#sourceServiceProvider').is(':checked')) {
+                $('#sourceCompany').prop('checked', true).trigger('change');
+            }
+        }
     }
 
     /**
@@ -1597,7 +1647,7 @@
         });
 
         $('input[name="workerSource"]').on('change', function () {
-            $('#workerSearchModal').val('');
+            $('#workerSearchModal').val('').removeData('selectedWorker');
             $('#selectedWorkerId').val('');
             $('#selectedWorkerSide').val('');
         });
@@ -1607,6 +1657,10 @@
             clearTimeout(workerSearchTimeout);
             const term = $(this).val().trim();
             const source = $('input[name="workerSource"]:checked').val();
+
+            // Clear selected worker data if user is typing new search
+            $(this).removeData('selectedWorker');
+            $('#selectedWorkerId').val('');
 
             if (term.length < CONFIG.minSearchLength) {
                 $('#workerSearchDropdownModal').removeClass('show').empty();
@@ -1618,23 +1672,12 @@
 
         $('#saveWorkerBtn').on('click', saveWorker);
 
-        window.removeWorkerRow = function (button) {
-            const $row = $(button).closest('tr');
-            const index = $row.data('worker-index');
-            state.workers = state.workers.filter((_, i) => i !== index);
-            $row.remove();
-
-            $('#workersTable tbody tr').each(function (i) {
-                $(this).attr('data-worker-index', i);
-            });
-
-            if ($('#workersTable tbody tr').length === 0) {
-                $('#workersTable tbody').html(`
-                    <tr><td colspan="4" class="text-center text-muted"><em>No workers added yet</em></td></tr>
-                `);
+        // Close dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#workerSearchModal, #workerSearchDropdownModal').length) {
+                $('#workerSearchDropdownModal').removeClass('show').empty();
             }
-            showNotification('Worker removed', 'info');
-        };
+        });
     }
 
     function searchWorkersForModal(term, source) {
@@ -1650,10 +1693,19 @@
 
         const params = { term, idLocation };
         if (source === 'serviceProvider') {
-            params.idServiceProvider = $('#serviceProviderSelect').val();
-            if (!params.idServiceProvider) {
+            const $selectedOption = $('#serviceProviderSelect option:selected');
+            const idServiceProvider = $selectedOption.val();
+            const idCompany = $selectedOption.attr('data-id-company');
+
+            // Only validate that it's not the special "Not Specified" value
+            if (!idServiceProvider || idServiceProvider === '-1') {
                 showNotification('Please select a service provider first', 'warning');
                 return;
+            }
+
+            params.idServiceProvider = idServiceProvider;
+            if (idCompany) {
+                params.idCompany = idCompany;
             }
         }
 
@@ -1667,11 +1719,24 @@
 
                 if (response.success && response.data?.length > 0) {
                     $.each(response.data, function (index, worker) {
+                        // Build display text with title and department
+                        const name = worker.fullName || worker.FullName || worker.name;
+                        const title = worker.title || worker.Title || '';
+                        const department = worker.departmentName || worker.DepartmentName || '';
+
+                        let detailsHtml = '';
+                        if (title || department) {
+                            detailsHtml = '<small class="text-muted">';
+                            if (title) detailsHtml += title;
+                            if (title && department) detailsHtml += '<br>';
+                            if (department) detailsHtml += department;
+                            detailsHtml += '</small>';
+                        }
+
                         $dropdown.append(
                             $('<div></div>')
                                 .addClass('typeahead-item')
-                                .html(`<strong>${worker.fullName || worker.name}</strong>
-                                       ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}`)
+                                .html(`<strong>${name}</strong>${detailsHtml ? '<br>' + detailsHtml : ''}`)
                                 .on('click', () => selectWorkerForModal(worker, source))
                         );
                     });
@@ -1689,69 +1754,171 @@
     }
 
     function selectWorkerForModal(worker, source) {
-        $('#workerSearchModal').val(worker.fullName || worker.name);
-        $('#selectedWorkerId').val(worker.id || worker.Employee_idEmployee);
+        const workerName = worker.fullName || worker.FullName || worker.name;
+        const workerId = worker.idEmployee || worker.IdEmployee || worker.id || worker.Employee_idEmployee;
+        const department = worker.departmentName || worker.DepartmentName || '';
+        const title = worker.title || worker.Title || '';
+        const email = worker.emailAddress || worker.EmailAddress || '';
+        const phone = worker.phoneNumber || worker.PhoneNumber || '';
+
+        $('#workerSearchModal').val(workerName);
+        $('#selectedWorkerId').val(workerId);
         $('#selectedWorkerSide').val(worker.side_Enum_idEnum || (source === 'company' ? 1 : 2));
         $('#workerSearchDropdownModal').removeClass('show').empty();
+
+        // Store full worker data for later use
+        $('#workerSearchModal').data('selectedWorker', {
+            id: workerId,
+            fullName: workerName,
+            departmentName: department,
+            title: title,
+            emailAddress: email,
+            phoneNumber: phone
+        });
+
+        console.log('Worker selected:', { id: workerId, name: workerName, source: source });
     }
 
     function resetWorkerModal() {
         $('#sourceCompany').prop('checked', true);
-        $('#workerSearchModal').val('');
+        $('#workerSearchModal').val('').removeData('selectedWorker');
         $('#selectedWorkerId').val('');
         $('#selectedWorkerSide').val('');
         $('#joinChatRoomCheck').prop('checked', false);
         $('#workerSearchDropdownModal').removeClass('show').empty();
+
+        // Update Service Provider Worker option visibility based on current selection
+        const serviceProviderValue = $('#serviceProviderSelect').val();
+        const showServiceProvider = serviceProviderValue && serviceProviderValue !== '-1' && serviceProviderValue !== '-2';
+        updateWorkerSourceOptions(showServiceProvider);
     }
 
     function saveWorker() {
         const workerId = $('#selectedWorkerId').val();
-        const workerName = $('#workerSearchModal').val();
         const workerSide = $('#selectedWorkerSide').val();
         const joinChatRoom = $('#joinChatRoomCheck').is(':checked');
         const source = $('input[name="workerSource"]:checked').val();
 
-        if (!workerId || !workerName) {
-            showNotification('Please select a worker', 'error');
+        // Get full worker data stored during selection
+        const selectedWorkerData = $('#workerSearchModal').data('selectedWorker');
+
+        if (!workerId || !selectedWorkerData) {
+            showNotification('Please select a worker from the search results', 'error');
             return;
         }
 
         const worker = {
             Employee_idEmployee: parseInt(workerId),
-            name: workerName,
+            fullName: selectedWorkerData.fullName,
+            departmentName: selectedWorkerData.departmentName,
+            title: selectedWorkerData.title,
+            emailAddress: selectedWorkerData.emailAddress,
+            phoneNumber: selectedWorkerData.phoneNumber,
             side_Enum_idEnum: parseInt(workerSide),
             source: source === 'company' ? 'Company' : 'Service Provider',
             isJoinToExternalChatRoom: joinChatRoom
         };
 
         state.workers.push(worker);
-        addWorkerToTable(worker);
+        addWorkerCard(worker, state.workers.length - 1);
 
         $('#addWorkerModal').modal('hide');
         showNotification('Worker added successfully', 'success');
     }
 
-    function addWorkerToTable(worker) {
-        const $tbody = $('#workersTable tbody');
-        if ($tbody.find('td[colspan]').length > 0) $tbody.empty();
+    /**
+     * Add worker card to the workers container
+     */
+    function addWorkerCard(worker, index) {
+        // Hide empty state, show card list
+        $('#workersEmptyState').hide();
+        $('#workersCardList').show();
 
-        const rowIndex = state.workers.length - 1;
-        $tbody.append(`
-            <tr data-worker-index="${rowIndex}">
-                <td>${worker.name}</td>
-                <td>${worker.source}</td>
-                <td class="text-center">
-                    <input type="checkbox" class="form-check-input"
-                           ${worker.isJoinToExternalChatRoom ? 'checked' : ''} disabled>
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-danger"
-                            onclick="removeWorkerRow(this)">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `);
+        const isCompany = worker.source === 'Company';
+        const initials = generateInitials(worker.fullName);
+        const avatarColor = generateAvatarColor(worker.fullName);
+
+        // Build details lines
+        let detailsHtml = '';
+        if (worker.title) {
+            detailsHtml += `<div><i class="ti ti-briefcase me-1"></i>${worker.title}</div>`;
+        }
+        if (worker.departmentName) {
+            detailsHtml += `<div><i class="ti ti-building me-1"></i>${worker.departmentName}</div>`;
+        }
+        if (worker.emailAddress) {
+            detailsHtml += `<div><i class="ti ti-mail me-1"></i>${worker.emailAddress}</div>`;
+        }
+        if (worker.phoneNumber) {
+            detailsHtml += `<div><i class="ti ti-phone me-1"></i>${worker.phoneNumber}</div>`;
+        }
+
+        const cardHtml = `
+            <div class="col-md-6 col-lg-4" data-worker-index="${index}">
+                <div class="worker-card ${isCompany ? 'worker-company' : 'worker-provider'}">
+                    <div class="d-flex align-items-start">
+                        <div class="worker-avatar me-2" style="background-color: ${avatarColor};">
+                            ${initials}
+                        </div>
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="worker-name text-truncate">${worker.fullName}</div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-worker"
+                                        onclick="removeWorkerCard(${index})" title="Remove worker">
+                                    <i class="ti ti-x"></i>
+                                </button>
+                            </div>
+                            <div class="worker-details mb-2">
+                                ${detailsHtml || '<div class="text-muted fst-italic">No details available</div>'}
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="worker-source-badge ${isCompany ? 'badge-company' : 'badge-provider'}">
+                                    <i class="ti ${isCompany ? 'ti-building-community' : 'ti-truck-delivery'} me-1"></i>
+                                    ${worker.source}
+                                </span>
+                                ${worker.isJoinToExternalChatRoom ? `
+                                    <span class="worker-chat-badge">
+                                        <i class="ti ti-message-circle me-1"></i>Chat
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $('#workersCardList').append(cardHtml);
+    }
+
+    /**
+     * Remove worker card
+     */
+    window.removeWorkerCard = function (index) {
+        // Remove from state
+        state.workers.splice(index, 1);
+
+        // Rebuild cards
+        rebuildWorkerCards();
+
+        showNotification('Worker removed', 'info');
+    };
+
+    /**
+     * Rebuild all worker cards (after removal)
+     */
+    function rebuildWorkerCards() {
+        const $cardList = $('#workersCardList');
+        $cardList.empty();
+
+        if (state.workers.length === 0) {
+            $cardList.hide();
+            $('#workersEmptyState').show();
+        } else {
+            state.workers.forEach((worker, index) => {
+                addWorkerCard(worker, index);
+            });
+        }
     }
 
     /**

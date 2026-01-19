@@ -89,9 +89,9 @@ namespace cfm_frontend.Constants
             public const string Create = Base + "/create";
 
             /// <summary>
-            /// POST: Create new work request
+            /// POST: Get work request list with filters
             /// </summary>
-            public const string List = Base + "/GetWorkRequestList";
+            public const string List = Base + "/list";
 
             /// <summary>
             /// GET: Get all work request statuses
@@ -179,7 +179,13 @@ namespace cfm_frontend.Constants
             /// GET: Search employees/requestors by search term
             /// Query params: term, idCompany
             /// </summary>
-            public const string SearchRequestors = Base + "/search-requestors";
+            public const string SearchRequestors = Base + "/requestor";
+
+            /// <summary>
+            /// GET: Search workers from company
+            /// Query params: idCompany, idProperty, prefiks
+            /// </summary>
+            public const string SearchWorkers = Base + "/worker";
         }
 
         #endregion
@@ -191,13 +197,13 @@ namespace cfm_frontend.Constants
         /// </summary>
         public static class ServiceProvider
         {
-            private const string Base = ApiBase + "/serviceprovider";
+            private const string Base = ApiBase + "/service-provider";
 
             /// <summary>
             /// GET: Get service providers for client and company
             /// Query params: idClient, idCompany
             /// </summary>
-            public const string List = Base + "/list";
+            public const string List = Base;
         }
 
         #endregion
@@ -262,34 +268,58 @@ namespace cfm_frontend.Constants
 
         #endregion
 
+        #region Priority Level (Form Detail)
+
+        /// <summary>
+        /// Priority Level endpoints for form detail (target date calculation)
+        /// Target: GET /api/v{version}/priority-level?idClient={idClient}&id={id}
+        /// Note: This is separate from Settings.PriorityLevel which is for CRUD operations
+        /// </summary>
+        public static class PriorityLevelDetail
+        {
+            private const string Base = ApiBase + "/priority-level";
+
+            /// <summary>
+            /// GET: Get priority level form detail by ID
+            /// Query params: idClient, id
+            /// Returns: PriorityLevelFormDetailResponse with target date configurations
+            /// </summary>
+            public const string Get = Base;
+        }
+
+        #endregion
+
         #region Office Hour & Public Holiday
 
         /// <summary>
         /// Office Hour management endpoints
+        /// Target: GET /api/v{version}/masters/office-hours?idClient={idClient}
         /// </summary>
         public static class OfficeHour
         {
-            private const string Base = ApiBase + "/officehour";
+            private const string Base = ApiBase + "/masters/office-hours";
 
             /// <summary>
             /// GET: Get office hours for client
             /// Query params: idClient
             /// </summary>
-            public const string List = Base + "/list";
+            public const string List = Base;
         }
 
         /// <summary>
         /// Public Holiday management endpoints
+        /// Target: GET /api/v{version}/masters/public-holidays/{year}?idClient={idClient}
         /// </summary>
         public static class PublicHoliday
         {
-            private const string Base = ApiBase + "/publicholiday";
+            private const string Base = ApiBase + "/masters/public-holidays";
 
             /// <summary>
-            /// GET: Get public holidays for client
-            /// Query params: idClient, year (optional), isActiveData (optional)
+            /// GET: Get public holidays for client by year
+            /// Path param: year
+            /// Query params: idClient
             /// </summary>
-            public const string List = Base + "/list";
+            public static string GetByYear(int year) => $"{Base}/{year}";
         }
 
         #endregion

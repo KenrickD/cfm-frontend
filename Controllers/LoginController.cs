@@ -83,10 +83,10 @@ namespace cfm_frontend.Controllers
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    if (authResponse?.data != null)
+                    if (authResponse?.Success == true && authResponse.Data != null)
                     {
                         // Step 2: Fetch user info using the tokens
-                        var userInfoResponse = await FetchUserInfoAsync(authResponse.data.Token, authResponse.data.RefreshToken);
+                        var userInfoResponse = await FetchUserInfoAsync(authResponse.Data.Token, authResponse.Data.RefreshToken);
 
                         if (userInfoResponse != null)
                         {
@@ -112,7 +112,7 @@ namespace cfm_frontend.Controllers
                             HttpContext.Session.SetString("UserSession", JsonSerializer.Serialize(userInfo));
 
                             // Step 5: Load user privileges (pass token explicitly since auth cookie not created yet)
-                            var privileges = await _privilegeService.LoadUserPrivilegesAsync(authResponse.data.Token);
+                            var privileges = await _privilegeService.LoadUserPrivilegesAsync(authResponse.Data.Token);
                             if (privileges != null)
                             {
                                 HttpContext.Session.SetPrivileges(privileges);
@@ -145,8 +145,8 @@ namespace cfm_frontend.Controllers
 
                             authProperties.StoreTokens(new List<AuthenticationToken>
                             {
-                                new AuthenticationToken { Name = "access_token", Value = authResponse.data.Token },
-                                new AuthenticationToken { Name = "refresh_token", Value = authResponse.data.RefreshToken }
+                                new AuthenticationToken { Name = "access_token", Value = authResponse.Data.Token },
+                                new AuthenticationToken { Name = "refresh_token", Value = authResponse.Data.RefreshToken }
                             });
 
                             await HttpContext.SignInAsync(

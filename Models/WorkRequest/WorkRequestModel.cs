@@ -1,5 +1,46 @@
 ﻿namespace cfm_frontend.Models.WorkRequest
 {
+    /// <summary>
+    /// Request model for the new work request list API endpoint (/api/v1/work-request/list)
+    /// </summary>
+    public class WorkRequestListParam
+    {
+        public int Client_idClient { get; set; }
+        public string? keywords { get; set; }
+        public int page { get; set; } = 1;
+        public WorkRequestList_Filter filter { get; set; } = new WorkRequestList_Filter();
+    }
+
+    /// <summary>
+    /// Filter object for WorkRequestListParam
+    /// </summary>
+    public class WorkRequestList_Filter
+    {
+        public int idPropertyType { get; set; } = -1;
+        public int idRoomZone { get; set; } = -1;
+        public bool showDeletedData { get; set; } = false;
+        public DateTime? requestDateFrom { get; set; }
+        public DateTime? requestDateTo { get; set; }
+        public DateTime? workCompletionFrom { get; set; }
+        public DateTime? workCompletionTo { get; set; }
+        public bool hasBeenCompletedByWorker { get; set; } = false;
+        public bool hasEmailSent { get; set; } = false;
+        public bool isActiveData { get; set; } = true;
+        public int[] feedbackTypes { get; set; } = Array.Empty<int>();
+        public int[] importantChecklists { get; set; } = Array.Empty<int>();
+        public int[] locations { get; set; } = Array.Empty<int>();
+        public int[] otherCategories { get; set; } = Array.Empty<int>();
+        public int[] otherCategories2 { get; set; } = Array.Empty<int>();
+        public int[] priorityLevels { get; set; } = Array.Empty<int>();
+        public int[] requestMethods { get; set; } = Array.Empty<int>();
+        public int[] serviceProviders { get; set; } = Array.Empty<int>();
+        public int[] statuses { get; set; } = Array.Empty<int>();
+        public int[] workCategories { get; set; } = Array.Empty<int>();
+    }
+
+    /// <summary>
+    /// Legacy request model - kept for backward compatibility
+    /// </summary>
     public class WorkRequestBodyModel {
         public int Client_idClient { get; set; }
         public string searchTag { get; set; } = "";

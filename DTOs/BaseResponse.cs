@@ -1,31 +1,15 @@
 namespace cfm_frontend.DTOs
 {
     /// <summary>
-    /// Base success response wrapper from backend API
-    /// </summary>
-    public class BaseSuccessResponse
-    {
-        public string msg { get; set; } = string.Empty;
-        public object data { get; set; } = new();
-    }
-
-    /// <summary>
-    /// Generic success response wrapper with strongly-typed data
+    /// Unified API response wrapper for all backend API responses.
     /// </summary>
     /// <typeparam name="T">Type of the data payload</typeparam>
-    public class BaseSuccessResponse<T>
+    public class ApiResponseDto<T>
     {
-        public string msg { get; set; } = string.Empty;
-        public T data { get; set; } = default!;
-    }
-
-    /// <summary>
-    /// Base error response wrapper from backend API
-    /// </summary>
-    public class BaseErrorResponse
-    {
-        public int errorCode { get; set; }
-        public string msg { get; set; } = string.Empty;
-        public object errors { get; set; } = new();
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public T? Data { get; set; }
+        public List<string> Errors { get; set; } = new();
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

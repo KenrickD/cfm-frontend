@@ -86,6 +86,43 @@ var idClient = userInfo.PreferredClientId;
 var idEmployee = userInfo.UserId;
 ```
 
+### API Response Format
+
+All backend API responses use the unified `ApiResponseDto<T>` wrapper (`DTOs/BaseResponse.cs`):
+
+```csharp
+public class ApiResponseDto<T>
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public T? Data { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+}
+```
+
+**Usage Pattern:**
+```csharp
+var response = await client.GetAsync($"{backendUrl}/api/endpoint");
+var responseStream = await response.Content.ReadAsStreamAsync();
+var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<MyDataType>>(
+    responseStream,
+    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+);
+
+if (apiResponse?.Success == true && apiResponse.Data != null)
+{
+    // Use apiResponse.Data
+}
+else
+{
+    // Handle error: apiResponse?.Message, apiResponse?.Errors
+}
+```
+
+**Specialized Response Types:**
+- `LoginResponse : ApiResponseDto<TokenData>` - Authentication responses
+
 ### API Calls
 ```csharp
 var client = _httpClientFactory.CreateClient("BackendAPI");
@@ -100,10 +137,16 @@ var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { Propert
 var content = new StringContent(json, Encoding.UTF8, "application/json");
 var response = await client.PostAsync($"{backendUrl}/api/endpoint", content);
 
-// Deserialize
-var result = await JsonSerializer.DeserializeAsync<ResponseType>(
-    await response.Content.ReadAsStreamAsync(),
+// Deserialize with ApiResponseDto
+var responseStream = await response.Content.ReadAsStreamAsync();
+var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<ResponseType>>(
+    responseStream,
     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+if (apiResponse?.Success == true && apiResponse.Data != null)
+{
+    var result = apiResponse.Data;
+}
 ```
 
 ### Parallel API Calls
@@ -195,6 +238,13 @@ After login, use parameterless overload (reads token from session):
 ```csharp
 var privileges = await _privilegeService.LoadUserPrivilegesAsync();
 ```
+
+## Important Model Notes
+
+### WorkRequestFilterModel
+**File:** `Models/WorkRequest/WorkRequestFilterModel.cs`
+
+This model contains nested classes (`LocationModel`, `ServiceProviderModel`, `WorkCategoryModel`, `OtherCategoryModel`, `PriorityLevelModel`) that are **strictly used only for the filter options** in the Work Request Index page (`Views/Helpdesk/WorkRequest/Index.cshtml`). These classes populate the Advanced Filters modal checkboxes and dropdowns. Do not use these models for other purposes.
 
 ## Key Controllers
 
