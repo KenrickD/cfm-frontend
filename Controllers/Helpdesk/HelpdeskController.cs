@@ -1255,7 +1255,8 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get priority level by ID for target date calculation
-        /// Uses /api/v1/priority-level?idClient={idClient}&id={id}
+        /// Fetches all priority levels and filters to the requested ID
+        /// Note: Backend provides single endpoint returning all priority levels
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelById(int id)
@@ -1278,12 +1279,23 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            // Using /api/v1/priority-level?idClient={idClient}&id={id} per MD-002 spec
-            var (success, data, message) = await SafeExecuteApiAsync<PriorityLevelResponse>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.Get}?idClient={idClient}&id={id}"),
-                "Failed to load priority level details");
+            // Fetch all priority levels and find the one with matching ID
+            var (success, allData, message) = await SafeExecuteApiAsync<List<Models.PriorityLevelModel>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.List}?idClient={idClient}"),
+                "Failed to load priority levels");
 
-            return Json(new { success, data, message });
+            if (!success || allData == null)
+            {
+                return Json(new { success = false, message });
+            }
+
+            var priorityLevel = allData.FirstOrDefault(p => p.Id == id);
+            if (priorityLevel == null)
+            {
+                return Json(new { success = false, message = $"Priority level with ID {id} not found" });
+            }
+
+            return Json(new { success = true, data = priorityLevel });
         }
 
         /// <summary>
@@ -1719,59 +1731,22 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         private async Task<List<Models.PriorityLevelModel>> GetPriorityLevelsWithDetailsAsync(HttpClient client, string backendUrl, int idClient, CancellationToken cancellationToken = default)
         {
-            try
+            // Single API call returns all priority levels with full details
+            // Used for: dropdown (Id, Name) and target date calculation (duration fields, reference fields, etc.)
+            // Note: Backend returns PriorityLevelFormDetailResponse with TimeSpan ticks, which we convert to days/hours/minutes
+            var (success, data, message) = await SafeExecuteApiAsync<List<DTOs.PriorityLevel.PriorityLevelFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.List}?idClient={idClient}", ct),
+                "Failed to load priority levels",
+                cancellationToken);
+
+            if (!success || data == null)
             {
-                // Step 1: Get list of priority levels using SafeExecuteApiAsync
-                var (listSuccess, listData, listMessage) = await SafeExecuteApiAsync<List<DropdownOption>>(
-                    ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}", ct),
-                    "Failed to load priority levels list",
-                    cancellationToken);
-
-                if (!listSuccess || listData == null || listData.Count == 0)
-                {
-                    _logger.LogWarning("Priority Levels list API failed or returned empty: {Message}", listMessage);
-                    return [];
-                }
-
-                // Step 2: Fetch full details for each priority using SafeExecuteApiAsync
-                // Using /api/v1/priority-level?idClient={idClient}&id={id} per MD-002 spec
-                var detailTasks = listData.Select(async p =>
-                {
-                    try
-                    {
-                        if (!int.TryParse(p.Value, out var priorityId))
-                        {
-                            _logger.LogWarning("Invalid priority level value: {Value}", p.Value);
-                            return null;
-                        }
-
-                        var (success, data, message) = await SafeExecuteApiAsync<Models.PriorityLevelModel>(
-                            ct => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.Get}?idClient={idClient}&id={priorityId}", ct),
-                            $"Failed to load priority level {priorityId}",
-                            cancellationToken);
-
-                        if (success && data != null)
-                        {
-                            return data;
-                        }
-                        _logger.LogWarning("Priority level {Id} fetch failed: {Message}", priorityId, message);
-                        return null;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Error fetching priority level details");
-                        return null;
-                    }
-                }).ToList(); // Materialize the query to avoid deferred execution issues
-
-                var details = await Task.WhenAll(detailTasks);
-                return details.Where(d => d != null).ToList()!;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching priority levels with details");
+                _logger.LogWarning("Priority Levels API failed: {Message}", message);
                 return [];
             }
+
+            // Convert API response DTOs to frontend models
+            return data.Select(dto => dto.ToModel()).ToList();
         }
 
         private async Task<List<EnumFormDetailResponse>> GetFeedbackTypesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)

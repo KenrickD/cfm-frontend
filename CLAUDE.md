@@ -252,7 +252,35 @@ This model contains nested classes (`LocationModel`, `ServiceProviderModel`, `Wo
 All controllers inherit from this. Provides:
 - Auto privilege refresh (background, >30min)
 - Authorization helpers: `CheckViewAccess()`, `CheckAddAccess()`, etc.
+- `SafeExecuteApiAsync<T>()` for safe API calls
 - Requires `IPrivilegeService`, `ILogger`
+
+#### SafeExecuteApiAsync
+**File:** `Controllers/BaseController.cs` (lines 85-123, 135+)
+
+Wraps API calls to catch exceptions and return structured responses. Never throws exceptions to the browser.
+
+```csharp
+var (success, data, message) = await SafeExecuteApiAsync<List<FloorDto>>(
+    () => client.GetAsync($"{backendUrl}/api/floors?locationId={id}"),
+    "Failed to load floors"
+);
+return Json(new { success, data, message });
+```
+
+**Behavior:**
+| Scenario | Returns |
+|----------|---------|
+| HTTP 2xx + `Success: true` | `(true, Data, Message)` |
+| HTTP 2xx + `Success: false` | `(false, default, apiResponse.Message)` |
+| HTTP 4xx/5xx | `(false, default, errorMessage)` |
+| Exception | `(false, default, errorMessage)` |
+
+**Overloads:**
+1. Basic: `SafeExecuteApiAsync<T>(Func<Task<HttpResponseMessage>>, string errorMessage)`
+2. With cancellation: `SafeExecuteApiAsync<T>(Func<CancellationToken, Task<HttpResponseMessage>>, string, CancellationToken, int timeoutMs)` - for parallel calls
+
+**Key insight:** All failures become `{ success: false, message: "..." }` with HTTP 200 status. The global AJAX handler (`global-ajax-handler.js`) catches these and shows toastr notifications.
 
 ### LoginController
 - `SignIn(SignInViewModel)`: Auth user, load privileges (explicit token), create session
@@ -292,6 +320,30 @@ $.ajax({
 1. Always use `showNotification()` (never `alert()`)
 2. Log errors to console + show user-friendly message
 3. Use `response.message` from server when available
+
+### Global AJAX Error Handler
+**File:** `wwwroot/assets/js/global-ajax-handler.js`
+
+Automatically intercepts all jQuery AJAX responses and displays `toastr` error notifications for "soft errors" (HTTP 200 with `success: false`).
+
+```javascript
+// Automatically triggers on ANY $.ajax call that returns { success: false, message: "..." }
+// No manual error handling needed for SafeExecuteApiAsync failures
+```
+
+**How it works:**
+- Uses `$(document).ajaxSuccess()` to intercept all AJAX responses
+- Checks if `xhr.responseJSON.success === false`
+- Displays error via `showNotification(message, 'error')`
+- Logs to console: `API Logic Error: <message>`
+
+**When to rely on it:**
+- API data fetching via `SafeExecuteApiAsync` (floors, rooms, employees, etc.)
+- Any endpoint returning the standard `{ success, data, message }` format
+
+**When to handle manually:**
+- Form submissions where you need custom success handling
+- Cases where you want to suppress the notification (set `success: true` or don't include `message`)
 
 ## Constants & Endpoints
 

@@ -858,8 +858,9 @@
                                 {
                                     foreach (var priority in Model.PriorityLevels)
                                     {
+                                        var priorityJson = System.Text.Json.JsonSerializer.Serialize(priority);
                                         <option value="@priority.Id"
-                                                data-priority-details='@System.Text.Json.JsonSerializer.Serialize(priority)'>
+                                                data-priority-details="@Html.Raw(System.Web.HttpUtility.HtmlAttributeEncode(priorityJson))">
                                             @priority.Name
                                         </option>
                                     }
@@ -887,8 +888,11 @@
                         <div class="col-md-4 mb-3">
                             <!-- Placeholder for alignment -->
                         </div>
+                    </div>
 
-                        <!-- Helpdesk Response -->
+                    <!-- Timeline Grid - Each row has: Date/Time Input | Target Display | Placeholder -->
+                    <!-- Helpdesk Response Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Helpdesk Response</label>
                             <div class="datetime-group">
@@ -896,9 +900,8 @@
                                 <input type="time" class="form-control form-control-sm" id="helpdeskResponseTime" name="HelpdeskResponseTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">New Target</label>
+                            <label class="form-label fw-semibold">Target</label>
                             <div id="helpdeskTarget" class="target-time-display" data-target-type="helpdesk">
                                 <i class="ti ti-target me-1"></i>
                                 <span class="target-date">-</span>
@@ -910,13 +913,13 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('helpdesk')">Cancel</button>
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Remark</label>
-                            <input type="text" class="form-control form-control-sm" id="helpdeskRemarkDisplay" readonly>
+                            <!-- Placeholder -->
                         </div>
+                    </div>
 
-                        <!-- Initial Follow Up -->
+                    <!-- Initial Follow Up Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Initial Follow Up</label>
                             <div class="datetime-group">
@@ -924,7 +927,6 @@
                                 <input type="time" class="form-control form-control-sm" id="initialFollowUpTime" name="InitialFollowUpTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Target</label>
                             <div id="initialFollowUpTarget" class="target-time-display" data-target-type="initialFollowUp">
@@ -938,12 +940,13 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('initialFollowUp')">Cancel</button>
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <!-- Placeholder -->
                         </div>
+                    </div>
 
-                        <!-- Quotation Submission -->
+                    <!-- Quotation Submission Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Quotation Submission</label>
                             <div class="datetime-group">
@@ -951,7 +954,6 @@
                                 <input type="time" class="form-control form-control-sm" id="quotationSubmissionTime" name="QuotationSubmissionTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Target</label>
                             <div id="quotationTarget" class="target-time-display" data-target-type="quotation">
@@ -965,12 +967,13 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('quotation')">Cancel</button>
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <!-- Placeholder -->
                         </div>
+                    </div>
 
-                        <!-- Cost Approval -->
+                    <!-- Cost Approval Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Cost Approval</label>
                             <div class="datetime-group">
@@ -978,7 +981,6 @@
                                 <input type="time" class="form-control form-control-sm" id="costApprovalTime" name="CostApprovalTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Target</label>
                             <div id="costApprovalTarget" class="target-time-display" data-target-type="costApproval">
@@ -992,12 +994,13 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('costApproval')">Cancel</button>
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <!-- Placeholder -->
                         </div>
+                    </div>
 
-                        <!-- Work Completion -->
+                    <!-- Work Completion Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Work Completion</label>
                             <div class="datetime-group">
@@ -1005,7 +1008,6 @@
                                 <input type="time" class="form-control form-control-sm" id="workCompletionTime" name="WorkCompletionTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Target</label>
                             <div id="workCompletionTarget" class="target-time-display" data-target-type="workCompletion">
@@ -1019,12 +1021,13 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('workCompletion')">Cancel</button>
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <!-- Placeholder -->
                         </div>
+                    </div>
 
-                        <!-- After Work Follow Up -->
+                    <!-- After Work Follow Up Row -->
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">After Work Follow Up</label>
                             <div class="datetime-group">
@@ -1032,7 +1035,6 @@
                                 <input type="time" class="form-control form-control-sm" id="afterWorkFollowUpTime" name="AfterWorkFollowUpTime">
                             </div>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Target</label>
                             <div id="afterWorkTarget" class="target-time-display" data-target-type="afterWork">
@@ -1045,6 +1047,9 @@
                                 <button type="button" class="btn btn-sm btn-primary me-2" onclick="saveTarget('afterWork')">Save</button>
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="cancelTarget('afterWork')">Cancel</button>
                             </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <!-- Placeholder -->
                         </div>
                     </div>
                 </div>

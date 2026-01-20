@@ -272,7 +272,8 @@ namespace cfm_frontend.Constants
 
         /// <summary>
         /// Priority Level endpoints for form detail (target date calculation)
-        /// Target: GET /api/v{version}/priority-level?idClient={idClient}&id={id}
+        /// Target: GET /api/v1/priority-level?idClient={idClient}
+        /// Returns all priority levels with full details for dropdown and target date calculation
         /// Note: This is separate from Settings.PriorityLevel which is for CRUD operations
         /// </summary>
         public static class PriorityLevelDetail
@@ -280,11 +281,12 @@ namespace cfm_frontend.Constants
             private const string Base = ApiBase + "/priority-level";
 
             /// <summary>
-            /// GET: Get priority level form detail by ID
-            /// Query params: idClient, id
-            /// Returns: PriorityLevelFormDetailResponse with target date configurations
+            /// GET: Get all priority levels with full details
+            /// Query params: idClient
+            /// Returns: List of PriorityLevelModel with target date configurations
+            /// Used for: Dropdown population and target date calculation
             /// </summary>
-            public const string Get = Base;
+            public const string List = Base;
         }
 
         #endregion

@@ -98,6 +98,11 @@
         initializeFormSubmission();
         setCurrentDateTime();
 
+        // Auto-select first priority level after a short delay to ensure DOM is ready
+        setTimeout(function () {
+            autoSelectFirstPriorityLevel();
+        }, 100);
+
         console.log('Work Request Add page initialized');
     }
 
@@ -111,17 +116,22 @@
                 const priorityId = $option.val();
                 const priorityDetailsJson = $option.attr('data-priority-details');
 
+                console.log('Processing priority option:', priorityId, 'Has data-priority-details:', !!priorityDetailsJson);
+
                 if (priorityDetailsJson) {
                     try {
                         const priorityData = JSON.parse(priorityDetailsJson);
                         state.priorityLevelsCache[priorityId] = priorityData;
+                        console.log('Cached priority data for ID', priorityId, ':', priorityData);
                     } catch (e) {
                         console.error('Error parsing priority level data for ID:', priorityId, e);
+                        console.error('Raw JSON:', priorityDetailsJson);
                     }
                 }
             });
 
             console.log('Priority levels cached from DOM:', Object.keys(state.priorityLevelsCache).length);
+            console.log('Cache contents:', state.priorityLevelsCache);
         } catch (error) {
             console.error('Error caching priority levels from DOM:', error);
         }
@@ -151,6 +161,30 @@
 
         $('#requestDate').val(dateStr);
         $('#requestTime').val(timeStr);
+    }
+
+    /**
+     * Auto-select first priority level on page load and trigger calculation
+     */
+    function autoSelectFirstPriorityLevel() {
+        const $prioritySelect = $('#priorityLevelSelect');
+        const $firstOption = $prioritySelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $prioritySelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('priorityLevelSelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            // Trigger the target date calculation
+            triggerTargetDateCalculation();
+
+            console.log('Auto-selected first priority level:', firstValue, $firstOption.text());
+        }
     }
 
     /**
@@ -1301,96 +1335,195 @@
     }
 
     /**
+     * Helper function to get property value supporting both PascalCase and camelCase
+     * C# serializes with PascalCase, but API may return camelCase
+     */
+    function getPriorityProperty(priorityLevel, pascalName) {
+        // Try PascalCase first (from C# JsonSerializer.Serialize in Razor)
+        if (priorityLevel[pascalName] !== undefined) {
+            return priorityLevel[pascalName];
+        }
+        // Try camelCase (from API responses)
+        const camelName = pascalName.charAt(0).toLowerCase() + pascalName.slice(1);
+        if (priorityLevel[camelName] !== undefined) {
+            return priorityLevel[camelName];
+        }
+        return null;
+    }
+
+    /**
+     * Reference enum mapping - maps enum IDs to their meaning
+     * These values come from the backend enum for target calculation references
+     * Note: Each target type has its own set of enum values
+     */
+    // Reference text values from backend API (matching *TargetCalculationText fields)
+    const REFERENCE_TEXT = {
+        AFTER_REQUEST_DATE: 'After Request Date',
+        AFTER_HELPDESK_RESPONSE_TARGET: 'After Helpdesk Response Target',
+        AFTER_INITIAL_FOLLOWUP_TARGET: 'After Initial Follow Up Target',
+        AFTER_INITIAL_FOLLOWUP: 'After Initial Follow Up',
+        AFTER_QUOTATION_SUBMISSION_TARGET: 'After Quotation Submission Target',
+        AFTER_QUOTATION_SUBMISSION: 'After Quotation Submission',
+        AFTER_COST_APPROVAL_TARGET: 'After Cost Approval Target',
+        AFTER_COST_APPROVAL: 'After Cost Approval',
+        AFTER_WORK_COMPLETION_TARGET: 'After Work Completion Target',
+        AFTER_WORK_COMPLETION: 'After Work Completion'
+    };
+
+    /**
      * Calculate and display all 6 target dates
+     * Targets are calculated in sequence because some targets depend on the result of previous targets
      */
     function calculateAndDisplayTargets(priorityLevel, calculator, requestDate, requestTime) {
-        const baseDate = new Date(`${requestDate}T${requestTime}`);
+        const requestDateTime = new Date(`${requestDate}T${requestTime}`);
+
+        // Store calculated target dates for chaining
+        const calculatedTargets = {
+            helpdesk: null,
+            initialFollowUp: null,
+            quotation: null,
+            costApproval: null,
+            workCompletion: null,
+            afterWork: null
+        };
 
         // Define all 6 target types with their priority level field mappings
         const targets = [
             {
                 type: 'helpdesk',
                 label: 'Helpdesk Response',
-                days: priorityLevel.helpdeskResponseTargetDays,
-                hours: priorityLevel.helpdeskResponseTargetHours,
-                minutes: priorityLevel.helpdeskResponseTargetMinutes,
-                withinOfficeHours: priorityLevel.helpdeskResponseTargetWithinOfficeHours,
-                reference: priorityLevel.helpdeskResponseTargetReference
+                days: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetReference'),
+                // Helpdesk Response always starts from Request Date
+                getBaseDate: () => requestDateTime
             },
             {
                 type: 'initialFollowUp',
                 label: 'Initial Follow Up',
-                days: priorityLevel.initialFollowUpTargetDays,
-                hours: priorityLevel.initialFollowUpTargetHours,
-                minutes: priorityLevel.initialFollowUpTargetMinutes,
-                withinOfficeHours: priorityLevel.initialFollowUpTargetWithinOfficeHours,
-                reference: priorityLevel.initialFollowUpTargetReference
+                days: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Helpdesk Response Target
+                    if (ref === REFERENCE_TEXT.AFTER_HELPDESK_RESPONSE_TARGET) {
+                        return calculatedTargets.helpdesk || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
             },
             {
                 type: 'quotation',
                 label: 'Quotation Submission',
-                days: priorityLevel.quotationSubmissionTargetDays,
-                hours: priorityLevel.quotationSubmissionTargetHours,
-                minutes: priorityLevel.quotationSubmissionTargetMinutes,
-                withinOfficeHours: priorityLevel.quotationSubmissionTargetWithinOfficeHours,
-                reference: priorityLevel.quotationSubmissionTargetReference
+                days: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Initial Follow Up Target or After Initial Follow Up
+                    if (ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP) {
+                        return calculatedTargets.initialFollowUp || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
             },
             {
                 type: 'costApproval',
                 label: 'Cost Approval',
-                days: priorityLevel.costApprovalTargetDays,
-                hours: priorityLevel.costApprovalTargetHours,
-                minutes: priorityLevel.costApprovalTargetMinutes,
-                withinOfficeHours: priorityLevel.costApprovalTargetWithinOfficeHours,
-                reference: priorityLevel.costApprovalTargetReference
+                days: getPriorityProperty(priorityLevel, 'CostApprovalTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'CostApprovalTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'CostApprovalTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'CostApprovalTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'CostApprovalTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Quotation Submission Target or After Quotation Submission
+                    if (ref === REFERENCE_TEXT.AFTER_QUOTATION_SUBMISSION_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_QUOTATION_SUBMISSION) {
+                        return calculatedTargets.quotation || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
             },
             {
                 type: 'workCompletion',
                 label: 'Work Completion',
-                days: priorityLevel.workCompletionTargetDays,
-                hours: priorityLevel.workCompletionTargetHours,
-                minutes: priorityLevel.workCompletionTargetMinutes,
-                withinOfficeHours: priorityLevel.workCompletionTargetWithinOfficeHours,
-                reference: priorityLevel.workCompletionTargetReference
+                days: getPriorityProperty(priorityLevel, 'WorkCompletionTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'WorkCompletionTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'WorkCompletionTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'WorkCompletionTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'WorkCompletionTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Initial Follow Up Target or After Initial Follow Up
+                    if (ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP) {
+                        return calculatedTargets.initialFollowUp || requestDateTime;
+                    }
+                    // After Cost Approval Target or After Cost Approval
+                    if (ref === REFERENCE_TEXT.AFTER_COST_APPROVAL_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_COST_APPROVAL) {
+                        return calculatedTargets.costApproval || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
             },
             {
                 type: 'afterWork',
                 label: 'After Work Follow Up',
-                days: priorityLevel.afterWorkFollowUpTargetDays,
-                hours: priorityLevel.afterWorkFollowUpTargetHours,
-                minutes: priorityLevel.afterWorkFollowUpTargetMinutes,
-                withinOfficeHours: priorityLevel.afterWorkFollowUpTargetWithinOfficeHours,
-                reference: priorityLevel.afterWorkFollowUpTargetReference
+                days: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetReference'),
+                // After Work Follow Up always starts from Work Completion Target (legacy behavior)
+                getBaseDate: () => {
+                    return calculatedTargets.workCompletion || requestDateTime;
+                }
             }
         ];
 
-        // Calculate and display each target
+        // Calculate and display each target in sequence (order matters for chaining)
         targets.forEach(target => {
             // Skip if there's a manual override
             if (state.targetOverrides[target.type]) {
                 return;
             }
 
-            // Check if this target has a defined duration
-            const hasDuration = target.days > 0 || target.hours > 0 || target.minutes > 0;
+            const days = target.days ?? 0;
+            const hours = target.hours ?? 0;
+            const minutes = target.minutes ?? 0;
+            const hasDuration = days > 0 || hours > 0 || minutes > 0;
 
             if (hasDuration) {
+                // Get the base date for this target (may depend on previous calculated targets)
+                const baseDate = target.getBaseDate(target.reference);
+
                 // Calculate target date using BusinessDateCalculator
                 const targetDate = calculator.calculateTargetDate(
                     baseDate,
-                    target.days || 0,
-                    target.hours || 0,
-                    target.minutes || 0,
+                    days,
+                    hours,
+                    minutes,
                     target.withinOfficeHours || false
                 );
 
-                // Build tooltip text (matching legacy behavior)
-                const tooltip = buildTooltipText(target);
+                // Store the calculated target for use by subsequent targets
+                calculatedTargets[target.type] = targetDate;
+
+                // Build tooltip text
+                const tooltip = buildTooltipText(target, target.reference);
 
                 // Update display
                 updateTargetDateDisplay(target.type, targetDate, tooltip);
-
-                // Show the target date element
                 $(`#${target.type}Target`).show();
             } else {
                 // No target defined - show "No Target"
@@ -1402,9 +1535,27 @@
     }
 
     /**
+     * Get human-readable reference description based on reference text
+     * The reference is now a text string from the backend (e.g., "After Request Date")
+     */
+    function getReferenceDescription(reference, targetType) {
+        // Special case for After Work Follow Up - always uses Work Completion
+        if (targetType === 'afterWork') {
+            return 'after Work Completion Target';
+        }
+
+        // The reference text from backend is already human-readable, just lowercase the first letter
+        if (reference && typeof reference === 'string' && reference.length > 0) {
+            return reference.charAt(0).toLowerCase() + reference.slice(1);
+        }
+
+        return 'after Request Date';
+    }
+
+    /**
      * Build tooltip text for target date
      */
-    function buildTooltipText(target) {
+    function buildTooltipText(target, reference) {
         let tooltip = 'Max ';
 
         if (target.days > 0) {
@@ -1417,7 +1568,7 @@
             tooltip += `${target.minutes} ${target.minutes === 1 ? 'minute' : 'minutes'} `;
         }
 
-        tooltip += 'after Request Date';
+        tooltip += getReferenceDescription(reference, target.type);
 
         if (target.withinOfficeHours) {
             tooltip += ' (within office hours only)';

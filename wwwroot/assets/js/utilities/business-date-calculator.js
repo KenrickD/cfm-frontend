@@ -92,18 +92,17 @@ class BusinessDateCalculator {
                 continue;
             }
 
-            // Case 3: Office Hours - Consume time
-            const nextPeriod = this.findNextOfficePeriod(currentPeriod);
-            const nextBoundary = this.calculateNextBoundary(resultDate, currentPeriod, nextPeriod);
-            const minutesUntilBoundary = this.getMinutesDifference(resultDate, nextBoundary);
+            // Case 3: Office Hours - Consume time until end of current period
+            const periodEndTime = this.getPeriodEndTime(resultDate, currentPeriod);
+            const minutesUntilBoundary = this.getMinutesDifference(resultDate, periodEndTime);
 
             if (remainingMinutes <= minutesUntilBoundary) {
                 // Remaining time fits within current period
                 resultDate.setMinutes(resultDate.getMinutes() + remainingMinutes);
                 remainingMinutes = 0;
             } else {
-                // Move to boundary and continue
-                resultDate = new Date(nextBoundary);
+                // Consume time until end of current period, then advance to next office period
+                resultDate = new Date(periodEndTime);
                 remainingMinutes -= minutesUntilBoundary;
             }
         }
@@ -168,44 +167,44 @@ class BusinessDateCalculator {
     }
 
     /**
-     * Finds the next office hour period after the current one (circular)
-     * @param {Object} currentPeriod - Current office hour period
-     * @returns {Object} Next office hour period
-     */
-    findNextOfficePeriod(currentPeriod) {
-        const currentIndex = this.officeHours.indexOf(currentPeriod);
-        const nextIndex = (currentIndex + 1) % this.officeHours.length;
-        return this.officeHours[nextIndex];
-    }
-
-    /**
-     * Advances date to the next office period start time
+     * Advances date to the next working office period start time
      * @param {Date} date - Current date
-     * @returns {Date} New date at next office period start
+     * @returns {Date} New date at next working office period start
      */
     advanceToNextOfficePeriod(date) {
         const dayOfWeek = date.getDay();
         const timeMinutes = this.parseTimeToMinutes(date.toTimeString().substring(0, 8));
 
-        // Find the next period on the same day or future days
-        for (let i = 0; i < this.officeHours.length * 2; i++) {
-            const period = this.officeHours[i % this.officeHours.length];
-            const periodFromMinutes = this.parseTimeToMinutes(period.fromHour);
+        // Filter to only working hour periods
+        const workingPeriods = this.officeHours.filter(p => p.isWorkingHour);
 
-            // Calculate day difference
-            let dayDifference = (period.officeDay + 7 - dayOfWeek) % 7;
+        if (workingPeriods.length === 0) {
+            // No working periods defined, fallback to next day
+            return this.advanceToNextDay(date);
+        }
 
-            // If same day but period already passed, look for next week
-            if (dayDifference === 0 && timeMinutes >= periodFromMinutes) {
-                dayDifference = 7;
-            }
+        // Find the next working period on the same day or future days
+        // Search up to 2 weeks to handle all scenarios
+        for (let dayOffset = 0; dayOffset <= 14; dayOffset++) {
+            const checkDay = (dayOfWeek + dayOffset) % 7;
 
-            // If this is a future period, use it
-            if (dayDifference > 0 || (dayDifference === 0 && timeMinutes < periodFromMinutes)) {
+            // Get working periods for this day, sorted by start time
+            const periodsForDay = workingPeriods
+                .filter(p => p.officeDay === checkDay)
+                .sort((a, b) => this.parseTimeToMinutes(a.fromHour) - this.parseTimeToMinutes(b.fromHour));
+
+            for (const period of periodsForDay) {
+                const periodFromMinutes = this.parseTimeToMinutes(period.fromHour);
+
+                // If same day (offset=0), only consider periods that haven't started yet
+                if (dayOffset === 0 && timeMinutes >= periodFromMinutes) {
+                    continue;
+                }
+
+                // Found a valid future working period
                 const newDate = new Date(date);
-                newDate.setDate(newDate.getDate() + dayDifference);
+                newDate.setDate(newDate.getDate() + dayOffset);
 
-                // Parse the fromHour to set the correct time
                 const timeParts = this.parseTimeSpanToObject(period.fromHour);
                 newDate.setHours(timeParts.hours, timeParts.minutes, timeParts.seconds, 0);
 
@@ -230,23 +229,16 @@ class BusinessDateCalculator {
     }
 
     /**
-     * Calculates the next boundary date/time based on next period
+     * Gets the end time of the current office period on the same day
      * @param {Date} currentDate - Current date/time
      * @param {Object} currentPeriod - Current office hour period
-     * @param {Object} nextPeriod - Next office hour period
-     * @returns {Date} Boundary date/time
+     * @returns {Date} End time of the current period
      */
-    calculateNextBoundary(currentDate, currentPeriod, nextPeriod) {
-        const dayDifference = (nextPeriod.officeDay + 7 - currentPeriod.officeDay) % 7;
-
-        const boundaryDate = new Date(currentDate);
-        boundaryDate.setDate(boundaryDate.getDate() + dayDifference);
-
-        // Set time to next period's start time
-        const timeParts = this.parseTimeSpanToObject(nextPeriod.fromHour);
-        boundaryDate.setHours(timeParts.hours, timeParts.minutes, timeParts.seconds, 0);
-
-        return boundaryDate;
+    getPeriodEndTime(currentDate, currentPeriod) {
+        const endTime = new Date(currentDate);
+        const timeParts = this.parseTimeSpanToObject(currentPeriod.toHour);
+        endTime.setHours(timeParts.hours, timeParts.minutes, timeParts.seconds, 0);
+        return endTime;
     }
 
     /**
