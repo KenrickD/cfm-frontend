@@ -68,8 +68,8 @@
                     $.each(response.data, function(index, currency) {
                         $select.append(
                             $('<option></option>')
-                                .val(currency.id || currency.value)
-                                .text(currency.code || currency.name)
+                                .val(currency.idEnum)
+                                .text(currency.enumName)
                         );
                     });
                 }
@@ -91,8 +91,8 @@
                     $.each(response.data, function(index, unit) {
                         $select.append(
                             $('<option></option>')
-                                .val(unit.id || unit.value)
-                                .text(unit.code || unit.name)
+                                .val(unit.idEnum)
+                                .text(unit.enumName)
                         );
                     });
                 }
@@ -102,13 +102,27 @@
             }
         });
 
-        // Load labor/material labels
+        // Load labor/material labels (from Masters Enum API with 'materialLabel')
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.getLaborMaterialLabels,
             method: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
                     extendedState.laborMaterialLabels = response.data;
+                    // Populate the Ad Hoc label radio buttons
+                    const $container = $('#adHocLabelContainer');
+                    $container.empty();
+                    $.each(response.data, function(index, label) {
+                        const radioId = 'label' + label.idEnum;
+                        const isFirst = index === 0;
+                        $container.append(`
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="adHocLabel"
+                                       id="${radioId}" value="${label.idEnum}" ${isFirst ? 'checked' : ''}>
+                                <label class="form-check-label" for="${radioId}">${label.enumName}</label>
+                            </div>
+                        `);
+                    });
                 }
             },
             error: function(xhr, status, error) {
@@ -173,6 +187,12 @@
             saveLaborMaterial();
         });
 
+        // Update unit display when measurement unit changes (Ad Hoc mode)
+        $('#adHocMeasurementUnit').on('change', function() {
+            const selectedUnit = extendedState.measurementUnits.find(u => u.idEnum == $(this).val());
+            $('#adHocUnitDisplay').text(selectedUnit ? selectedUnit.enumName : 'UNIT');
+        });
+
         // Close dropdown when clicking outside
         $(document).on('click', function(e) {
             if (!$(e.target).closest('#jobCodeSearch, #jobCodeDropdown').length) {
@@ -183,7 +203,7 @@
 
     /**
      * Search Job Code via API
-     * API Response: JobCodeFormDetailResponse { IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit }
+     * API Response: JobCodeFormDetailResponse { IdJobCode, Name, Description, MinimumStock, UnitPrice, UnitPriceCurrency, LatestStock, LaborMaterialMeasurementUnit }
      */
     function searchJobCode(term) {
         $.ajax({
@@ -195,18 +215,23 @@
                 $dropdown.empty();
 
                 if (response.success && response.data && response.data.length > 0) {
-                    $.each(response.data, function(index, jobCode) {
+                    $.each(response.data, function(index, jobCode) {s
                         // Use correct property names from JobCodeFormDetailResponse
                         const name = jobCode.Name || jobCode.name;
                         const latestStock = jobCode.LatestStock ?? jobCode.latestStock ?? 0;
                         const minimumStock = jobCode.MinimumStock ?? jobCode.minimumStock ?? 0;
+                        const unitPrice = jobCode.UnitPrice ?? jobCode.unitPrice ?? 0;
+                        const currency = jobCode.UnitPriceCurrency || jobCode.unitPriceCurrency || 'IDR';
                         const stockClass = latestStock > minimumStock ? 'text-success' : 'text-danger';
+
+                        const priceDisplay = unitPrice > 0 ? `${currency} ${unitPrice.toLocaleString()}` : '-';
 
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
                                 <strong>${name}</strong><br>
                                 <small class="${stockClass}">Stock: ${latestStock}</small>
+                                <small class="text-muted ms-2">| Price: ${priceDisplay}</small>
                             `)
                             .on('click', function() {
                                 selectJobCode(jobCode);
@@ -232,7 +257,7 @@
 
     /**
      * Select a Job Code
-     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit
+     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, UnitPrice, UnitPriceCurrency, LatestStock, LaborMaterialMeasurementUnit
      */
     function selectJobCode(jobCode) {
         extendedState.currentJobCodeSelection = jobCode;
@@ -245,6 +270,8 @@
         const latestStock = jobCode.LatestStock ?? jobCode.latestStock ?? 0;
         const minimumStock = jobCode.MinimumStock ?? jobCode.minimumStock ?? 0;
         const unit = jobCode.LaborMaterialMeasurementUnit || jobCode.laborMaterialMeasurementUnit || 'PCS';
+        const unitPrice = jobCode.UnitPrice ?? jobCode.unitPrice ?? 0;
+        const unitPriceCurrency = jobCode.UnitPriceCurrency || jobCode.unitPriceCurrency || 'IDR';
 
         // Apply stock color coding: green if > min, red if <= min
         const stockClass = latestStock > minimumStock ? 'text-success' : 'text-danger';
@@ -255,6 +282,9 @@
             .removeClass('text-success text-danger')
             .addClass(stockClass);
         $('#jobCodeUnit').text(unit);
+        $('#jobCodeUnitDisplay').text(unit);
+        $('#selectedJobCodeCurrency').text(unitPriceCurrency);
+        $('#selectedJobCodeUnitPrice').text(unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         $('#jobCodeSelected').show();
     }
 
@@ -278,18 +308,22 @@
         const today = new Date().toISOString().split('T')[0];
         $('#jobCodeTransactionDate').val(today);
         $('#jobCodeQuantity').val('1.00');
-        $('#jobCodeUnitPrice').val('');
-        $('#jobCodeCurrency').val('');
+        $('#jobCodeUnit').text('PCS');
+        $('#jobCodeUnitDisplay').text('PCS');
+        $('#selectedJobCodeCurrency').text('');
+        $('#selectedJobCodeUnitPrice').text('');
         extendedState.currentJobCodeSelection = null;
 
         // Reset Ad Hoc fields
         $('#adHocName').val('');
-        $('#labelLabor').prop('checked', true);
+        // Select first radio button if available
+        $('input[name="adHocLabel"]').first().prop('checked', true);
         $('#adHocUnitPrice').val('');
         $('#adHocQuantity').val('1.00');
         if ($('#adHocMeasurementUnit option').length > 1) {
             $('#adHocMeasurementUnit').val('');
         }
+        $('#adHocUnitDisplay').text('UNIT');
 
         // Reset edit mode
         extendedState.editingItemIndex = null;
@@ -314,7 +348,7 @@
 
     /**
      * Save Labor/Material - Job Code Mode
-     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit
+     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, UnitPrice, UnitPriceCurrency, LatestStock, LaborMaterialMeasurementUnit
      */
     function saveLaborMaterialJobCode(isEditMode) {
         if (!extendedState.currentJobCodeSelection) {
@@ -334,10 +368,12 @@
             return;
         }
 
-        const unitPrice = parseFloat($('#jobCodeUnitPrice').val()) || 0;
-
         // Use correct property names from JobCodeFormDetailResponse
+        // UnitPrice and UnitPriceCurrency come from the API, not user input
         const selection = extendedState.currentJobCodeSelection;
+        const unitPrice = selection.UnitPrice ?? selection.unitPrice ?? 0;
+        const currencyCode = selection.UnitPriceCurrency || selection.unitPriceCurrency || 'IDR';
+
         const item = {
             type: 'jobCode',
             idJobCode: selection.IdJobCode ?? selection.idJobCode,
@@ -349,8 +385,8 @@
             unit: selection.LaborMaterialMeasurementUnit || selection.laborMaterialMeasurementUnit || 'PCS',
             minimumStock: selection.MinimumStock ?? selection.minimumStock ?? 0,
             latestStock: selection.LatestStock ?? selection.latestStock ?? 0,
-            currencyCode: $('#jobCodeCurrency option:selected').text() || 'IDR',
-            currencyId: $('#jobCodeCurrency').val() || null
+            currencyCode: currencyCode,
+            currencyId: null // No longer selecting from dropdown
         };
 
         if (isEditMode && extendedState.editingItemIndex !== null) {
@@ -380,11 +416,16 @@
             return;
         }
 
-        const labelValue = $('input[name="adHocLabel"]:checked').val();
-        const label = extendedState.laborMaterialLabels.find(l =>
-            (l.value || l.name).toLowerCase() === labelValue
-        );
-        const labelId = label ? label.id : 1;
+        // Get selected label from radio button (value is the idEnum from API)
+        const labelId = $('input[name="adHocLabel"]:checked').val();
+        if (!labelId) {
+            showNotification('Please select a label', 'error', 'Validation Error');
+            return;
+        }
+
+        // Find the label name for display purposes
+        const selectedLabel = extendedState.laborMaterialLabels.find(l => l.idEnum == labelId);
+        const labelName = selectedLabel ? selectedLabel.enumName : 'Unknown';
 
         const currencyId = $('#adHocCurrency').val();
         const unitPrice = parseFloat($('#adHocUnitPrice').val());
@@ -405,21 +446,21 @@
             return;
         }
 
-        const measurementUnit = extendedState.measurementUnits.find(u => u.id == measurementUnitId);
-        const currency = extendedState.currencies.find(c => c.id == currencyId);
+        const measurementUnit = extendedState.measurementUnits.find(u => u.idEnum == measurementUnitId);
+        const currency = extendedState.currencies.find(c => c.idEnum == currencyId);
 
         // Create item data
         const item = {
             type: 'adHoc',
             name: name,
-            labelValue: labelValue,
-            label_Enum_idEnum: labelId,
-            unitPriceCurrency_Enum_idEnum: currencyId || 1,
+            labelValue: labelName, // For display
+            label_Enum_idEnum: parseInt(labelId),
+            unitPriceCurrency_Enum_idEnum: currencyId ? parseInt(currencyId) : 1,
             unitPrice: unitPrice,
             quantity: quantity,
-            measurementUnit_Enum_idEnum: measurementUnitId,
-            unit: measurementUnit ? (measurementUnit.code || measurementUnit.name) : 'UNIT',
-            currencyCode: currency ? (currency.code || currency.name) : 'IDR',
+            measurementUnit_Enum_idEnum: parseInt(measurementUnitId),
+            unit: measurementUnit ? measurementUnit.enumName : 'UNIT',
+            currencyCode: currency ? currency.enumName : 'IDR',
             transactionDate: new Date().toISOString().split('T')[0]
         };
 
@@ -541,7 +582,7 @@
 
     /**
      * Open edit modal for Job Code item
-     * Job Code items can only edit date, quantity, and unit price
+     * Job Code items can only edit date and quantity (price comes from API)
      */
     function openEditJobCodeModal(itemData) {
         const $modal = $('#laborMaterialModal');
@@ -562,25 +603,28 @@
         $('#selectedJobCodeName').text(itemData.name);
         $('#selectedJobCodeStock').text(itemData.latestStock || '-').removeClass('text-success text-danger');
         $('#jobCodeUnit').text(itemData.unit || 'PCS');
+        $('#jobCodeUnitDisplay').text(itemData.unit || 'PCS');
+        $('#selectedJobCodeCurrency').text(itemData.currencyCode || 'IDR');
+        $('#selectedJobCodeUnitPrice').text((itemData.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         $('#jobCodeSelected').show();
 
         // Hide remove button during edit (can't change job code)
         $('#removeJobCodeBtn').hide();
 
-        // Set editable fields
+        // Set editable fields (only date and quantity)
         $('#jobCodeTransactionDate').val(itemData.transactionDate || new Date().toISOString().split('T')[0]);
         $('#jobCodeQuantity').val(itemData.quantity || 1);
-        $('#jobCodeUnitPrice').val(itemData.unitPrice || '');
-        $('#jobCodeCurrency').val(itemData.currencyId || '');
 
-        // Store the job code selection for update
+        // Store the job code selection for update (including UnitPrice and UnitPriceCurrency)
         extendedState.currentJobCodeSelection = {
             IdJobCode: itemData.idJobCode,
             Name: itemData.name,
             Description: itemData.description,
             MinimumStock: itemData.minimumStock,
             LatestStock: itemData.latestStock,
-            LaborMaterialMeasurementUnit: itemData.unit
+            LaborMaterialMeasurementUnit: itemData.unit,
+            UnitPrice: itemData.unitPrice,
+            UnitPriceCurrency: itemData.currencyCode
         };
 
         // Change save button to update mode
@@ -610,9 +654,11 @@
         // Populate fields
         $('#adHocName').val(itemData.name);
 
-        // Set label radio
-        const labelValue = itemData.labelValue || 'labor';
-        $(`input[name="adHocLabel"][value="${labelValue}"]`).prop('checked', true);
+        // Set label radio by idEnum value
+        const labelId = itemData.label_Enum_idEnum;
+        if (labelId) {
+            $(`input[name="adHocLabel"][value="${labelId}"]`).prop('checked', true);
+        }
 
         // Set currency
         if (itemData.unitPriceCurrency_Enum_idEnum) {
@@ -625,6 +671,12 @@
         // Set measurement unit
         if (itemData.measurementUnit_Enum_idEnum) {
             $('#adHocMeasurementUnit').val(itemData.measurementUnit_Enum_idEnum);
+        }
+
+        // Update the unit display
+        const measurementUnit = extendedState.measurementUnits.find(u => u.idEnum == itemData.measurementUnit_Enum_idEnum);
+        if (measurementUnit) {
+            $('#adHocUnitDisplay').text(measurementUnit.enumName);
         }
 
         // Change save button to update mode

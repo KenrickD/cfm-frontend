@@ -16,6 +16,12 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
+
+// Configure antiforgery to use X-CSRF-TOKEN header for AJAX requests
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+});
 builder.Services.AddTransient<AuthTokenHandler>();
 builder.Services.AddScoped<IPrivilegeService, PrivilegeService>();
 builder.Services.AddScoped<ISessionRestoreService, SessionRestoreService>();

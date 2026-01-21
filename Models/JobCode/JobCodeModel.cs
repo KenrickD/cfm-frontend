@@ -29,6 +29,8 @@ namespace cfm_frontend.Models.JobCode
         public int IdJobCode { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public float UnitPrice { get; set; }
+        public string UnitPriceCurrency { get; set; }
         public double MinimumStock { get; set; }
         public double LatestStock { get; set; }
         public string? LaborMaterialMeasurementUnit { get; set; }

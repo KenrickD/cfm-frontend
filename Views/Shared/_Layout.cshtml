@@ -64,8 +64,26 @@
 
     @Html.Partial("~/Views/Shared/VendorScripts.cshtml")
 
+    <!-- Global Anti-Forgery Token for AJAX requests -->
+    @Html.AntiForgeryToken()
+
     <!-- MVC Endpoints - Centralized endpoint definitions (load before page-specific scripts) -->
     <script src="~/assets/js/mvc-endpoints.js"></script>
+
+    <script>
+        // Global AJAX setup - Include CSRF token in all requests
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                // Only add token for same-origin requests (not external APIs)
+                if (!settings.crossDomain) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    if (token) {
+                        xhr.setRequestHeader('X-CSRF-TOKEN', token);
+                    }
+                }
+            }
+        });
+    </script>
 
     <script>
         // Configure toastr global options

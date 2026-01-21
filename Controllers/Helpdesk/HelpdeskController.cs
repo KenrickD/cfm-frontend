@@ -1401,7 +1401,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetCurrenciesAsync()
-        {
+         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -1430,6 +1430,7 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get labor/material labels for dropdown
+        /// Uses Masters Enum API with 'materialLabel' category
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetLaborMaterialLabelsAsync()
@@ -1437,8 +1438,9 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.LaborMaterialLabel}"),
+            var endpoint = ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.MaterialLabel);
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
                 "Failed to load labor/material labels");
 
             return Json(new { success, data, message });

@@ -681,6 +681,7 @@ namespace cfm_frontend.Constants
                 public const string WorkRequestFeedbackType = "workRequestFeedbackType";
                 public const string Currency = "currency";
                 public const string MeasurementUnit = "measurementUnit";
+                public const string MaterialLabel = "materialLabel";
             }
         }
 
