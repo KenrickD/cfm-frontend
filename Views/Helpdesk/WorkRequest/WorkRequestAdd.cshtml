@@ -773,17 +773,14 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th width="12%">Transaction Date</th>
-                                    <th width="10%">Qty</th>
-                                    <th width="12%">Unit</th>
-                                    <th width="15%">Unit Price</th>
-                                    <th width="15%">Total</th>
-                                    <th width="5%">Action</th>
+                                    <th width="15%">Qty</th>
+                                    <th width="20%">Unit Price</th>
+                                    <th width="12%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">
+                                    <td colspan="4" class="text-center text-muted">
                                         <em>No Labor/Material added yet</em>
                                     </td>
                                 </tr>
@@ -814,8 +811,8 @@
                                 {
                                     foreach (var currency in Model.Currencies)
                                     {
-                                        <option value="@currency.Value">
-                                            @currency.Label
+                                        <option value="@currency.IdEnum">
+                                            @currency.EnumName
                                         </option>
                                     }
                                 }
@@ -1253,8 +1250,10 @@
                 <div id="jobCodeMode">
                     <div class="mb-3">
                         <label class="form-label fw-semibold required-field">Name</label>
-                        <input type="text" class="form-control form-control-sm" id="jobCodeSearch" placeholder="Type the name here to search Job Code..." autocomplete="off">
-                        <div id="jobCodeDropdown" class="typeahead-dropdown"></div>
+                        <div class="position-relative">
+                            <input type="text" class="form-control form-control-sm" id="jobCodeSearch" placeholder="Type the name here to search Job Code..." autocomplete="off">
+                            <div id="jobCodeDropdown" class="typeahead-dropdown"></div>
+                        </div>
                         <div id="jobCodeSelected" class="mt-2" style="display: none;">
                             <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
                                 <div>
@@ -1279,6 +1278,26 @@
                             <input type="number" class="form-control form-control-sm" id="jobCodeQuantity" min="0.01" step="0.01" value="1.00">
                             <span class="input-group-text" id="jobCodeUnit">PCS</span>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Unit Price</label>
+                        <div class="input-group input-group-sm">
+                            <select class="form-select form-select-sm" id="jobCodeCurrency" style="max-width: 100px;">
+                                <option value="">IDR</option>
+                                @if (Model?.Currencies != null && Model.Currencies.Any())
+                                {
+                                    foreach (var currency in Model.Currencies)
+                                    {
+                                        <option value="@currency.IdEnum">
+                                            @currency.EnumName
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <input type="number" class="form-control form-control-sm" id="jobCodeUnitPrice" min="0" step="0.01" placeholder="0.00">
+                        </div>
+                        <small class="text-muted">Optional - enter unit price if needed</small>
                     </div>
                 </div>
 

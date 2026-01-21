@@ -10,7 +10,7 @@
     // Configuration
     const CONFIG = {
         debounceDelay: 300,
-        minSearchLength: 2,
+        minSearchLength: 1,
         apiEndpoints: {
             // Location cascade
             locations: MvcEndpoints.Helpdesk.Location.GetByClient,
@@ -1675,117 +1675,12 @@
 
     /**
      * Initialize labor/material management
+     * Note: The actual labor/material functionality is handled by work-request-add-extended.js
+     * This function is kept for backward compatibility but delegates to the extended module
      */
     function initializeLaborMaterial() {
-        let itemCounter = 0;
-
-        $('#addLaborMaterialBtn').on('click', function () {
-            addLaborMaterialRow(itemCounter++);
-        });
-
-        // Make remove function global
-        window.removeLaborRow = function (button) {
-            const $row = $(button).closest('tr');
-            const index = $row.data('index');
-
-            // Remove from state
-            state.laborMaterialItems = state.laborMaterialItems.filter(item => item.index !== index);
-
-            // Remove row
-            $row.remove();
-
-            // Check if table is empty
-            if ($('#laborMaterialTable tbody tr').length === 0) {
-                $('#laborMaterialTable tbody').html(`
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">
-                            <em>No Labor/Material added yet</em>
-                        </td>
-                    </tr>
-                `);
-            }
-
-            updateLaborMaterialTotal();
-        };
-    }
-
-    /**
-     * Add labor/material row to table
-     */
-    function addLaborMaterialRow(index) {
-        const $tbody = $('#laborMaterialTable tbody');
-
-        // Remove empty message if present
-        if ($tbody.find('td[colspan]').length > 0) {
-            $tbody.empty();
-        }
-
-        const row = `
-            <tr data-index="${index}">
-                <td>
-                    <input type="text" 
-                           class="form-control form-control-sm labor-name" 
-                           name="LaborMaterial[${index}].Name" 
-                           placeholder="Material or labor description"
-                           required>
-                </td>
-                <td>
-                    <input type="number" 
-                           class="form-control form-control-sm labor-qty" 
-                           name="LaborMaterial[${index}].Quantity" 
-                           min="0" 
-                           step="0.01"
-                           value="1"
-                           required>
-                </td>
-                <td>
-                    <input type="number" 
-                           class="form-control form-control-sm labor-price" 
-                           name="LaborMaterial[${index}].UnitPrice" 
-                           min="0" 
-                           step="0.01"
-                           placeholder="0.00"
-                           required>
-                </td>
-                <td class="text-center">
-                    <button type="button" 
-                            class="btn btn-sm btn-danger" 
-                            onclick="removeLaborRow(this)"
-                            title="Remove this item">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        $tbody.append(row);
-
-        // Add to state
-        state.laborMaterialItems.push({ index: index });
-
-        // Add change listeners for calculation
-        $(`tr[data-index="${index}"]`).find('.labor-qty, .labor-price').on('input', function () {
-            updateLaborMaterialTotal();
-        });
-    }
-
-    /**
-     * Update labor/material total (if needed)
-     */
-    function updateLaborMaterialTotal() {
-        let total = 0;
-
-        $('#laborMaterialTable tbody tr[data-index]').each(function () {
-            const qty = parseFloat($(this).find('.labor-qty').val()) || 0;
-            const price = parseFloat($(this).find('.labor-price').val()) || 0;
-            total += qty * price;
-        });
-
-        // Update cost estimation if it's empty
-        const $costEstimation = $('#costEstimation');
-        if (!$costEstimation.val() || parseFloat($costEstimation.val()) === 0) {
-            $costEstimation.val(total.toFixed(2));
-        }
+        // Labor/Material modal and table management is handled by work-request-add-extended.js
+        // This function is intentionally empty - the extended module handles all functionality
     }
 
     /**

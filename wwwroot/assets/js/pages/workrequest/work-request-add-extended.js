@@ -17,7 +17,7 @@
             searchAssetGroup: MvcEndpoints.Helpdesk.Search.AssetGroup
         },
         debounceDelay: 300,
-        minSearchLength: 2
+        minSearchLength: 1
     };
 
     // Extended state for labor/material and assets
@@ -35,7 +35,9 @@
         currentAssetSelection: null,
         laborMaterialLabels: [],
         currencies: [],
-        measurementUnits: []
+        measurementUnits: [],
+        editingItemIndex: null,
+        editingItemType: null
     };
 
     /**
@@ -181,6 +183,7 @@
 
     /**
      * Search Job Code via API
+     * API Response: JobCodeFormDetailResponse { IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit }
      */
     function searchJobCode(term) {
         $.ajax({
@@ -193,11 +196,17 @@
 
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function(index, jobCode) {
+                        // Use correct property names from JobCodeFormDetailResponse
+                        const name = jobCode.Name || jobCode.name;
+                        const latestStock = jobCode.LatestStock ?? jobCode.latestStock ?? 0;
+                        const minimumStock = jobCode.MinimumStock ?? jobCode.minimumStock ?? 0;
+                        const stockClass = latestStock > minimumStock ? 'text-success' : 'text-danger';
+
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${jobCode.code || jobCode.name}</strong><br>
-                                <small class="text-muted">Stock: ${jobCode.remainingStock || 0}</small>
+                                <strong>${name}</strong><br>
+                                <small class="${stockClass}">Stock: ${latestStock}</small>
                             `)
                             .on('click', function() {
                                 selectJobCode(jobCode);
@@ -223,6 +232,7 @@
 
     /**
      * Select a Job Code
+     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit
      */
     function selectJobCode(jobCode) {
         extendedState.currentJobCodeSelection = jobCode;
@@ -230,9 +240,21 @@
         $('#jobCodeSearch').hide();
         $('#jobCodeDropdown').removeClass('show').empty();
 
-        $('#selectedJobCodeName').text(jobCode.code || jobCode.name);
-        $('#selectedJobCodeStock').text(jobCode.remainingStock || 0);
-        $('#jobCodeUnit').text(jobCode.unit || 'PCS');
+        // Use correct property names from JobCodeFormDetailResponse
+        const name = jobCode.Name || jobCode.name;
+        const latestStock = jobCode.LatestStock ?? jobCode.latestStock ?? 0;
+        const minimumStock = jobCode.MinimumStock ?? jobCode.minimumStock ?? 0;
+        const unit = jobCode.LaborMaterialMeasurementUnit || jobCode.laborMaterialMeasurementUnit || 'PCS';
+
+        // Apply stock color coding: green if > min, red if <= min
+        const stockClass = latestStock > minimumStock ? 'text-success' : 'text-danger';
+
+        $('#selectedJobCodeName').text(name);
+        $('#selectedJobCodeStock')
+            .text(latestStock)
+            .removeClass('text-success text-danger')
+            .addClass(stockClass);
+        $('#jobCodeUnit').text(unit);
         $('#jobCodeSelected').show();
     }
 
@@ -245,13 +267,19 @@
         $('#jobCodeMode').show();
         $('#adHocMode').hide();
 
+        // Re-enable mode switching
+        $('input[name="laborMaterialMode"]').prop('disabled', false);
+
         // Reset Job Code fields
         $('#jobCodeSearch').val('').show();
         $('#jobCodeSelected').hide();
+        $('#removeJobCodeBtn').show(); // Show remove button
         $('#jobCodeDropdown').removeClass('show').empty();
         const today = new Date().toISOString().split('T')[0];
         $('#jobCodeTransactionDate').val(today);
         $('#jobCodeQuantity').val('1.00');
+        $('#jobCodeUnitPrice').val('');
+        $('#jobCodeCurrency').val('');
         extendedState.currentJobCodeSelection = null;
 
         // Reset Ad Hoc fields
@@ -262,6 +290,12 @@
         if ($('#adHocMeasurementUnit option').length > 1) {
             $('#adHocMeasurementUnit').val('');
         }
+
+        // Reset edit mode
+        extendedState.editingItemIndex = null;
+        extendedState.editingItemType = null;
+        $('#saveLaborMaterialBtn').html('<i class="ti ti-device-floppy"></i> Save').data('edit-mode', false);
+        $('#laborMaterialModalLabel').text('Labor/Material');
     }
 
     /**
@@ -269,18 +303,20 @@
      */
     function saveLaborMaterial() {
         const mode = $('input[name="laborMaterialMode"]:checked').val();
+        const isEditMode = $('#saveLaborMaterialBtn').data('edit-mode') === true;
 
         if (mode === 'jobCode') {
-            saveLaborMaterialJobCode();
+            saveLaborMaterialJobCode(isEditMode);
         } else {
-            saveLaborMaterialAdHoc();
+            saveLaborMaterialAdHoc(isEditMode);
         }
     }
 
     /**
      * Save Labor/Material - Job Code Mode
+     * Uses JobCodeFormDetailResponse properties: IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit
      */
-    function saveLaborMaterialJobCode() {
+    function saveLaborMaterialJobCode(isEditMode) {
         if (!extendedState.currentJobCodeSelection) {
             showNotification('Please select a job code', 'error', 'Validation Error');
             return;
@@ -298,28 +334,46 @@
             return;
         }
 
+        const unitPrice = parseFloat($('#jobCodeUnitPrice').val()) || 0;
+
+        // Use correct property names from JobCodeFormDetailResponse
+        const selection = extendedState.currentJobCodeSelection;
         const item = {
             type: 'jobCode',
-            idJobCode: extendedState.currentJobCodeSelection.id,
-            name: extendedState.currentJobCodeSelection.code || extendedState.currentJobCodeSelection.name,
+            idJobCode: selection.IdJobCode ?? selection.idJobCode,
+            name: selection.Name || selection.name,
+            description: selection.Description || selection.description || '',
             transactionDate: transactionDate,
             quantity: quantity,
-            unit: extendedState.currentJobCodeSelection.unit || 'PCS',
-            unitPrice: extendedState.currentJobCodeSelection.unitPrice || 0,
-            remainingStock: extendedState.currentJobCodeSelection.remainingStock || 0
+            unitPrice: unitPrice,
+            unit: selection.LaborMaterialMeasurementUnit || selection.laborMaterialMeasurementUnit || 'PCS',
+            minimumStock: selection.MinimumStock ?? selection.minimumStock ?? 0,
+            latestStock: selection.LatestStock ?? selection.latestStock ?? 0,
+            currencyCode: $('#jobCodeCurrency option:selected').text() || 'IDR',
+            currencyId: $('#jobCodeCurrency').val() || null
         };
 
-        extendedState.laborMaterialItems.jobCode.push(item);
-        addLaborMaterialToTable(item);
+        if (isEditMode && extendedState.editingItemIndex !== null) {
+            // Update existing item
+            extendedState.laborMaterialItems.jobCode[extendedState.editingItemIndex] = item;
+            rebuildLaborMaterialTable();
+            showNotification('Labor/Material updated successfully', 'success', 'Success');
+        } else {
+            // Add new item
+            extendedState.laborMaterialItems.jobCode.push(item);
+            addLaborMaterialToTable(item);
+            showNotification('Labor/Material added successfully', 'success', 'Success');
+        }
 
         $('#laborMaterialModal').modal('hide');
-        showNotification('Labor/Material added successfully', 'success', 'Success');
+        resetLaborMaterialModal();
+        updateCostEstimation();
     }
 
     /**
      * Save Labor/Material - Ad Hoc Mode
      */
-    function saveLaborMaterialAdHoc() {
+    function saveLaborMaterialAdHoc(isEditMode) {
         const name = $('#adHocName').val().trim();
         if (!name) {
             showNotification('Please enter a name', 'error', 'Validation Error');
@@ -351,51 +405,41 @@
             return;
         }
 
-        showNotification('Saving ad-hoc job code...', 'info', 'Please wait');
+        const measurementUnit = extendedState.measurementUnits.find(u => u.id == measurementUnitId);
+        const currency = extendedState.currencies.find(c => c.id == currencyId);
 
-        // Save ad-hoc job code to backend immediately
-        $.ajax({
-            url: '/Helpdesk/CreateAdHocJobCode',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: name,
-                label_Enum_idEnum: labelId,
-                unitPriceCurrency_Enum_idEnum: currencyId || 1,
-                unitPrice: unitPrice,
-                measurementUnit_Enum_idEnum: measurementUnitId
-            }),
-            success: function(response) {
-                if (response.success && response.data) {
-                    const measurementUnit = extendedState.measurementUnits.find(u => u.id == measurementUnitId);
-                    const currency = extendedState.currencies.find(c => c.id == currencyId);
+        // Create item data
+        const item = {
+            type: 'adHoc',
+            name: name,
+            labelValue: labelValue,
+            label_Enum_idEnum: labelId,
+            unitPriceCurrency_Enum_idEnum: currencyId || 1,
+            unitPrice: unitPrice,
+            quantity: quantity,
+            measurementUnit_Enum_idEnum: measurementUnitId,
+            unit: measurementUnit ? (measurementUnit.code || measurementUnit.name) : 'UNIT',
+            currencyCode: currency ? (currency.code || currency.name) : 'IDR',
+            transactionDate: new Date().toISOString().split('T')[0]
+        };
 
-                    // Create item with returned job code ID
-                    const item = {
-                        type: 'jobCode',
-                        idJobCode: response.data.id,
-                        name: name,
-                        quantity: quantity,
-                        unitPrice: unitPrice,
-                        unit: measurementUnit ? (measurementUnit.code || measurementUnit.name) : 'UNIT',
-                        currencyCode: currency ? (currency.code || currency.name) : 'IDR',
-                        transactionDate: new Date().toISOString().split('T')[0]
-                    };
-
-                    extendedState.laborMaterialItems.jobCode.push(item);
-                    addLaborMaterialToTable(item);
-
-                    $('#laborMaterialModal').modal('hide');
-                    showNotification('Labor/Material saved and added successfully', 'success', 'Success');
-                } else {
-                    showNotification(response.message || 'Failed to save job code', 'error', 'Error');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error saving ad-hoc job code:', error);
-                showNotification('Failed to save job code. Please try again.', 'error', 'Error');
-            }
-        });
+        if (isEditMode && extendedState.editingItemIndex !== null) {
+            // Update existing item in state
+            extendedState.laborMaterialItems.adHoc[extendedState.editingItemIndex] = item;
+            rebuildLaborMaterialTable();
+            $('#laborMaterialModal').modal('hide');
+            resetLaborMaterialModal();
+            updateCostEstimation();
+            showNotification('Labor/Material updated successfully', 'success', 'Success');
+        } else {
+            // Add new item
+            extendedState.laborMaterialItems.adHoc.push(item);
+            addLaborMaterialToTable(item);
+            $('#laborMaterialModal').modal('hide');
+            resetLaborMaterialModal();
+            updateCostEstimation();
+            showNotification('Labor/Material added successfully', 'success', 'Success');
+        }
     }
 
     /**
@@ -409,18 +453,32 @@
             $tbody.empty();
         }
 
-        const total = item.quantity * item.unitPrice;
         const rowIndex = $tbody.find('tr').length;
 
+        // Determine prefix based on type
+        const typePrefix = item.type === 'jobCode' ? '[Job Code]' : '[AdHoc]';
+        const displayName = `${typePrefix} ${item.name}`;
+
+        // Format unit price display
+        const unitPriceDisplay = item.unitPrice ?
+            `${item.currencyCode || 'IDR'} ${item.unitPrice.toFixed(2)}` :
+            '-';
+
+        // Format quantity with unit
+        const qtyDisplay = `${item.quantity.toFixed(2)} ${item.unit || ''}`.trim();
+
         const row = `
-            <tr data-labor-index="${rowIndex}" data-labor-type="${item.type}">
-                <td>${item.name}</td>
-                <td>${item.transactionDate || '-'}</td>
-                <td>${item.quantity.toFixed(2)}</td>
-                <td>${item.unit || item.unitText}</td>
-                <td>${item.currencyCode || ''} ${item.unitPrice ? item.unitPrice.toFixed(2) : '0.00'}</td>
-                <td>${item.currencyCode || ''} ${total.toFixed(2)}</td>
+            <tr data-labor-index="${rowIndex}" data-labor-type="${item.type}" data-item-data='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                <td>${escapeHtml(displayName)}</td>
+                <td>${qtyDisplay}</td>
+                <td>${unitPriceDisplay}</td>
                 <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary me-1"
+                            onclick="window.editLaborMaterialRow(this)"
+                            title="Edit this item">
+                        <i class="ti ti-pencil"></i>
+                    </button>
                     <button type="button"
                             class="btn btn-sm btn-danger"
                             onclick="window.removeLaborMaterialRow(this)"
@@ -453,41 +511,212 @@
         // Remove row
         $row.remove();
 
-        // Re-index remaining rows
-        $('#laborMaterialTable tbody tr').each(function(i) {
-            $(this).attr('data-labor-index', i);
-        });
-
-        // Check if table is empty
-        if ($('#laborMaterialTable tbody tr').length === 0) {
-            $('#laborMaterialTable tbody').html(`
-                <tr>
-                    <td colspan="7" class="text-center text-muted">
-                        <em>No Labor/Material added yet</em>
-                    </td>
-                </tr>
-            `);
-        }
+        // Re-index remaining rows and update state array indices
+        rebuildLaborMaterialTable();
 
         updateCostEstimation();
         showNotification('Labor/Material removed', 'info', 'Info');
     };
 
     /**
+     * Edit Labor/Material row (global function)
+     */
+    window.editLaborMaterialRow = function(button) {
+        const $row = $(button).closest('tr');
+        const type = $row.data('labor-type');
+        const index = $row.data('labor-index');
+        const itemData = $row.data('item-data');
+
+        // Store which item is being edited
+        extendedState.editingItemIndex = index;
+        extendedState.editingItemType = type;
+
+        // Open modal in edit mode
+        if (type === 'jobCode') {
+            openEditJobCodeModal(itemData);
+        } else {
+            openEditAdHocModal(itemData);
+        }
+    };
+
+    /**
+     * Open edit modal for Job Code item
+     * Job Code items can only edit date, quantity, and unit price
+     */
+    function openEditJobCodeModal(itemData) {
+        const $modal = $('#laborMaterialModal');
+
+        // Set mode to Job Code
+        $('#modeJobCode').prop('checked', true);
+        $('#jobCodeMode').show();
+        $('#adHocMode').hide();
+
+        // Disable mode switching during edit
+        $('input[name="laborMaterialMode"]').prop('disabled', true);
+
+        // Hide job code search, show selected item (locked)
+        $('#jobCodeSearch').hide();
+        $('#jobCodeDropdown').removeClass('show').empty();
+
+        // Show selected job code info (read-only)
+        $('#selectedJobCodeName').text(itemData.name);
+        $('#selectedJobCodeStock').text(itemData.latestStock || '-').removeClass('text-success text-danger');
+        $('#jobCodeUnit').text(itemData.unit || 'PCS');
+        $('#jobCodeSelected').show();
+
+        // Hide remove button during edit (can't change job code)
+        $('#removeJobCodeBtn').hide();
+
+        // Set editable fields
+        $('#jobCodeTransactionDate').val(itemData.transactionDate || new Date().toISOString().split('T')[0]);
+        $('#jobCodeQuantity').val(itemData.quantity || 1);
+        $('#jobCodeUnitPrice').val(itemData.unitPrice || '');
+        $('#jobCodeCurrency').val(itemData.currencyId || '');
+
+        // Store the job code selection for update
+        extendedState.currentJobCodeSelection = {
+            IdJobCode: itemData.idJobCode,
+            Name: itemData.name,
+            Description: itemData.description,
+            MinimumStock: itemData.minimumStock,
+            LatestStock: itemData.latestStock,
+            LaborMaterialMeasurementUnit: itemData.unit
+        };
+
+        // Change save button to update mode
+        $('#saveLaborMaterialBtn').text('Update').data('edit-mode', true);
+
+        // Update modal title
+        $('#laborMaterialModalLabel').text('Edit Labor/Material');
+
+        $modal.modal('show');
+    }
+
+    /**
+     * Open edit modal for AdHoc item
+     * AdHoc items can edit all fields
+     */
+    function openEditAdHocModal(itemData) {
+        const $modal = $('#laborMaterialModal');
+
+        // Set mode to Ad Hoc
+        $('#modeAdHoc').prop('checked', true);
+        $('#jobCodeMode').hide();
+        $('#adHocMode').show();
+
+        // Disable mode switching during edit
+        $('input[name="laborMaterialMode"]').prop('disabled', true);
+
+        // Populate fields
+        $('#adHocName').val(itemData.name);
+
+        // Set label radio
+        const labelValue = itemData.labelValue || 'labor';
+        $(`input[name="adHocLabel"][value="${labelValue}"]`).prop('checked', true);
+
+        // Set currency
+        if (itemData.unitPriceCurrency_Enum_idEnum) {
+            $('#adHocCurrency').val(itemData.unitPriceCurrency_Enum_idEnum);
+        }
+
+        $('#adHocUnitPrice').val(itemData.unitPrice || '');
+        $('#adHocQuantity').val(itemData.quantity || 1);
+
+        // Set measurement unit
+        if (itemData.measurementUnit_Enum_idEnum) {
+            $('#adHocMeasurementUnit').val(itemData.measurementUnit_Enum_idEnum);
+        }
+
+        // Change save button to update mode
+        $('#saveLaborMaterialBtn').text('Update').data('edit-mode', true);
+
+        // Update modal title
+        $('#laborMaterialModalLabel').text('Edit Labor/Material');
+
+        $modal.modal('show');
+    }
+
+    /**
+     * Rebuild labor/material table from state
+     */
+    function rebuildLaborMaterialTable() {
+        const $tbody = $('#laborMaterialTable tbody');
+        $tbody.empty();
+
+        const allItems = [
+            ...extendedState.laborMaterialItems.jobCode.map(item => ({ ...item, type: 'jobCode' })),
+            ...extendedState.laborMaterialItems.adHoc.map(item => ({ ...item, type: 'adHoc' }))
+        ];
+
+        if (allItems.length === 0) {
+            $tbody.html(`
+                <tr>
+                    <td colspan="4" class="text-center text-muted">
+                        <em>No Labor/Material added yet</em>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        // Re-add all items
+        allItems.forEach((item, index) => {
+            const typePrefix = item.type === 'jobCode' ? '[Job Code]' : '[AdHoc]';
+            const displayName = `${typePrefix} ${item.name}`;
+            const unitPriceDisplay = item.unitPrice ?
+                `${item.currencyCode || 'IDR'} ${item.unitPrice.toFixed(2)}` :
+                '-';
+            const qtyDisplay = `${item.quantity.toFixed(2)} ${item.unit || ''}`.trim();
+
+            const row = `
+                <tr data-labor-index="${index}" data-labor-type="${item.type}" data-item-data='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                    <td>${escapeHtml(displayName)}</td>
+                    <td>${qtyDisplay}</td>
+                    <td>${unitPriceDisplay}</td>
+                    <td class="text-center">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary me-1"
+                                onclick="window.editLaborMaterialRow(this)"
+                                title="Edit this item">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-danger"
+                                onclick="window.removeLaborMaterialRow(this)"
+                                title="Remove this item">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $tbody.append(row);
+        });
+    }
+
+    /**
      * Update cost estimation based on labor/material total
+     * Calculates: sum of (quantity * unitPrice) for all items
      */
     function updateCostEstimation() {
         let total = 0;
-        $('#laborMaterialTable tbody tr[data-labor-index]').each(function() {
-            const text = $(this).find('td').eq(5).text().replace(/[^\d.]/g, '');
-            const amount = parseFloat(text) || 0;
-            total += amount;
+
+        // Calculate from job code items
+        extendedState.laborMaterialItems.jobCode.forEach(item => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unitPrice) || 0;
+            total += qty * price;
         });
 
+        // Calculate from ad-hoc items
+        extendedState.laborMaterialItems.adHoc.forEach(item => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unitPrice) || 0;
+            total += qty * price;
+        });
+
+        // Always update cost estimation with the calculated total
         const $costEstimation = $('#costEstimation');
-        if (!$costEstimation.val() || parseFloat($costEstimation.val()) === 0) {
-            $costEstimation.val(total.toFixed(0));
-        }
+        $costEstimation.val(total.toFixed(0));
     }
 
     /**

@@ -30,7 +30,7 @@ namespace cfm_frontend.ViewModels
         public List<EnumFormDetailResponse>? Statuses { get; set; }
 
         // Lookup data (Currencies)
-        public List<LookupModel>? Currencies { get; set; }
+        public List<EnumFormDetailResponse>? Currencies { get; set; }
 
         // Important Checklist
         public List<TypeFormDetailResponse>? ImportantChecklist { get; set; }

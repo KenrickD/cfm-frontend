@@ -208,7 +208,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient, idCompany, ct);
                 var priorityLevelsTask = GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient, ct);
                 var feedbackTypesTask = GetFeedbackTypesAsync(client, backendUrl, ct);
-                var currenciesTask = GetCurrenciesAsync(client, backendUrl, ct);
+                var currenciesTask = FetchCurrenciesAsync(client, backendUrl, ct);
                 var requestMethodsTask = GetRequestMethodsAsync(client, backendUrl, ct);
                 var statusesTask = GetStatusesAsync(client, backendUrl, ct);
                 var checklistTask = GetImportantChecklistAsync(client, backendUrl, idClient, ct);
@@ -1389,8 +1389,8 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.Models.JobCode.JobCodeModel>>(
-                () => client.GetAsync($"{backendUrl}/api/jobcode/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+            var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.Models.JobCode.JobCodeSearchResult>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.Base}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
                 "Failed to search job codes");
 
             return Json(new { success, data, message });
@@ -1400,13 +1400,13 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Get currencies for unit price dropdown
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetCurrencies()
+        public async Task<IActionResult> GetCurrenciesAsync()
         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
-                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=currency"),
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.Currency)}"),
                 "Failed to load currencies");
 
             return Json(new { success, data, message });
@@ -1416,29 +1416,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Get measurement units for dropdown
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetMeasurementUnits()
+        public async Task<IActionResult> GetMeasurementUnitsAsync()
         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
-                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=measurementUnit"),
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.MeasurementUnit)}"),
                 "Failed to load measurement units");
 
             return Json(new { success, data, message });
         }
 
         /// <summary>
-        /// API: Get labor/material label enum
+        /// API: Get labor/material labels for dropdown
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetLaborMaterialLabels()
+        public async Task<IActionResult> GetLaborMaterialLabelsAsync()
         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<LookupModel>>(
-                () => client.GetAsync($"{backendUrl}/api/lookup/list?type=laborMaterialLabel"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.LaborMaterialLabel}"),
                 "Failed to load labor/material labels");
 
             return Json(new { success, data, message });
@@ -1760,10 +1760,10 @@ namespace cfm_frontend.Controllers.Helpdesk
             return success && data != null ? data : [];
         }
 
-        private async Task<List<LookupModel>> GetCurrenciesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
+        private async Task<List<EnumFormDetailResponse>> FetchCurrenciesAsync(HttpClient client, string backendUrl, CancellationToken cancellationToken = default)
         {
-            var (success, data, _) = await SafeExecuteApiAsync<List<LookupModel>>(
-                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.Currency}", ct),
+            var (success, data, _) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                ct => client.GetAsync($"{backendUrl}{ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.Currency)}", ct),
                 "Error fetching currencies",
                 cancellationToken);
 

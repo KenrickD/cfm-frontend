@@ -79,9 +79,9 @@
              * Supporting data for labor/material and other extended functionality
              */
             Extended: {
-                GetCurrencies: '/Helpdesk/GetCurrencies',
-                GetMeasurementUnits: '/Helpdesk/GetMeasurementUnits',
-                GetLaborMaterialLabels: '/Helpdesk/GetLaborMaterialLabels',
+                GetCurrencies: '/Helpdesk/GetCurrenciesAsync',
+                GetMeasurementUnits: '/Helpdesk/GetMeasurementUnitsAsync',
+                GetLaborMaterialLabels: '/Helpdesk/GetLaborMaterialLabelsAsync',
                 GetOfficeHours: '/Helpdesk/GetOfficeHours',
                 GetPublicHolidays: '/Helpdesk/GetPublicHolidays'
             },

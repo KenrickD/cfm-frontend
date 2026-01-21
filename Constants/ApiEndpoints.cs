@@ -263,6 +263,7 @@ namespace cfm_frontend.Constants
                 public const string WorkRequestDocument = "workRequestDocument";
                 public const string Currency = "currency";
                 public const string MeasurementUnit = "measurementUnit";
+                public const string LaborMaterialLabel = "laborMaterialLabel";
             }
         }
 
@@ -590,13 +591,20 @@ namespace cfm_frontend.Constants
         /// </summary>
         public static class JobCode
         {
-            private const string Base = ApiBase + "/jobcode";
+            public const string Base = ApiBase + "/jobcode";
 
             /// <summary>
             /// GET: Get all job codes
             /// Query params: idClient, isActiveData (optional), keyword (optional), group (optional), page (optional)
             /// </summary>
             public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Search job codes for Labor/Material modal
+            /// Query params: term, idClient
+            /// Returns: List of JobCodeSearchResult (IdJobCode, Name, Description, MinimumStock, LatestStock, LaborMaterialMeasurementUnit)
+            /// </summary>
+            public const string Search = Base + "/search";
 
             /// <summary>
             /// GET: Get job code by ID
@@ -671,6 +679,8 @@ namespace cfm_frontend.Constants
                 public const string WorkRequestMethod = "workRequestMethod";
                 public const string WorkRequestStatus = "workRequestStatus";
                 public const string WorkRequestFeedbackType = "workRequestFeedbackType";
+                public const string Currency = "currency";
+                public const string MeasurementUnit = "measurementUnit";
             }
         }
 
