@@ -3,6 +3,7 @@ using cfm_frontend.Handlers;
 using cfm_frontend.Middleware;
 using cfm_frontend.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,12 @@ builder.Services.AddTransient<AuthTokenHandler>();
 builder.Services.AddScoped<IPrivilegeService, PrivilegeService>();
 builder.Services.AddScoped<ISessionRestoreService, SessionRestoreService>();
 builder.Services.AddSingleton<IFileLoggerService, FileLoggerService>();
+
+// Persist Data Protection keys so auth cookies survive app restarts
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "Keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("CFM-Frontend");
 
 builder.Services.AddHttpClient("BackendAPI", client =>
 {

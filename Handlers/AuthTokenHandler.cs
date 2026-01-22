@@ -208,13 +208,20 @@ namespace cfm_frontend.Handlers
                             properties.UpdateTokenValue("access_token", newTokens.Data.Token);
                             properties.UpdateTokenValue("refresh_token", newTokens.Data.RefreshToken);
 
+                            // Preserve Remember Me: extend expiration for persistent cookies
+                            if (properties.IsPersistent == true)
+                            {
+                                properties.ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30);
+                            }
+
                             await context.SignInAsync(
                                 CookieAuthenticationDefaults.AuthenticationScheme,
                                 result.Principal,
                                 properties
                             );
 
-                            _logger.LogInformation("Access token refreshed successfully at {Time}", DateTime.UtcNow);
+                            _logger.LogInformation("Access token refreshed successfully at {Time}. IsPersistent: {IsPersistent}",
+                                DateTime.UtcNow, properties.IsPersistent);
                             return true;
                         }
                     }

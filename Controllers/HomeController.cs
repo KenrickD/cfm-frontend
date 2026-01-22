@@ -1,3 +1,4 @@
+using cfm_frontend.Extensions;
 using cfm_frontend.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -15,6 +16,18 @@ namespace cfm_frontend.Controllers
 
         public IActionResult Index()
         {
+            // Check if user is authenticated (has valid Remember Me cookie)
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userInfo = HttpContext.Session.GetUserInfo();
+                ViewBag.IsAuthenticated = true;
+                ViewBag.UserName = userInfo?.FullName ?? User.Identity.Name ?? "User";
+            }
+            else
+            {
+                ViewBag.IsAuthenticated = false;
+            }
+
             return View();
         }
 

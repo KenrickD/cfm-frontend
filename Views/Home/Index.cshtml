@@ -59,7 +59,16 @@
                         <a href="#price" class="nav-link smoothScroll">HOW MUCH?</a>
                     </li>
                     <li class="nav-item" style="padding-left: 10px; padding-right: 10px;">
-                        <a class="nav-link smoothScroll" asp-controller="Login" asp-action="Index">LOGIN</a>
+                        @if (ViewBag.IsAuthenticated == true)
+                        {
+                            <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                                <i class="fa fa-user"></i> @ViewBag.UserName
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="nav-link smoothScroll" asp-controller="Login" asp-action="Index">LOGIN</a>
+                        }
                     </li>
                 </ul>
             </div>

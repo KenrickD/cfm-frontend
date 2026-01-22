@@ -66,6 +66,74 @@ var privileges = HttpContext.Session.GetPrivileges();
 
 **Token Storage:** In auth cookie, retrieved via `await HttpContext.GetTokenAsync("access_token")`
 
+### Remember Me Feature
+
+**Files:** `LoginController.cs`, `AuthTokenHandler.cs`, `Program.cs`
+
+When user checks "Remember me?" during login:
+- Auth cookie is set with `IsPersistent = true` and 30-day expiration
+- Cookie survives browser close/reopen
+- Session data is auto-restored via `SessionRestoreMiddleware`
+
+**Key Implementation Points:**
+
+1. **LoginController.cs** - Sets persistence on login:
+```csharp
+var authProperties = new AuthenticationProperties
+{
+    IsPersistent = model.RememberMe,
+    ExpiresUtc = model.RememberMe ? DateTime.UtcNow.AddDays(30) : DateTime.UtcNow.AddHours(12)
+};
+```
+
+2. **AuthTokenHandler.cs** - Preserves persistence during token refresh:
+```csharp
+// When refreshing tokens, preserve Remember Me setting
+if (properties.IsPersistent == true)
+{
+    properties.ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30);
+}
+```
+
+3. **SessionRestoreMiddleware** - Auto-restores session when cookie valid but session expired
+
+**Landing Page Auth Detection:**
+`HomeController.Index()` checks `User.Identity.IsAuthenticated` and passes to view:
+- If authenticated: Shows username linking to Dashboard instead of LOGIN button
+- If not authenticated: Shows LOGIN button
+
+### Data Protection (Cookie Encryption Keys)
+
+**File:** `Program.cs`
+
+Auth cookies are encrypted using Data Protection keys. Configuration ensures keys persist across app restarts.
+
+```csharp
+// Persist Data Protection keys so auth cookies survive app restarts
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "Keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("CFM-Frontend");
+```
+
+**Key Storage by Environment:**
+
+| Environment | Key Storage | Notes |
+|-------------|-------------|-------|
+| Development (F5) | `Keys/` folder | Required for cookies to survive app restart |
+| IIS on VM | `Keys/` folder | Works fine, keys persist on disk |
+| Load Balanced | ⚠️ Shared storage needed | Use network share, Redis, or database |
+| Containers/K8s | ⚠️ Persistent volume needed | Or use Azure Blob/Redis |
+
+**Current Deployment:** IIS on VM - file-based keys work correctly.
+
+**Future Migration Notes:**
+- For **load balancer**: Change to shared network path or Redis
+- For **Azure**: Use `PersistKeysToAzureBlobStorage()`
+- For **containers**: Use persistent volume or external key store
+
+**⚠️ IMPORTANT:** The `Keys/` folder is in `.gitignore` - do not commit encryption keys to source control.
+
 ### DI Configuration (`Program.cs`)
 ```csharp
 builder.Services.AddHttpClient("BackendAPI", c => c.BaseAddress = new Uri(config["BackendBaseUrl"]))
@@ -465,8 +533,10 @@ Use `cfm_frontend` for consistency (some legacy use `Mvc.Controllers`)
 3. `UseRouting()`
 4. `UseSession()` (before auth!)
 5. `UseAuthentication()`
-6. `UseAuthorization()`
-7. `MapControllerRoute()`
+6. `UseTokenExpiration()` - Validates tokens, forces logout if both expired
+7. `UseAuthorization()`
+8. `UseSessionRestore()` - Auto-restores session for Remember Me users
+9. `MapControllerRoute()`
 
 ### Static Assets
 - Bootstrap 5, jQuery, "pcoded" theme
