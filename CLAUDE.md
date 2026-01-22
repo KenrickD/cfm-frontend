@@ -345,6 +345,100 @@ Automatically intercepts all jQuery AJAX responses and displays `toastr` error n
 - Form submissions where you need custom success handling
 - Cases where you want to suppress the notification (set `success: true` or don't include `message`)
 
+## File Logger Service
+
+**File:** `Services/FileLoggerService.cs`
+
+Thread-safe file logging service for API timing and diagnostics. Writes to rotating daily log files.
+
+### Configuration (`appsettings.json`)
+```json
+{
+  "Logging": {
+    "FileLogger": {
+      "Path": "Logs"
+    }
+  },
+  "ApplicationName": "CFM-Frontend"
+}
+```
+
+Log files are created at: `{Path}/{ApplicationName}_{yyyy-MM-dd}.log`
+
+### DI Registration
+```csharp
+builder.Services.AddSingleton<IFileLoggerService, FileLoggerService>();
+```
+
+### Basic Logging
+```csharp
+_fileLogger.LogInfo("Operation completed", "CATEGORY");
+_fileLogger.LogWarning("Something unexpected", "CATEGORY");
+_fileLogger.LogError("Failed to process", exception, "CATEGORY");
+```
+
+### Timed API Calls (Batch)
+Use when tracking multiple parallel API calls with timing:
+
+```csharp
+var totalStopwatch = Stopwatch.StartNew();
+var apiTimingResults = new List<ApiTimingResult>();
+
+// Execute timed API calls in parallel
+var task1 = _fileLogger.ExecuteTimedAsync(
+    "Locations",
+    "/api/locations",
+    () => GetLocationsAsync(),
+    apiTimingResults);
+
+var task2 = _fileLogger.ExecuteTimedAsync(
+    "Categories",
+    "/api/categories",
+    () => GetCategoriesAsync(),
+    apiTimingResults);
+
+await Task.WhenAll(task1, task2);
+
+// Update record counts after completion
+_fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Locations", locations?.Count);
+_fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Categories", categories?.Count);
+
+// Log batch summary
+totalStopwatch.Stop();
+_fileLogger.LogApiTimingBatch("Page Load", apiTimingResults, totalStopwatch.Elapsed);
+```
+
+### Timed API Calls (Standalone)
+Use for individual API calls where you just want timing logged:
+
+```csharp
+var data = await _fileLogger.ExecuteTimedAsync(
+    "GetUserDetails",
+    "/api/users/123",
+    () => GetUserDetailsAsync(123),
+    "USER-API");  // optional category
+```
+
+### Log Output Example
+```
+=== Page Load API Timing Summary ===
+Total Duration: 1234.56ms
+Timestamp: 2026-01-21 10:30:45.123 UTC
+--------------------------------------------------------------------------------
+Results: 10 succeeded, 1 failed out of 11 total
+--------------------------------------------------------------------------------
+  [✗] ServiceProviders                       523.45ms - Connection timeout
+  [✓] Locations                              412.32ms (15 records)
+  [✓] Categories                             234.56ms (12 records)
+================================================================================
+```
+
+### Features
+- Thread-safe concurrent queue with background flushing (1 second interval)
+- Auto-rotates files at 10MB
+- Logs failures separately at WARNING level for easy filtering
+- Categories: `API-TIMING`, `API-TIMING-BATCH`, `API-FAILURE`, `API-ERROR`, `PAGE-LOAD`, `AUTH`, `SESSION`
+
 ## Constants & Endpoints
 
 - **C# API Endpoints:** `Constants/ApiEndpoints.cs`

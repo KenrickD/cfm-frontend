@@ -25,6 +25,7 @@ builder.Services.AddAntiforgery(options =>
 builder.Services.AddTransient<AuthTokenHandler>();
 builder.Services.AddScoped<IPrivilegeService, PrivilegeService>();
 builder.Services.AddScoped<ISessionRestoreService, SessionRestoreService>();
+builder.Services.AddSingleton<IFileLoggerService, FileLoggerService>();
 
 builder.Services.AddHttpClient("BackendAPI", client =>
 {

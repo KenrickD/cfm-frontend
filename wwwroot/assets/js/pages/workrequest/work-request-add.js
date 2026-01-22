@@ -103,6 +103,11 @@
             autoSelectFirstPriorityLevel();
         }, 100);
 
+        // Auto-select first location after a short delay (cascades to floors and rooms)
+        setTimeout(function () {
+            autoSelectFirstLocation();
+        }, 150);
+
         console.log('Work Request Add page initialized');
     }
 
@@ -184,6 +189,31 @@
             triggerTargetDateCalculation();
 
             console.log('Auto-selected first priority level:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first location on page load and trigger cascade to floors/rooms
+     */
+    function autoSelectFirstLocation() {
+        const $locationSelect = $('#locationSelect');
+        const $firstValidOption = $locationSelect.find('option[value!=""][value!="-1"]').first();
+
+        if ($firstValidOption.length > 0) {
+            const firstValue = $firstValidOption.val();
+            $locationSelect.val(firstValue);
+            state.selectedLocation = firstValue;
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('locationSelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstValidOption.text(), true);
+            }
+
+            // Trigger change to cascade to floors (which will cascade to rooms)
+            $locationSelect.trigger('change');
+
+            console.log('Auto-selected first location:', firstValue, $firstValidOption.text());
         }
     }
 
@@ -684,6 +714,21 @@
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
                     }
+
+                    // Auto-select first valid floor and trigger cascade to rooms
+                    const $firstValidFloor = $floorSelect.find('option[value!=""][value!="-1"]').first();
+                    if ($firstValidFloor.length > 0) {
+                        const firstValue = $firstValidFloor.val();
+                        $floorSelect.val(firstValue);
+                        state.selectedFloor = firstValue;
+
+                        if (selectElement && selectElement._searchableDropdown) {
+                            selectElement._searchableDropdown.setValue(firstValue, $firstValidFloor.text(), true);
+                        }
+
+                        // Trigger change to cascade to rooms
+                        $floorSelect.trigger('change');
+                    }
                 } else {
                     $floorSelect.append('<option value="">No floors available</option>');
                 }
@@ -726,6 +771,18 @@
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
+                    }
+
+                    // Auto-select first valid room
+                    const $firstValidRoom = $roomSelect.find('option[value!=""][value!="-1"]').first();
+                    if ($firstValidRoom.length > 0) {
+                        const firstValue = $firstValidRoom.val();
+                        $roomSelect.val(firstValue);
+                        state.selectedRoom = firstValue;
+
+                        if (selectElement && selectElement._searchableDropdown) {
+                            selectElement._searchableDropdown.setValue(firstValue, $firstValidRoom.text(), true);
+                        }
                     }
                 } else {
                     $roomSelect.append('<option value="">No room zones available</option>');
@@ -1094,10 +1151,23 @@
                     $.each(response.data, function (index, person) {
                         $select.append(
                             $('<option></option>')
-                                .val(person.id)
-                                .text((person.fullName || person.name) + (person.position ? ' - ' + person.position : ''))
+                                .val(person.employee_idEmployee)
+                                .text(person.fullName)
                         );
                     });
+
+                    // Auto-select first valid PIC
+                    const $firstValidPIC = $select.find('option[value!=""]').first();
+                    if ($firstValidPIC.length > 0) {
+                        const firstValue = $firstValidPIC.val();
+                        $select.val(firstValue);
+
+                        // Update searchable dropdown if available
+                        const selectElement = document.getElementById('personInChargeSelect');
+                        if (selectElement && selectElement._searchableDropdown) {
+                            selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
+                        }
+                    }
                 }
             },
             error: function (xhr, status, error) {

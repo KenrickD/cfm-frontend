@@ -1,6 +1,7 @@
 ﻿using cfm_frontend.Constants;
 using cfm_frontend.DTOs;
 using cfm_frontend.DTOs.Employee;
+using cfm_frontend.DTOs.PIC;
 using cfm_frontend.DTOs.PriorityLevel;
 using cfm_frontend.DTOs.ServiceProvider;
 using cfm_frontend.DTOs.WorkRequest;
@@ -12,6 +13,7 @@ using cfm_frontend.Services;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using static cfm_frontend.Models.WorkRequest.WorkRequestFilterModel;
@@ -23,17 +25,20 @@ namespace cfm_frontend.Controllers.Helpdesk
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<HelpdeskController> _logger;
+        private readonly IFileLoggerService _fileLogger;
 
         public HelpdeskController(
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
             ILogger<HelpdeskController> logger,
-            IPrivilegeService privilegeService)
+            IPrivilegeService privilegeService,
+            IFileLoggerService fileLogger)
             : base(privilegeService, logger)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _fileLogger = fileLogger;
         }
 
         #region Work Request Management
@@ -155,11 +160,15 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// GET: Work Request Add page
-        /// Pre-loads all static dropdown data server-side to eliminate concurrent API calls
+        /// Pre-loads all static dropdown data server-side to eliminate concurrent API calls.
+        /// Includes comprehensive timing and failure logging for diagnostics.
         /// </summary>
         //[Authorize]
         public async Task<IActionResult> WorkRequestAdd()
         {
+            var totalStopwatch = Stopwatch.StartNew();
+            var apiTimingResults = new List<ApiTimingResult>();
+
             // Check if user has permission to view Work Request Add page
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
             if (accessCheck != null) return accessCheck;
@@ -168,6 +177,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             if (!User.Identity?.IsAuthenticated ?? false)
             {
                 _logger.LogWarning("User not authenticated, redirecting to login");
+                _fileLogger.LogWarning("WorkRequestAdd: User not authenticated, redirecting to login", "AUTH");
                 return RedirectToAction("Index", "Login");
             }
 
@@ -183,6 +193,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 if (string.IsNullOrEmpty(userSessionJson))
                 {
                     _logger.LogWarning("User session not found, redirecting to login");
+                    _fileLogger.LogWarning("WorkRequestAdd: User session not found, redirecting to login", "SESSION");
                     return RedirectToAction("Index", "Login");
                 }
 
@@ -196,25 +207,80 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var idClient = userInfo.PreferredClientId;
                 var idCompany = userInfo.IdCompany;
 
+                _fileLogger.LogInfo($"WorkRequestAdd: Starting API calls for idClient={idClient}, idCompany={idCompany}", "PAGE-LOAD");
+
                 // Create cancellation token with overall timeout for all parallel tasks (60 seconds)
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
                 var ct = cts.Token;
 
-                // Pre-load all static dropdown data in parallel with cancellation support
-                var locationsTask = GetLocationsAsync(client, backendUrl, idClient, ct);
-                var workCategoriesTask = GetWorkCategoriesByTypesAsync(client, backendUrl, idClient, ct);
-                var otherCategoriesTask = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory", ct);
-                var otherCategories2Task = GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2", ct);
-                var serviceProvidersTask = GetServiceProvidersAsync(client, backendUrl, idClient, idCompany, ct);
-                var priorityLevelsTask = GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient, ct);
-                var feedbackTypesTask = GetFeedbackTypesAsync(client, backendUrl, ct);
-                var currenciesTask = FetchCurrenciesAsync(client, backendUrl, ct);
-                var requestMethodsTask = GetRequestMethodsAsync(client, backendUrl, ct);
-                var statusesTask = GetStatusesAsync(client, backendUrl, ct);
-                var checklistTask = GetImportantChecklistAsync(client, backendUrl, idClient, ct);
+                // Pre-load all static dropdown data in parallel with timing
+                var locationsTask = _fileLogger.ExecuteTimedAsync(
+                    "Locations",
+                    $"{ApiEndpoints.Property.List}?idClient={idClient}",
+                    () => GetLocationsAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var workCategoriesTask = _fileLogger.ExecuteTimedAsync(
+                    "WorkCategories",
+                    $"{ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory)}?idClient={idClient}",
+                    () => GetWorkCategoriesByTypesAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var otherCategoriesTask = _fileLogger.ExecuteTimedAsync(
+                    "OtherCategories",
+                    $"{ApiEndpoints.Masters.GetTypes("workRequestCustomCategory")}?idClient={idClient}",
+                    () => GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory", ct),
+                    apiTimingResults);
+
+                var otherCategories2Task = _fileLogger.ExecuteTimedAsync(
+                    "OtherCategories2",
+                    $"{ApiEndpoints.Masters.GetTypes("workRequestCustomCategory2")}?idClient={idClient}",
+                    () => GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2", ct),
+                    apiTimingResults);
+
+                var serviceProvidersTask = _fileLogger.ExecuteTimedAsync(
+                    "ServiceProviders",
+                    $"{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}",
+                    () => GetServiceProvidersAsync(client, backendUrl, idClient, idCompany, ct),
+                    apiTimingResults);
+
+                var priorityLevelsTask = _fileLogger.ExecuteTimedAsync(
+                    "PriorityLevels",
+                    $"{ApiEndpoints.PriorityLevelDetail.List}?idClient={idClient}",
+                    () => GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var feedbackTypesTask = _fileLogger.ExecuteTimedAsync(
+                    "FeedbackTypes",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType),
+                    () => GetFeedbackTypesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var currenciesTask = _fileLogger.ExecuteTimedAsync(
+                    "Currencies",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.Currency),
+                    () => FetchCurrenciesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var requestMethodsTask = _fileLogger.ExecuteTimedAsync(
+                    "RequestMethods",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod),
+                    () => GetRequestMethodsAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var statusesTask = _fileLogger.ExecuteTimedAsync(
+                    "Statuses",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus),
+                    () => GetStatusesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var checklistTask = _fileLogger.ExecuteTimedAsync(
+                    "ImportantChecklist",
+                    $"{ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation)}?idClient={idClient}",
+                    () => GetImportantChecklistAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
 
                 // Wait for all tasks - use WhenAll to run in parallel
-                // Wrap in try-catch to handle any faulted tasks gracefully
                 try
                 {
                     await Task.WhenAll(
@@ -242,17 +308,55 @@ namespace cfm_frontend.Controllers.Helpdesk
                 viewmodel.Statuses = statusesTask.IsCompletedSuccessfully ? statusesTask.Result : [];
                 viewmodel.ImportantChecklist = checklistTask.IsCompletedSuccessfully ? checklistTask.Result : [];
 
+                // Update record counts in timing results
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Locations", viewmodel.Locations?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "WorkCategories", viewmodel.WorkCategories?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "OtherCategories", viewmodel.OtherCategories?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "OtherCategories2", viewmodel.OtherCategories2?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "ServiceProviders", viewmodel.ServiceProviders?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "PriorityLevels", viewmodel.PriorityLevels?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "FeedbackTypes", viewmodel.FeedbackTypes?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Currencies", viewmodel.Currencies?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "RequestMethods", viewmodel.RequestMethods?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Statuses", viewmodel.Statuses?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "ImportantChecklist", viewmodel.ImportantChecklist?.Count);
+
                 _logger.LogInformation("Work Request Add page data loaded successfully: {LocationCount} locations, {CategoryCount} categories, {PriorityCount} priority levels",
                     viewmodel.Locations?.Count ?? 0,
                     viewmodel.WorkCategories?.Count ?? 0,
                     viewmodel.PriorityLevels?.Count ?? 0);
             }
-            // Manual 401 handling removed - now handled by AuthenticationExceptionFilter globally
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading work request add page data");
-                // Return view with empty ViewModel - JavaScript can handle loading as fallback
+                _fileLogger.LogError("WorkRequestAdd: Critical error loading page data", ex, "PAGE-LOAD");
                 viewmodel = new WorkRequestViewModel();
+            }
+            finally
+            {
+                totalStopwatch.Stop();
+
+                // Log comprehensive timing summary to file
+                _fileLogger.LogApiTimingBatch("WorkRequestAdd Page Load", apiTimingResults, totalStopwatch.Elapsed);
+
+                // Also log summary to standard logger
+                var failedApis = apiTimingResults.Where(r => !r.Success).ToList();
+                if (failedApis.Any())
+                {
+                    _logger.LogWarning(
+                        "WorkRequestAdd: {FailedCount}/{TotalCount} API calls failed. Total time: {TotalMs}ms. Failed APIs: {FailedApis}",
+                        failedApis.Count,
+                        apiTimingResults.Count,
+                        totalStopwatch.ElapsedMilliseconds,
+                        string.Join(", ", failedApis.Select(f => f.ApiName)));
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "WorkRequestAdd: All {TotalCount} API calls succeeded. Total time: {TotalMs}ms",
+                        apiTimingResults.Count,
+                        totalStopwatch.ElapsedMilliseconds);
+                }
             }
 
             return View("~/Views/Helpdesk/WorkRequest/WorkRequestAdd.cshtml", viewmodel);
@@ -718,7 +822,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PersonInCharge.Base}?idClient={idClient}"),
                 "Failed to load persons in charge");
 
             return Json(new { success, data, message });
@@ -802,17 +906,9 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var url = $"{backendUrl}{ApiEndpoints.Employee.PersonsInCharge}?idClient={idClient}";
-            if (idWorkCategory.HasValue)
-            {
-                url += $"&idWorkCategory={idWorkCategory.Value}";
-            }
-            if (idLocation.HasValue)
-            {
-                url += $"&idLocation={idLocation.Value}";
-            }
+            var url = $"{backendUrl}{ApiEndpoints.PersonInCharge.Base}?idClient={idClient}&idProperty={idLocation.Value}";
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+            var (success, data, message) = await SafeExecuteApiAsync<List<PICFormDetailResponse>>(
                 () => client.GetAsync(url),
                 "Failed to load persons in charge");
 

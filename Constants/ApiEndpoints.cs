@@ -169,11 +169,6 @@ namespace cfm_frontend.Constants
         {
             private const string Base = ApiBase + "/employee";
 
-            /// <summary>
-            /// GET: Get persons in charge filtered by category and location
-            /// Query params: idClient, idWorkCategory, idLocation
-            /// </summary>
-            public const string PersonsInCharge = Base + "/persons-in-charge";
 
             /// <summary>
             /// GET: Search employees/requestors by search term
@@ -186,6 +181,11 @@ namespace cfm_frontend.Constants
             /// Query params: idCompany, idProperty, prefiks
             /// </summary>
             public const string SearchWorkers = Base + "/worker";
+        }
+
+        public static class PersonInCharge
+        {
+            public const string Base = ApiBase + "/pic";
         }
 
         #endregion

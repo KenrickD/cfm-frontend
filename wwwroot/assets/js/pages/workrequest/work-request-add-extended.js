@@ -215,7 +215,7 @@
                 $dropdown.empty();
 
                 if (response.success && response.data && response.data.length > 0) {
-                    $.each(response.data, function(index, jobCode) {s
+                    $.each(response.data, function(index, jobCode) {
                         // Use correct property names from JobCodeFormDetailResponse
                         const name = jobCode.Name || jobCode.name;
                         const latestStock = jobCode.LatestStock ?? jobCode.latestStock ?? 0;
