@@ -46,6 +46,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Work Request List page
         /// </summary>
+        [Authorize]
         public async Task<IActionResult> Index(
             int page = 1,
             string search = "",
@@ -163,7 +164,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// Pre-loads all static dropdown data server-side to eliminate concurrent API calls.
         /// Includes comprehensive timing and failure logging for diagnostics.
         /// </summary>
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> WorkRequestAdd()
         {
             var totalStopwatch = Stopwatch.StartNew();
@@ -597,7 +598,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Send New Work Request page
         /// </summary>
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> SendNewWorkRequest()
         {
             // Check if user has permission to view Send Work Request page
@@ -749,7 +750,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Work Request Detail page
         /// </summary>
-        //[Authorize]
+        [Authorize]
         public IActionResult WorkRequestDetail(int id)
         {
             // Check if user has permission to view Work Request Detail
@@ -1933,7 +1934,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Settings Hub page
         /// </summary>
-        //[Authorize]
+        [Authorize]
         public IActionResult Settings()
         {
             var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
@@ -1944,7 +1945,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// GET: Work Category Settings page
         /// </summary>
-        //[Authorize]
+        [Authorize]
         public IActionResult WorkCategory()
         {
             ViewBag.Title = "Work Category";
@@ -2050,7 +2051,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         #region Other Category
-
+        [Authorize]
         public IActionResult OtherCategory()
         {
             ViewBag.Title = "Other Category";
@@ -2074,7 +2075,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Other Category 2
-
+        [Authorize]
         public IActionResult OtherCategory2()
         {
             ViewBag.Title = "Other Category 2";
@@ -2098,7 +2099,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Job Code Group
-
+        [Authorize]
         public IActionResult JobCodeGroup()
         {
             ViewBag.Title = "Job Code Group";
@@ -2122,7 +2123,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Material Type
-
+        [Authorize]
         public IActionResult MaterialType()
         {
             ViewBag.Title = "Material Type";
@@ -2146,7 +2147,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Important Checklist
-
+        [Authorize]
         public IActionResult ImportantChecklist()
         {
             ViewBag.Title = "Important Checklist";
@@ -2309,7 +2310,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Related Document
-
+        [Authorize]
         public IActionResult RelatedDocument()
         {
             ViewBag.Title = "Related Document";
@@ -2517,7 +2518,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Person in Charge
-
+        [Authorize]
         public IActionResult PersonInCharge()
         {
             ViewBag.Title = "Person in Charge";
@@ -2632,7 +2633,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Cost Approver Group
-
+        [Authorize]
         public IActionResult CostApprover()
         {
             ViewBag.Title = "Cost Approver Group";
@@ -2640,7 +2641,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
             return View("~/Views/Helpdesk/Settings/CostApprover.cshtml");
         }
-
+        [Authorize]
         public IActionResult CostApproverAdd()
         {
             ViewBag.Title = "Add Cost Approver Group";
@@ -2712,6 +2713,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Email Distribution List management page
         /// </summary>
         [HttpGet]
+        [Authorize]
         public IActionResult EmailDistributionList()
         {
             var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
@@ -2744,6 +2746,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Setup new email distribution list page
         /// </summary>
         [HttpGet]
+        [Authorize]
         public IActionResult EmailDistributionListSetup(string pageReference)
         {
             var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
@@ -2768,6 +2771,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Edit existing email distribution list page
         /// </summary>
         [HttpGet]
+        [Authorize]
         public IActionResult EmailDistributionListEdit(int id)
         {
             var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
