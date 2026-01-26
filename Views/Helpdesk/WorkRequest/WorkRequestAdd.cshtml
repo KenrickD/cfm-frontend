@@ -1195,17 +1195,12 @@
                             <i class="ti ti-x me-1"></i>
                             Cancel
                         </a>
-                        <!--draft button is not yet implemented-->
-                        @* <div>
-                            <button type="button" class="btn btn-outline-primary me-2" id="saveDraftBtn">
-                                <i class="ti ti-device-floppy me-1"></i>
-                                Save as Draft
-                            </button>
+                        <div>
                             <button type="submit" class="btn btn-primary">
                                 <i class="ti ti-check me-1"></i>
                                 Submit Work Request
                             </button>
-                        </div> *@
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1377,8 +1372,10 @@
 
                     <!-- Individual Search -->
                     <div id="individualSearchMode">
-                        <input type="text" class="form-control form-control-sm" id="assetIndividualSearch" placeholder="Type to search asset..." autocomplete="off">
-                        <div id="assetIndividualDropdown" class="typeahead-dropdown"></div>
+                        <div class="position-relative">
+                            <input type="text" class="form-control form-control-sm" id="assetIndividualSearch" placeholder="Type to search asset..." autocomplete="off">
+                            <div id="assetIndividualDropdown" class="typeahead-dropdown"></div>
+                        </div>
                         <div id="assetIndividualSelected" class="mt-2" style="display: none;">
                             <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
                                 <div>
@@ -1393,8 +1390,10 @@
 
                     <!-- Group Search -->
                     <div id="groupSearchMode" style="display: none;">
-                        <input type="text" class="form-control form-control-sm" id="assetGroupSearch" placeholder="Type to search asset group..." autocomplete="off">
-                        <div id="assetGroupDropdown" class="typeahead-dropdown"></div>
+                        <div class="position-relative">
+                            <input type="text" class="form-control form-control-sm" id="assetGroupSearch" placeholder="Type to search asset group..." autocomplete="off">
+                            <div id="assetGroupDropdown" class="typeahead-dropdown"></div>
+                        </div>
                         <div id="assetGroupSelected" class="mt-2" style="display: none;">
                             <div class="alert alert-info mb-0">
                                 <div class="d-flex justify-content-between align-items-start mb-2">

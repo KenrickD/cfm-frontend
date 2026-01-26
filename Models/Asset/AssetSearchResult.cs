@@ -6,9 +6,9 @@ namespace cfm_frontend.Models.Asset
     public class AssetSearchResult
     {
         public int IdAsset { get; set; }
+        public string Label { get; set; }
         public string Name { get; set; }
-        public string Code { get; set; }
-        public string Description { get; set; }
+        public string OtherCode { get; set; }
     }
 
     /// <summary>
@@ -16,8 +16,7 @@ namespace cfm_frontend.Models.Asset
     /// </summary>
     public class AssetGroupSearchResult
     {
-        public int IdAssetGroup { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
+        public string AssetGroupName { get; set; }
+        public List<AssetSearchResult> Asset { get; set; } = new();
     }
 }

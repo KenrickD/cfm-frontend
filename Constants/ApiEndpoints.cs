@@ -85,8 +85,9 @@ namespace cfm_frontend.Constants
 
             /// <summary>
             /// POST: Create new work request
+            /// Endpoint: POST /api/v1/work-request
             /// </summary>
-            public const string Create = Base + "/create";
+            public const string Create = Base;
 
             /// <summary>
             /// POST: Get work request list with filters
@@ -790,6 +791,23 @@ namespace cfm_frontend.Constants
             /// </summary>
             public const string SearchMaterials = Base + "/search-materials";
         }
+
+        #endregion
+
+        #region Asset
+
+        /// <summary>
+        /// Asset search endpoints
+        /// </summary>
+        public static class Asset
+        {
+            private const string Base = ApiBase + "/asset";
+
+            public static string GetAsset(int idProperty) => $"{Base}/{idProperty}";
+
+            public static string GetAssetByGroup(int idProperty) => $"{Base}/asset-group/{idProperty}";
+        }
+
 
         #endregion
     }

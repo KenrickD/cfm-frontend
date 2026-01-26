@@ -42,8 +42,8 @@
         public DateTime requestDate { get; set; }
 
         // Helpdesk Response
-        public DateTime? HelpdeskResponseDate { get; set; }
-        public DateTime? HelpdeskResponseTarget { get; set; }
+        public DateTime? helpdeskResponse { get; set; }
+        public DateTime? helpdeskResponseTarget { get; set; }
         public string helpdeskResponseTargetChangeNote { get; set; }
 
         // Initial Follow Up
@@ -89,6 +89,9 @@
         //worker from company + worker from service provider
         public List<WorkerDto> Workers { get; set; } = new List<WorkerDto>();
 
+        // Related Documents (file uploads as base64)
+        public List<RelatedDocumentDto> RelatedDocuments { get; set; } = new List<RelatedDocumentDto>();
+
         //unclear and unused yet
         public int? TransactionChannel_idTransactionChannel { get; set; }
         public int? pmReferenceNumber_MaintenanceSchedule_idMaintenanceSchedule { get; set; }
@@ -98,6 +101,7 @@
     public class MaterialJobCodeDto
     {
         public int idJobCode { get; set; }
+        public string jobCode { get; set; }
         public float quantity { get; set; }
         public float unitPrice { get; set; }
     }
@@ -116,6 +120,7 @@
     public class AssetDto
     {
         public int idAsset { get; set; }
+        public string asset { get; set; }
     }
 
     public class WorkerDto
@@ -129,5 +134,17 @@
     {
         public int Type_idType { get; set; }
         public bool value { get; set; }
+    }
+
+    public class RelatedDocumentDto
+    {
+        public int idDocument { get; set; }
+        public string documentName { get; set; }
+        public string fileName { get; set; }
+        public long fileSize { get; set; }
+        public string extension { get; set; }
+        public string documentUrl { get; set; }
+        public string base64 { get; set; }
+        public string documentType { get; set; }
     }
 }

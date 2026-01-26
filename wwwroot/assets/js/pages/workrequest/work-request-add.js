@@ -2039,114 +2039,258 @@
 
     /**
      * Initialize form submission handling
+     * Uses AJAX to submit form data with proper field mapping to API structure
      */
     function initializeFormSubmission() {
         const $form = $('#workRequestForm');
 
-        // Save as draft button
-        $('#saveDraftBtn').on('click', function () {
-            // Add hidden field for draft
-            if ($form.find('input[name="IsDraft"]').length === 0) {
-                $('<input>').attr({
-                    type: 'hidden',
-                    name: 'IsDraft',
-                    value: 'true'
-                }).appendTo($form);
-            }
-
-            // Submit form
-            $form.submit();
-        });
-
-        // Form submit event
+        // Form submit event - intercept and use AJAX
         $form.on('submit', function (e) {
-            // Serialize labor/material items
-            const laborMaterialItems = [];
-            $('#laborMaterialTable tbody tr[data-index]').each(function () {
-                const name = $(this).find('.labor-name').val();
-                const qty = parseFloat($(this).find('.labor-qty').val()) || 0;
-                const price = parseFloat($(this).find('.labor-price').val()) || 0;
+            e.preventDefault();
 
-                if (name && qty > 0 && price > 0) {
-                    laborMaterialItems.push({
-                        name: name,
-                        quantity: qty,
-                        unitPrice: price,
-                        totalPrice: qty * price
-                    });
-                }
-            });
-
-            // Add labor/material JSON to form
-            if (laborMaterialItems.length > 0) {
-                if ($form.find('input[name="LaborMaterialJson"]').length === 0) {
-                    $('<input>').attr({
-                        type: 'hidden',
-                        name: 'LaborMaterialJson'
-                    }).appendTo($form);
-                }
-                $form.find('input[name="LaborMaterialJson"]').val(JSON.stringify(laborMaterialItems));
+            // Validate required fields
+            if (!validateRequiredFields()) {
+                return false;
             }
-
-            // Important Checklist
-            const importantChecklist = [];
-            $('.important-checklist-item').each(function () {
-                importantChecklist.push({
-                    Type_idType: $(this).data('type-id'),
-                    value: $(this).is(':checked')
-                });
-            });
-
-            if (importantChecklist.length > 0) {
-                if ($form.find('input[name="ImportantChecklistJson"]').length === 0) {
-                    $('<input>').attr({ type: 'hidden', name: 'ImportantChecklistJson' }).appendTo($form);
-                }
-                $form.find('input[name="ImportantChecklistJson"]').val(JSON.stringify(importantChecklist));
-            }
-
-            // Workers
-            if (state.workers.length > 0) {
-                if ($form.find('input[name="WorkersJson"]').length === 0) {
-                    $('<input>').attr({ type: 'hidden', name: 'WorkersJson' }).appendTo($form);
-                }
-                $form.find('input[name="WorkersJson"]').val(JSON.stringify(state.workers));
-            }
-
-            // Target Change Notes - map to hidden fields
-            $('#helpdeskResponseTargetChangeNote').val(state.targetOverrides.helpdesk?.remark || '');
-            $('#onsiteResponseTargetChangeNote').val(state.targetOverrides.initialFollowUp?.remark || '');
-            $('#quotationSubmissionTargetChangeNote').val(state.targetOverrides.quotation?.remark || '');
-            $('#costApprovalTargetChangeNote').val(state.targetOverrides.costApproval?.remark || '');
-            $('#workCompletionTargetChangeNote').val(state.targetOverrides.workCompletion?.remark || '');
-            $('#followUpTargetChangeNote').val(state.targetOverrides.afterWork?.remark || '');
-
-            // Add target overrides to form
-            $.each(state.targetOverrides, function (targetType, override) {
-                const capitalizedType = targetType.charAt(0).toUpperCase() + targetType.slice(1);
-
-                // Add target date
-                if ($form.find(`input[name="${capitalizedType}ResponseTarget"]`).length === 0) {
-                    $('<input>').attr({
-                        type: 'hidden',
-                        name: `${capitalizedType}ResponseTarget`,
-                        value: override.newTarget
-                    }).appendTo($form);
-                }
-
-                // Add remark
-                if ($form.find(`input[name="${capitalizedType}ResponseRemark"]`).length === 0) {
-                    $('<input>').attr({
-                        type: 'hidden',
-                        name: `${capitalizedType}ResponseRemark`,
-                        value: override.remark
-                    }).appendTo($form);
-                }
-            });
 
             // Show loading indicator
             showLoadingOverlay();
+
+            // Build the payload matching API structure
+            const payload = buildWorkRequestPayload();
+
+            // Submit via AJAX
+            submitWorkRequest(payload);
         });
     }
+
+    /**
+     * Validate required form fields before submission
+     */
+    function validateRequiredFields() {
+        const requiredFields = [
+            { selector: '#locationSelect', name: 'Location' },
+            { selector: '#floorSelect', name: 'Floor' },
+            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#requestorId', name: 'Requestor', isHidden: true },
+            { selector: '#workTitle', name: 'Work Title' },
+            { selector: '#requestDetail', name: 'Request Detail' },
+            { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
+            { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
+            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#personInChargeSelect', name: 'Person in Charge' },
+            { selector: '#priorityLevelSelect', name: 'Priority Level' },
+            { selector: '#requestDate', name: 'Request Date' },
+            { selector: '#requestTime', name: 'Request Time' }
+        ];
+
+        const missingFields = [];
+
+        requiredFields.forEach(field => {
+            const $element = $(field.selector);
+            if (field.isRadio) {
+                if ($element.length === 0) {
+                    missingFields.push(field.name);
+                }
+            } else if (field.isHidden) {
+                if (!$element.val()) {
+                    missingFields.push(field.name);
+                }
+            } else {
+                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                    missingFields.push(field.name);
+                }
+            }
+        });
+
+        if (missingFields.length > 0) {
+            showNotification(`Please fill in required fields: ${missingFields.join(', ')}`, 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Combine date and time inputs into ISO datetime string
+     */
+    function combineDateTimeToISO(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        if (!dateVal) return null;
+
+        const timeToUse = timeVal || '00:00';
+        return new Date(`${dateVal}T${timeToUse}`).toISOString();
+    }
+
+    /**
+     * Build the work request payload matching API structure
+     */
+    function buildWorkRequestPayload() {
+        // Combine request date and time
+        const requestDateTime = combineDateTimeToISO('#requestDate', '#requestTime');
+
+        // Build important checklist array
+        const importantChecklist = [];
+        $('.important-checklist-item').each(function () {
+            importantChecklist.push({
+                type_idType: parseInt($(this).data('type-id')),
+                value: $(this).is(':checked')
+            });
+        });
+
+        // Build workers array with correct property names
+        const workers = state.workers.map(worker => ({
+            employee_idEmployee: worker.Employee_idEmployee,
+            side_Enum_idEnum: worker.side_Enum_idEnum,
+            isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false
+        }));
+
+        // Build the payload
+        const payload = {
+            // Location Details
+            property_idProperty: parseInt($('#locationSelect').val()) || 0,
+            propertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
+            roomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
+
+            // Requestor and Work Details
+            requestor_Employee_idEmployee: parseInt($('#requestorId').val()) || 0,
+            workTitle: $('#workTitle').val(),
+            requestDetail: $('#requestDetail').val(),
+            solutionDetail: $('#solution').val() || null,
+
+            // Request Method and Status
+            requestMethod_Enum_idEnum: parseInt($('input[name="RequestMethod"]:checked').val()) || 0,
+            status_Enum_idEnum: parseInt($('input[name="Status"]:checked').val()) || 0,
+
+            // Work Categories
+            workCategory_Type_idType: parseInt($('#workCategorySelect').val()) || null,
+            customCategory_Type_idType: parseInt($('#otherCategorySelect').val()) || null,
+            customCategory2_Type_idType: parseInt($('#otherCategory2Select').val()) || null,
+
+            // PM Finding
+            isPMFinding: $('#pmFindingCheck').is(':checked'),
+
+            // Person in Charge and Service Provider
+            pic_Employee_idEmployee: parseInt($('#personInChargeSelect').val()) || 0,
+            serviceProvider_idServiceProvider: parseInt($('#serviceProviderSelect').val()) || null,
+
+            // Cost Estimation
+            costEstimationCurrency_Enum_idEnum: parseInt($('#costEstimationCurrencySelect').val()) || null,
+            costEstimation: parseFloat($('#costEstimation').val()) || null,
+
+            // Priority and Timeline
+            priorityLevel_idPriorityLevel: parseInt($('#priorityLevelSelect').val()) || 0,
+            requestDate: requestDateTime,
+
+            // Timeline dates - Helpdesk Response
+            helpdeskResponse: combineDateTimeToISO('#helpdeskResponseDate', '#helpdeskResponseTime'),
+            helpdeskResponseTarget: state.targetOverrides.helpdesk?.newTarget
+                ? new Date(state.targetOverrides.helpdesk.newTarget).toISOString()
+                : null,
+            helpdeskResponseTargetChangeNote: state.targetOverrides.helpdesk?.remark || null,
+
+            // Initial Follow Up (onsite response)
+            onsiteResponse: combineDateTimeToISO('#initialFollowUpDate', '#initialFollowUpTime'),
+            onsiteResponseTarget: state.targetOverrides.initialFollowUp?.newTarget
+                ? new Date(state.targetOverrides.initialFollowUp.newTarget).toISOString()
+                : null,
+            onsiteResponseTargetChangeNote: state.targetOverrides.initialFollowUp?.remark || null,
+
+            // Quotation Submission
+            quotationSubmission: combineDateTimeToISO('#quotationSubmissionDate', '#quotationSubmissionTime'),
+            quotationSubmissionTarget: state.targetOverrides.quotation?.newTarget
+                ? new Date(state.targetOverrides.quotation.newTarget).toISOString()
+                : null,
+            quotationSubmissionTargetChangeNote: state.targetOverrides.quotation?.remark || null,
+
+            // Cost Approval
+            costApproval: combineDateTimeToISO('#costApprovalDate', '#costApprovalTime'),
+            costApprovalTarget: state.targetOverrides.costApproval?.newTarget
+                ? new Date(state.targetOverrides.costApproval.newTarget).toISOString()
+                : null,
+            costApprovalTargetChangeNote: state.targetOverrides.costApproval?.remark || null,
+
+            // Work Completion
+            workCompletion: combineDateTimeToISO('#workCompletionDate', '#workCompletionTime'),
+            workCompletionTarget: state.targetOverrides.workCompletion?.newTarget
+                ? new Date(state.targetOverrides.workCompletion.newTarget).toISOString()
+                : null,
+            workCompletionTargetChangeNote: state.targetOverrides.workCompletion?.remark || null,
+
+            // Follow Up (after work)
+            followUp: combineDateTimeToISO('#afterWorkFollowUpDate', '#afterWorkFollowUpTime'),
+            followUpTarget: state.targetOverrides.afterWork?.newTarget
+                ? new Date(state.targetOverrides.afterWork.newTarget).toISOString()
+                : null,
+            followUpTargetChangeNote: state.targetOverrides.afterWork?.remark || null,
+
+            // Summary and Feedback
+            followUpDetail: $('#followUpSummary').val() || null,
+            feedbackType_Enum_idEnum: parseInt($('#feedbackStatus').val()) || null,
+            feedbackSummary: $('#feedbackSummary').val() || null,
+
+            // Collections - will be populated by extended.js
+            importantChecklist: importantChecklist,
+            workers: workers,
+            material_Jobcode: [],
+            material_Adhoc: [],
+            assets: [],
+            relatedDocuments: []
+        };
+
+        return payload;
+    }
+
+    /**
+     * Submit work request via AJAX
+     */
+    function submitWorkRequest(payload) {
+        // Get CSRF token
+        const token = $('input[name="__RequestVerificationToken"]').val();
+
+        $.ajax({
+            url: '/Helpdesk/WorkRequestAdd',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'RequestVerificationToken': token
+            },
+            data: JSON.stringify(payload),
+            success: function (response) {
+                hideLoadingOverlay();
+
+                if (response.success) {
+                    showNotification(response.message || 'Work Request created successfully!', 'success');
+                    // Redirect after brief delay
+                    setTimeout(function () {
+                        window.location.href = response.redirectUrl || '/Helpdesk/Index';
+                    }, 1500);
+                } else {
+                    showNotification(response.message || 'Failed to create work request', 'error');
+                }
+            },
+            error: function (xhr, status, error) {
+                hideLoadingOverlay();
+                console.error('Error submitting work request:', error);
+                showNotification('An error occurred while creating the work request. Please try again.', 'error');
+            }
+        });
+    }
+
+    /**
+     * Hide loading overlay
+     */
+    function hideLoadingOverlay() {
+        $('#loading-overlay').remove();
+    }
+
+    /**
+     * Make payload builder available globally for extended.js to enhance
+     */
+    window.buildWorkRequestPayload = buildWorkRequestPayload;
+    window.submitWorkRequest = submitWorkRequest;
 
     /**
      * Utility: Debounce function

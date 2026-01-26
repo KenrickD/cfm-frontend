@@ -861,10 +861,16 @@
      * Search Asset Individual via API
      */
     function searchAssetIndividual(term) {
+        const propertyId = $('#locationSelect').val();
+        if (!propertyId) {
+            showNotification('Please select a location first', 'warning', 'Warning');
+            return;
+        }
+
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.searchAsset,
             method: 'GET',
-            data: { term: term },
+            data: { term: term, propertyId: propertyId },
             success: function(response) {
                 const $dropdown = $('#assetIndividualDropdown');
                 $dropdown.empty();
@@ -874,7 +880,7 @@
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${asset.label || asset.code}</strong><br>
+                                <strong>${asset.label}</strong><br>
                                 <small class="text-muted">${asset.name || ''}</small>
                             `)
                             .on('click', function() {
@@ -911,7 +917,7 @@
         $('#assetIndividualSearch').hide();
         $('#assetIndividualDropdown').removeClass('show').empty();
 
-        $('#selectedAssetName').text(`${asset.label || asset.code} - ${asset.name || ''}`);
+        $('#selectedAssetName').text(`${asset.label} - ${asset.name || ''}`);
         $('#assetIndividualSelected').show();
     }
 
@@ -919,21 +925,27 @@
      * Search Asset Group via API
      */
     function searchAssetGroup(term) {
+        const propertyId = $('#locationSelect').val();
+        if (!propertyId) {
+            showNotification('Please select a location first', 'warning', 'Warning');
+            return;
+        }
+
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.searchAssetGroup,
             method: 'GET',
-            data: { term: term },
+            data: { term: term, propertyId: propertyId },
             success: function(response) {
                 const $dropdown = $('#assetGroupDropdown');
                 $dropdown.empty();
 
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function(index, group) {
-                        const assetCount = group.assets ? group.assets.length : 0;
+                        const assetCount = group.asset ? group.asset.length : 0;
                         const $item = $('<div></div>')
                             .addClass('typeahead-item')
                             .html(`
-                                <strong>${group.name || group.groupName}</strong><br>
+                                <strong>${group.assetGroupName}</strong><br>
                                 <small class="text-muted">${assetCount} asset(s)</small>
                             `)
                             .on('click', function() {
@@ -973,9 +985,9 @@
         const $list = $('#selectedAssetGroupList');
         $list.empty();
 
-        if (group.assets && group.assets.length > 0) {
-            $.each(group.assets, function(index, asset) {
-                $list.append(`<li>${asset.label || asset.code} - ${asset.name || ''}</li>`);
+        if (group.asset && group.asset.length > 0) {
+            $.each(group.asset, function(index, asset) {
+                $list.append(`<li>${asset.label} - ${asset.name || ''}</li>`);
             });
         } else {
             $list.append('<li class="text-muted">No assets in this group</li>');
@@ -1021,8 +1033,8 @@
             extendedState.relatedAssets.individual.push(selection.data);
             addAssetToTable(selection.data);
         } else {
-            if (selection.data.assets && selection.data.assets.length > 0) {
-                $.each(selection.data.assets, function(index, asset) {
+            if (selection.data.asset && selection.data.asset.length > 0) {
+                $.each(selection.data.asset, function(index, asset) {
                     extendedState.relatedAssets.individual.push(asset);
                     addAssetToTable(asset);
                 });
@@ -1051,9 +1063,9 @@
         const rowCount = $tbody.find('tr').length + 1;
 
         const row = `
-            <tr data-asset-id="${asset.id}">
+            <tr data-asset-id="${asset.idAsset}">
                 <td>${rowCount}</td>
-                <td>${asset.label || asset.code || '-'}</td>
+                <td>${asset.label || '-'}</td>
                 <td>${asset.name || '-'}</td>
                 <td class="text-center">
                     <button type="button"
@@ -1077,7 +1089,7 @@
         const assetId = $row.data('asset-id');
 
         // Remove from state
-        extendedState.relatedAssets.individual = extendedState.relatedAssets.individual.filter(a => a.id !== assetId);
+        extendedState.relatedAssets.individual = extendedState.relatedAssets.individual.filter(a => a.idAsset !== assetId);
 
         // Remove row
         $row.remove();
@@ -1231,141 +1243,124 @@
     }
 
     /**
-     * Extend form submission to include labor/material and assets
+     * Extend form submission to include labor/material, assets, and documents
+     * Integrates with the main form submission in work-request-add.js
      */
     function extendFormSubmission() {
         const $form = $('#workRequestForm');
 
-        $form.on('submit', function(e) {
-            // If there are documents, we need to use FormData for file upload
+        // Store the original buildWorkRequestPayload function
+        const originalBuildPayload = window.buildWorkRequestPayload;
+        const originalSubmitWorkRequest = window.submitWorkRequest;
+
+        // Override buildWorkRequestPayload to add extended data
+        window.buildWorkRequestPayload = function() {
+            // Get the base payload from original function
+            const payload = originalBuildPayload();
+
+            // Add Material_Jobcode array
+            payload.material_Jobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
+                idJobCode: item.idJobCode,
+                jobCode: item.name || '', // Include job code name
+                quantity: item.quantity,
+                unitPrice: item.unitPrice || 0
+            }));
+
+            // Add Material_Adhoc array
+            payload.material_Adhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
+                name: item.name,
+                label_Enum_idEnum: item.label_Enum_idEnum,
+                unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum,
+                unitPrice: item.unitPrice,
+                quantity: item.quantity,
+                measurementUnit_Enum_idEnum: item.measurementUnit_Enum_idEnum
+            }));
+
+            // Add Assets array
+            payload.assets = extendedState.relatedAssets.individual.map(asset => ({
+                idAsset: asset.idAsset,
+                asset: asset.label || asset.name || '' // Include asset label/name
+            }));
+
+            return payload;
+        };
+
+        // Override submitWorkRequest to handle document conversion
+        window.submitWorkRequest = async function(payload) {
+            // If there are documents, convert them to base64 first
             if (extendedState.relatedDocuments.length > 0) {
-                e.preventDefault(); // Prevent normal form submission
-                submitFormWithFiles();
-                return false;
+                try {
+                    payload.relatedDocuments = await convertDocumentsToBase64();
+                } catch (error) {
+                    console.error('Error converting documents:', error);
+                    showNotification('Error processing documents. Please try again.', 'error');
+                    hideLoadingOverlay();
+                    return;
+                }
             }
 
-            // No files - proceed with normal submission but add JSON data
-            addJsonDataToForm();
-        });
+            // Call original submit function
+            originalSubmitWorkRequest(payload);
+        };
     }
 
     /**
-     * Add JSON data to form (for non-file submissions)
+     * Convert uploaded documents to base64 format for API submission
+     * Returns a promise that resolves to an array of document objects
      */
-    function addJsonDataToForm() {
-        const $form = $('#workRequestForm');
-
-        // Prepare Material_Jobcode array
-        const materialJobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
-            idJobCode: item.idJobCode,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice || 0
-        }));
-
-        // Prepare Material_Adhoc array
-        const materialAdhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
-            name: item.name,
-            label_Enum_idEnum: item.label_Enum_idEnum,
-            unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum,
-            unitPrice: item.unitPrice,
-            quantity: item.quantity,
-            measurementUnit_Enum_idEnum: item.measurementUnit_Enum_idEnum
-        }));
-
-        // Prepare Assets array
-        const assets = extendedState.relatedAssets.individual.map(asset => ({
-            idAsset: asset.id
-        }));
-
-        // Add hidden fields for JSON data
-        if ($form.find('input[name="Material_JobcodeJson"]').length === 0) {
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Material_JobcodeJson'
-            }).appendTo($form);
-        }
-        $form.find('input[name="Material_JobcodeJson"]').val(JSON.stringify(materialJobcode));
-
-        if ($form.find('input[name="Material_AdhocJson"]').length === 0) {
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Material_AdhocJson'
-            }).appendTo($form);
-        }
-        $form.find('input[name="Material_AdhocJson"]').val(JSON.stringify(materialAdhoc));
-
-        if ($form.find('input[name="AssetsJson"]').length === 0) {
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'AssetsJson'
-            }).appendTo($form);
-        }
-        $form.find('input[name="AssetsJson"]').val(JSON.stringify(assets));
-    }
-
-    /**
-     * Submit form with files using FormData
-     */
-    function submitFormWithFiles() {
-        const $form = $('#workRequestForm');
-        const formData = new FormData($form[0]);
-
-        // Add JSON data
-        const materialJobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
-            idJobCode: item.idJobCode,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice || 0
-        }));
-
-        const materialAdhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
-            name: item.name,
-            label_Enum_idEnum: item.label_Enum_idEnum,
-            unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum,
-            unitPrice: item.unitPrice,
-            quantity: item.quantity,
-            measurementUnit_Enum_idEnum: item.measurementUnit_Enum_idEnum
-        }));
-
-        const assets = extendedState.relatedAssets.individual.map(asset => ({
-            idAsset: asset.id
-        }));
-
-        formData.append('Material_JobcodeJson', JSON.stringify(materialJobcode));
-        formData.append('Material_AdhocJson', JSON.stringify(materialAdhoc));
-        formData.append('AssetsJson', JSON.stringify(assets));
-
-        // Add document files and labels
-        extendedState.relatedDocuments.forEach((doc, index) => {
-            formData.append(`RelatedDocuments[${index}].File`, doc.file);
-
+    async function convertDocumentsToBase64() {
+        const documentPromises = extendedState.relatedDocuments.map(async (doc) => {
             // Get updated label from table input
             const $row = $(`tr[data-document-id="${doc.id}"]`);
             const label = $row.find('.document-label').val() || doc.fileName;
-            formData.append(`RelatedDocuments[${index}].Label`, label);
+
+            // Read file as base64
+            const base64Content = await readFileAsBase64(doc.file);
+
+            // Extract extension from filename
+            const extension = doc.fileName.split('.').pop() || '';
+
+            return {
+                idDocument: 0, // New document
+                documentName: label,
+                fileName: doc.fileName,
+                fileSize: doc.file.size,
+                extension: extension,
+                documentUrl: '', // Will be set by backend
+                base64: base64Content,
+                documentType: doc.file.type || 'application/octet-stream'
+            };
         });
 
-        // Show loading
-        showNotification('Submitting work request...', 'info', 'Please wait');
+        return Promise.all(documentPromises);
+    }
 
-        // Submit via AJAX
-        $.ajax({
-            url: $form.attr('action'),
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                showNotification('Work request created successfully!', 'success', 'Success');
-                // Redirect after a brief delay
-                setTimeout(() => {
-                    window.location.href = '/Helpdesk/Index';
-                }, 1500);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error submitting form:', error);
-                showNotification('Error creating work request. Please try again.', 'error', 'Error');
-            }
+    /**
+     * Read a file and return its base64 content (without data URL prefix)
+     */
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+                const base64String = e.target.result.split(',')[1];
+                resolve(base64String);
+            };
+
+            reader.onerror = function(error) {
+                reject(error);
+            };
+
+            reader.readAsDataURL(file);
         });
+    }
+
+    /**
+     * Hide loading overlay (utility function)
+     */
+    function hideLoadingOverlay() {
+        $('#loading-overlay').remove();
     }
 
     // Initialize when document is ready

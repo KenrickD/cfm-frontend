@@ -365,45 +365,38 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// POST: Create new Work Request
+        /// Accepts JSON body from AJAX submission
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        //[Authorize]
-        public async Task<IActionResult> WorkRequestAdd(
-            WorkRequestCreateRequest model,
-            string Material_JobcodeJson = null,
-            string Material_AdhocJson = null,
-            string AssetsJson = null,
-            string ImportantChecklistJson = null,
-            string WorkersJson = null)
+        public async Task<IActionResult> WorkRequestAdd([FromBody] WorkRequestCreateRequest model)
         {
             // Check if user has permission to add Work Requests
             var accessCheck = this.CheckAddAccess("Helpdesk", "Work Request Management");
-            if (accessCheck != null) return accessCheck;
+            if (accessCheck != null)
+            {
+                return Json(new { success = false, message = "You do not have permission to add work requests." });
+            }
 
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
-                return RedirectToAction("Index", "Login");
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (userInfo == null)
             {
-                return RedirectToAction("Index", "Login");
+                return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
             var idClient = userInfo.PreferredClientId;
-            if (!ModelState.IsValid)
-            {
-                // Return validation errors as JSON for client-side handling
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
 
-                return Json(new { success = false, errors });
+            // Validate model
+            if (model == null)
+            {
+                return Json(new { success = false, message = "Invalid request data." });
             }
 
             try
@@ -413,96 +406,22 @@ namespace cfm_frontend.Controllers.Helpdesk
 
                 // Set system fields from session
                 model.Client_idClient = idClient;
-                model.IdEmployee = 1; // TODO: Get from session/authentication
+                model.IdEmployee = userInfo.IdWebUser;
                 model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
 
-                // Parse JSON fields if provided
-                if (!string.IsNullOrEmpty(Material_JobcodeJson))
-                {
-                    try
-                    {
-                        model.Material_Jobcode = JsonSerializer.Deserialize<List<MaterialJobCodeDto>>(
-                            Material_JobcodeJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        ) ?? new List<MaterialJobCodeDto>();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse Material_JobcodeJson");
-                        model.Material_Jobcode = new List<MaterialJobCodeDto>();
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(Material_AdhocJson))
-                {
-                    try
-                    {
-                        model.Material_Adhoc = JsonSerializer.Deserialize<List<MaterialAdhocDto>>(
-                            Material_AdhocJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        ) ?? new List<MaterialAdhocDto>();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse Material_AdhocJson");
-                        model.Material_Adhoc = new List<MaterialAdhocDto>();
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(AssetsJson))
-                {
-                    try
-                    {
-                        model.Assets = JsonSerializer.Deserialize<List<AssetDto>>(
-                            AssetsJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        ) ?? new List<AssetDto>();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse AssetsJson");
-                        model.Assets = new List<AssetDto>();
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(ImportantChecklistJson))
-                {
-                    try
-                    {
-                        model.ImportantChecklist = JsonSerializer.Deserialize<List<AdditionalInformationDto>>(
-                            ImportantChecklistJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        ) ?? new List<AdditionalInformationDto>();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse ImportantChecklistJson");
-                        model.ImportantChecklist = new List<AdditionalInformationDto>();
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(WorkersJson))
-                {
-                    try
-                    {
-                        model.Workers = JsonSerializer.Deserialize<List<WorkerDto>>(
-                            WorkersJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        ) ?? new List<WorkerDto>();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse WorkersJson");
-                        model.Workers = new List<WorkerDto>();
-                    }
-                }
+                // Log the payload for debugging
+                _logger.LogInformation("Creating work request: Title={Title}, Property={Property}, Requestor={Requestor}",
+                    model.workTitle, model.Property_idProperty, model.requestor_Employee_idEmployee);
 
                 // Serialize and send to backend
                 var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                _logger.LogDebug("Work request payload: {Payload}", jsonPayload);
 
                 var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
 
@@ -516,12 +435,19 @@ namespace cfm_frontend.Controllers.Helpdesk
 
                     if (result != null && result.success)
                     {
-                        TempData["SuccessMessage"] = $"Work Request {result.workRequestCode} created successfully!";
-                        return RedirectToAction("Index");
+                        _logger.LogInformation("Work request created successfully: {WorkRequestCode}", result.workRequestCode);
+                        return Json(new
+                        {
+                            success = true,
+                            message = $"Work Request {result.workRequestCode} created successfully!",
+                            redirectUrl = "/Helpdesk/Index",
+                            workRequestCode = result.workRequestCode
+                        });
                     }
                     else
                     {
-                        ModelState.AddModelError(string.Empty, result?.message ?? "Failed to create work request");
+                        _logger.LogWarning("Work request creation failed: {Message}", result?.message);
+                        return Json(new { success = false, message = result?.message ?? "Failed to create work request" });
                     }
                 }
                 else
@@ -529,24 +455,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogWarning("Failed to create work request. Status: {StatusCode}, Content: {Content}",
                         response.StatusCode, errorContent);
-                    ModelState.AddModelError(string.Empty, "Failed to create work request. Please try again.");
+                    return Json(new { success = false, message = "Failed to create work request. Please try again." });
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating work request");
-                ModelState.AddModelError(string.Empty, "An error occurred while creating the work request.");
+                return Json(new { success = false, message = "An error occurred while creating the work request." });
             }
-
-            // If we got here, something failed - return JSON error for JavaScript to handle
-            return Json(new
-            {
-                success = false,
-                message = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .FirstOrDefault() ?? "An error occurred while creating the work request."
-            });
         }
 
         /// <summary>
@@ -1040,21 +956,11 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            // First get the service provider's company ID
-            var (spSuccess, spData, spMessage) = await SafeExecuteApiAsync<ServiceProviderCompanyResponse>(
-                () => client.GetAsync($"{backendUrl}/api/serviceprovider/get-company-id?idClient={idClient}&idServiceProvider={idServiceProvider}"),
-                "Failed to get service provider details");
 
-            if (!spSuccess || spData == null)
-            {
-                return Json(new { success = false, message = spMessage });
-            }
-
-            int idCompany = spData.IdCompany;
 
             // Now search workers with the company ID
             var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
-                () => client.GetAsync($"{backendUrl}/api/worker/search-by-company?term={Uri.EscapeDataString(term)}&idLocation={idLocation}&idCompany={idCompany}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idServiceProvider}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
                 "Failed to search workers");
 
             return Json(new { success, data, message });
@@ -1547,7 +1453,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Search assets individually by name
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchAsset(string term)
+        public async Task<IActionResult> SearchAsset(string term, int propertyId)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1562,7 +1468,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<AssetSearchResult>>(
-                () => client.GetAsync($"{backendUrl}/api/asset/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAsset(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
                 "Failed to search assets");
 
             return Json(new { success, data, message });
@@ -1572,7 +1478,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Search asset groups by name
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchAssetGroup(string term)
+        public async Task<IActionResult> SearchAssetGroup(string term, int propertyId)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1587,7 +1493,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<AssetGroupSearchResult>>(
-                () => client.GetAsync($"{backendUrl}/api/assetgroup/search?term={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAssetByGroup(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
                 "Failed to search asset groups");
 
             return Json(new { success, data, message });
