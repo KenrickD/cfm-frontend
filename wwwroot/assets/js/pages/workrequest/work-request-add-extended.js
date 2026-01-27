@@ -40,6 +40,30 @@
         editingItemType: null
     };
 
+    // ========================================
+    // Loading State Helper Functions
+    // ========================================
+
+    /**
+     * Show loading message in a typeahead dropdown
+     * @param {jQuery} $dropdown - The dropdown element
+     */
+    function showTypeaheadLoading($dropdown) {
+        $dropdown.empty().append(
+            $('<div></div>')
+                .addClass('typeahead-loading')
+                .html('<i class="ti ti-loader me-1"></i>Searching...')
+        ).addClass('show');
+    }
+
+    /**
+     * Hide input loading state
+     * @param {string} selector - The input selector
+     */
+    function hideInputLoading(selector) {
+        $(selector).parent().removeClass('input-loading');
+    }
+
     /**
      * Initialize extended functionality
      */
@@ -160,6 +184,7 @@
         $('#jobCodeSearch').on('keyup', function() {
             clearTimeout(jobCodeSearchTimeout);
             const term = $(this).val().trim();
+            const $input = $(this);
 
             if (term.length < EXTENDED_CONFIG.minSearchLength) {
                 $('#jobCodeDropdown').removeClass('show').empty();
@@ -167,6 +192,9 @@
             }
 
             jobCodeSearchTimeout = setTimeout(function() {
+                // Show loading state
+                $input.parent().addClass('input-loading');
+                showTypeaheadLoading($('#jobCodeDropdown'));
                 searchJobCode(term);
             }, EXTENDED_CONFIG.debounceDelay);
         });
@@ -251,6 +279,11 @@
             error: function(xhr, status, error) {
                 console.error('Error searching job codes:', error);
                 showNotification('Error searching job codes', 'error', 'Error');
+                $('#jobCodeDropdown').removeClass('show').empty();
+            },
+            complete: function() {
+                // Hide loading state
+                hideInputLoading('#jobCodeSearch');
             }
         });
     }
@@ -800,6 +833,7 @@
         $('#assetIndividualSearch').on('keyup', function() {
             clearTimeout(assetSearchTimeout);
             const term = $(this).val().trim();
+            const $input = $(this);
 
             if (term.length < EXTENDED_CONFIG.minSearchLength) {
                 $('#assetIndividualDropdown').removeClass('show').empty();
@@ -807,6 +841,9 @@
             }
 
             assetSearchTimeout = setTimeout(function() {
+                // Show loading state
+                $input.parent().addClass('input-loading');
+                showTypeaheadLoading($('#assetIndividualDropdown'));
                 searchAssetIndividual(term);
             }, EXTENDED_CONFIG.debounceDelay);
         });
@@ -816,6 +853,7 @@
         $('#assetGroupSearch').on('keyup', function() {
             clearTimeout(assetGroupSearchTimeout);
             const term = $(this).val().trim();
+            const $input = $(this);
 
             if (term.length < EXTENDED_CONFIG.minSearchLength) {
                 $('#assetGroupDropdown').removeClass('show').empty();
@@ -823,6 +861,9 @@
             }
 
             assetGroupSearchTimeout = setTimeout(function() {
+                // Show loading state
+                $input.parent().addClass('input-loading');
+                showTypeaheadLoading($('#assetGroupDropdown'));
                 searchAssetGroup(term);
             }, EXTENDED_CONFIG.debounceDelay);
         });
@@ -864,6 +905,8 @@
         const propertyId = $('#locationSelect').val();
         if (!propertyId) {
             showNotification('Please select a location first', 'warning', 'Warning');
+            hideInputLoading('#assetIndividualSearch');
+            $('#assetIndividualDropdown').removeClass('show').empty();
             return;
         }
 
@@ -901,6 +944,11 @@
             error: function(xhr, status, error) {
                 console.error('Error searching assets:', error);
                 showNotification('Error searching assets', 'error', 'Error');
+                $('#assetIndividualDropdown').removeClass('show').empty();
+            },
+            complete: function() {
+                // Hide loading state
+                hideInputLoading('#assetIndividualSearch');
             }
         });
     }
@@ -928,6 +976,8 @@
         const propertyId = $('#locationSelect').val();
         if (!propertyId) {
             showNotification('Please select a location first', 'warning', 'Warning');
+            hideInputLoading('#assetGroupSearch');
+            $('#assetGroupDropdown').removeClass('show').empty();
             return;
         }
 
@@ -966,6 +1016,11 @@
             error: function(xhr, status, error) {
                 console.error('Error searching asset groups:', error);
                 showNotification('Error searching asset groups', 'error', 'Error');
+                $('#assetGroupDropdown').removeClass('show').empty();
+            },
+            complete: function() {
+                // Hide loading state
+                hideInputLoading('#assetGroupSearch');
             }
         });
     }

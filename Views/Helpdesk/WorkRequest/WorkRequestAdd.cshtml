@@ -325,6 +325,70 @@
         .worker-card:hover .btn-remove-worker {
             opacity: 1;
         }
+
+        /* Loading Animation Styles */
+        .input-loading {
+            position: relative;
+        }
+
+        .input-loading::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e9ecef;
+            border-top-color: #04a9f5;
+            border-radius: 50%;
+            animation: spinner-rotate 0.8s linear infinite;
+        }
+
+        .input-loading input {
+            padding-right: 35px;
+        }
+
+        @@keyframes spinner-rotate {
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
+        }
+
+        /* Searchable dropdown loading state */
+        .searchable-dropdown.loading .searchable-dropdown-toggle::after {
+            content: '';
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            border: 2px solid #e9ecef;
+            border-top-color: #04a9f5;
+            border-radius: 50%;
+            animation: spinner-rotate 0.8s linear infinite;
+        }
+
+        .searchable-dropdown.loading .dropdown-icon {
+            opacity: 0;
+        }
+
+        /* Typeahead dropdown loading message */
+        .typeahead-loading {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .typeahead-loading i {
+            animation: spinner-rotate 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        [data-pc-theme="dark"] .typeahead-loading {
+            color: #9ca3af;
+        }
     </style>
 }
 
@@ -826,7 +890,7 @@
                                    name="CostEstimation"
                                    placeholder="0"
                                    min="0"
-                                   step="1000">
+                                   step="any">
                         </div>
                     </div>
                 </div>

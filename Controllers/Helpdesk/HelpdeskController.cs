@@ -959,7 +959,7 @@ namespace cfm_frontend.Controllers.Helpdesk
 
 
             // Now search workers with the company ID
-            var (success, data, message) = await SafeExecuteApiAsync<List<EmployeeModel>>(
+            var (success, data, message) = await SafeExecuteApiAsync<List<WorkerFormDetailResponse>>(
                 () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idServiceProvider}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
                 "Failed to search workers");
 

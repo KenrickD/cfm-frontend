@@ -56,6 +56,62 @@
         priorityLevelsCache: {} // Cache full priority level data by ID
     };
 
+    // ========================================
+    // Loading State Helper Functions
+    // ========================================
+
+    /**
+     * Show loading state on a searchable dropdown
+     * @param {string} selectId - The ID of the select element (without #)
+     */
+    function showDropdownLoading(selectId) {
+        const selectElement = document.getElementById(selectId);
+        if (selectElement && selectElement._searchableDropdown) {
+            selectElement._searchableDropdown.wrapper.classList.add('loading');
+        }
+    }
+
+    /**
+     * Hide loading state on a searchable dropdown
+     * @param {string} selectId - The ID of the select element (without #)
+     */
+    function hideDropdownLoading(selectId) {
+        const selectElement = document.getElementById(selectId);
+        if (selectElement && selectElement._searchableDropdown) {
+            selectElement._searchableDropdown.wrapper.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Show loading state on a text input's parent container
+     * @param {jQuery|string} input - The input element or selector
+     */
+    function showInputLoading(input) {
+        const $input = typeof input === 'string' ? $(input) : input;
+        $input.parent().addClass('input-loading');
+    }
+
+    /**
+     * Hide loading state on a text input's parent container
+     * @param {jQuery|string} input - The input element or selector
+     */
+    function hideInputLoading(input) {
+        const $input = typeof input === 'string' ? $(input) : input;
+        $input.parent().removeClass('input-loading');
+    }
+
+    /**
+     * Show loading message in a typeahead dropdown
+     * @param {jQuery} $dropdown - The dropdown element
+     */
+    function showTypeaheadLoading($dropdown) {
+        $dropdown.empty().append(
+            $('<div></div>')
+                .addClass('typeahead-loading')
+                .html('<i class="ti ti-loader me-1"></i>Searching...')
+        ).addClass('show');
+    }
+
     /**
      * Initialize the module
      */
@@ -689,6 +745,9 @@
     function loadFloors(propertyId) {
         const $floorSelect = $('#floorSelect');
 
+        // Show loading state
+        showDropdownLoading('floorSelect');
+
         $.ajax({
             url: CONFIG.apiEndpoints.floors,
             method: 'GET',
@@ -737,6 +796,10 @@
                 console.error('Error loading floors:', error);
                 $floorSelect.empty().append('<option value="">Error loading floors</option>');
                 showNotification('Error loading floors. Please try again.', 'error');
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('floorSelect');
             }
         });
     }
@@ -746,6 +809,9 @@
      */
     function loadRooms(propertyId, floorId) {
         const $roomSelect = $('#roomSelect');
+
+        // Show loading state
+        showDropdownLoading('roomSelect');
 
         $.ajax({
             url: CONFIG.apiEndpoints.rooms,
@@ -792,6 +858,10 @@
                 console.error('Error loading rooms:', error);
                 $roomSelect.empty().append('<option value="">Error loading rooms</option>');
                 showNotification('Error loading rooms. Please try again.', 'error');
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('roomSelect');
             }
         });
     }
@@ -816,10 +886,15 @@
             }
 
             searchTimeout = setTimeout(function () {
+                // Show loading state
+                showInputLoading($requestorSearch);
+                showTypeaheadLoading($requestorDropdown);
+
                 searchEmployees(term, $requestorDropdown, function (employee) {
                     // Show card instead of just updating text
                     showRequestorCard(employee);
                     $requestorDropdown.removeClass('show').empty();
+                    hideInputLoading($requestorSearch);
                 });
             }, CONFIG.debounceDelay);
         });
@@ -928,6 +1003,11 @@
             error: function (xhr, status, error) {
                 console.error('Error searching requestors:', error);
                 showNotification('Error searching requestors. Please try again.', 'error');
+                $dropdown.removeClass('show').empty();
+            },
+            complete: function () {
+                // Hide input loading state
+                hideInputLoading('#requestorSearch');
             }
         });
     }
@@ -1141,6 +1221,9 @@
         if (idWorkCategory) params.idWorkCategory = idWorkCategory;
         if (idLocation) params.idLocation = idLocation;
 
+        // Show loading state
+        showDropdownLoading('personInChargeSelect');
+
         $.ajax({
             url: CONFIG.apiEndpoints.personsInCharge,
             method: 'GET',
@@ -1165,6 +1248,7 @@
                         // Update searchable dropdown if available
                         const selectElement = document.getElementById('personInChargeSelect');
                         if (selectElement && selectElement._searchableDropdown) {
+                            selectElement._searchableDropdown.loadFromSelect();
                             selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
                         }
                     }
@@ -1172,6 +1256,10 @@
             },
             error: function (xhr, status, error) {
                 console.error('Error loading persons in charge:', error);
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('personInChargeSelect');
             }
         });
     }
@@ -1783,7 +1871,12 @@
                 return;
             }
 
-            workerSearchTimeout = setTimeout(() => searchWorkersForModal(term, source), CONFIG.debounceDelay);
+            workerSearchTimeout = setTimeout(function () {
+                // Show loading state
+                showInputLoading('#workerSearchModal');
+                showTypeaheadLoading($('#workerSearchDropdownModal'));
+                searchWorkersForModal(term, source);
+            }, CONFIG.debounceDelay);
         });
 
         $('#saveWorkerBtn').on('click', saveWorker);
@@ -1865,6 +1958,11 @@
             error: function (xhr, status, error) {
                 console.error('Error searching workers:', error);
                 showNotification('Failed to search workers', 'error');
+                $('#workerSearchDropdownModal').removeClass('show').empty();
+            },
+            complete: function () {
+                // Hide loading state
+                hideInputLoading('#workerSearchModal');
             }
         });
     }
