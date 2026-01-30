@@ -101,38 +101,38 @@
                  * Work Category CRUD
                  */
                 WorkCategory: {
-                    List: '/Helpdesk/Settings/GetWorkCategories',
-                    Create: '/Helpdesk/Settings/CreateWorkCategory',
-                    Update: '/Helpdesk/Settings/UpdateWorkCategory',
-                    Delete: '/Helpdesk/Settings/DeleteWorkCategory'
+                    List: '/Helpdesk/GetWorkCategories',
+                    Create: '/Helpdesk/CreateWorkCategory',
+                    Update: '/Helpdesk/UpdateWorkCategory',
+                    Delete: '/Helpdesk/DeleteWorkCategory'
                 },
 
                 /**
                  * Important Checklist CRUD
                  */
                 ImportantChecklist: {
-                    List: '/Helpdesk/Settings/GetImportantChecklists',
-                    Create: '/Helpdesk/Settings/CreateImportantChecklist',
-                    Update: '/Helpdesk/Settings/UpdateImportantChecklist',
-                    Delete: '/Helpdesk/Settings/DeleteImportantChecklist',
-                    UpdateOrder: '/Helpdesk/Settings/UpdateImportantChecklistOrder'
+                    List: '/Helpdesk/GetImportantChecklists',
+                    Create: '/Helpdesk/CreateImportantChecklist',
+                    Update: '/Helpdesk/UpdateImportantChecklist',
+                    Delete: '/Helpdesk/DeleteImportantChecklist',
+                    UpdateOrder: '/Helpdesk/UpdateImportantChecklistOrder'
                 },
 
                 /**
                  * Person in Charge CRUD
                  */
                 PersonInCharge: {
-                    List: '/Helpdesk/Settings/GetPersonsInCharge',
-                    GetById: '/Helpdesk/Settings/GetPersonInChargeById',
-                    Create: '/Helpdesk/Settings/CreatePersonInCharge',
-                    Update: '/Helpdesk/Settings/UpdatePersonInCharge',
-                    Delete: '/Helpdesk/Settings/DeletePersonInCharge'
+                    List: '/Helpdesk/GetPersonsInCharge',
+                    GetById: '/Helpdesk/GetPersonInChargeById',
+                    Create: '/Helpdesk/CreatePersonInCharge',
+                    Update: '/Helpdesk/UpdatePersonInCharge',
+                    Delete: '/Helpdesk/DeletePersonInCharge'
                 },
 
                 /**
                  * Supporting Data for Settings
                  */
-                GetProperties: '/Helpdesk/Settings/GetProperties',
+                GetProperties: '/Helpdesk/GetProperties',
 
                 /**
                  * Priority Level (Settings context)

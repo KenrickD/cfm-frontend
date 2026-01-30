@@ -4,6 +4,7 @@ using cfm_frontend.DTOs.Employee;
 using cfm_frontend.DTOs.PIC;
 using cfm_frontend.DTOs.PriorityLevel;
 using cfm_frontend.DTOs.ServiceProvider;
+using cfm_frontend.DTOs.WorkCategory;
 using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Extensions;
 using cfm_frontend.Models;
@@ -1972,28 +1973,158 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// GET: Work Category Settings page
+        /// GET: Work Category Settings page with pagination
         /// </summary>
         [Authorize]
-        public IActionResult WorkCategory()
+        public async Task<IActionResult> WorkCategory(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Work Category";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/WorkCategory.cshtml");
+
+            var viewmodel = new WorkCategoryViewModel
+            {
+                SearchKeyword = search
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var idClient = userInfo.PreferredClientId;
+
+                // Capture client context at page load for multi-tab session safety
+                viewmodel.IdClient = idClient;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetWorkCategoriesPagedAsync(client, backendUrl, idClient, page, search);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work categories");
+                TempData["ErrorMessage"] = "Failed to load work categories. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/WorkCategory.cshtml", viewmodel);
         }
 
         /// <summary>
-        /// API: Get all work categories
+        /// Helper method to fetch paginated work categories from backend API
+        /// </summary>
+        private async Task<WorkCategoryListResponse?> GetWorkCategoriesPagedAsync(
+            HttpClient client,
+            string? backendUrl,
+            int idClient,
+            int page,
+            string? keyword)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"cid={idClient}",
+                    $"page={page}"
+                };
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    queryParams.Add($"keyword={Uri.EscapeDataString(keyword)}");
+                }
+
+                var queryString = string.Join("&", queryParams);
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}?{queryString}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<WorkCategoryListResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return apiResponse?.Data;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to fetch work categories. Status: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching work categories from API");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// API: Get paginated work categories for AJAX requests
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetWorkCategories()
+        public async Task<IActionResult> GetWorkCategories(int page = 1, string? keyword = "")
         {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var idClient = userInfo.PreferredClientId;
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<WorkCategoryModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}"),
+            var queryParams = new List<string>
+            {
+                $"cid={idClient}",
+                $"page={page}"
+            };
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                queryParams.Add($"keyword={Uri.EscapeDataString(keyword)}");
+            }
+
+            var queryString = string.Join("&", queryParams);
+
+            var (success, data, message) = await SafeExecuteApiAsync<WorkCategoryListResponse>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkCategory.List}?{queryString}"),
                 "Failed to load work categories");
 
             return Json(new { success, data, message });
@@ -2003,12 +2134,30 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Create new work category
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateWorkCategory([FromBody] WorkCategoryModel model)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateWorkCategory([FromBody] WorkCategoryPayloadDto model)
         {
-            if (string.IsNullOrWhiteSpace(model.name))
+            if (string.IsNullOrWhiteSpace(model.Text))
             {
                 return Json(new { success = false, message = "Category name is required" });
             }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            // Set client ID from session
+            model.IdClient = userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -2030,17 +2179,34 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Update work category
         /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateWorkCategory([FromBody] WorkCategoryModel model)
+        public async Task<IActionResult> UpdateWorkCategory([FromBody] WorkCategoryPayloadDto model)
         {
-            if (model.id <= 0)
+            if (model.IdType <= 0)
             {
                 return Json(new { success = false, message = "Invalid category ID" });
             }
 
-            if (string.IsNullOrWhiteSpace(model.name))
+            if (string.IsNullOrWhiteSpace(model.Text))
             {
                 return Json(new { success = false, message = "Category name is required" });
             }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            // Set client ID from session
+            model.IdClient = userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -2062,18 +2228,33 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// API: Delete work category
         /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteWorkCategory([FromBody] WorkCategoryModel model)
+        public async Task<IActionResult> DeleteWorkCategory(int id)
         {
-            if (model.id <= 0)
+            if (id <= 0)
             {
                 return Json(new { success = false, message = "Invalid category ID" });
             }
 
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var idClient = userInfo.PreferredClientId;
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Delete(model.id)}"),
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.WorkCategory.Delete(id)}?cid={idClient}"),
                 "Failed to delete work category");
 
             return Json(new { success, message = success ? "Work category deleted successfully" : message });

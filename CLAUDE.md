@@ -33,6 +33,22 @@ dotnet restore        # Restore packages
 - **ViewModels**: Aggregate data from multiple APIs for complex views
 - **Views**: Server-rendered Razor templates (`Views/Shared/`)
 
+### BackendModels Folder (Reference Only)
+
+**⚠️ IMPORTANT:** The `BackendModels/` folder contains model classes copied from the backend repository for **reference purposes only**. DO NOT use these models directly in the frontend code.
+
+**Purpose:** To understand backend data structures when creating frontend DTOs/Models that need to match backend APIs.
+
+**Key Backend Models for Reference:**
+- `BackendModels/Models/DataModels/Type.cs` - Master data for client-specific choice sets (Work Categories, Other Categories, etc.)
+  - Properties: `IdType`, `ClientIdClient`, `ParentTypeIdType`, `Category`, `Text`, `DisplayOrder`, `IsActiveData`
+- `BackendModels/Models/DataModels/Enum.cs` - System-wide fixed choice sets (non-client-specific)
+
+**Usage Rule:** When creating frontend DTOs that need to match backend structures:
+1. Check `BackendModels/` to understand the backend model structure
+2. Create a **new DTO** in the `DTOs/` folder with only the properties needed
+3. Never reference `BackendModels` namespace directly in frontend code
+
 ### Backend API Integration
 
 Use named `HttpClient` "BackendAPI":
@@ -336,6 +352,15 @@ monitor.start();
 - ✅ Use for pages with client-specific AJAX calls
 - ⚠️ Optional for read-only pages
 - ❌ Not needed for client-agnostic pages
+
+**⚠️ MANDATORY FOR NEW IMPLEMENTATIONS:**
+When creating new pages or features that involve client-specific CRUD operations (Settings pages, Work Request forms, etc.), you MUST follow this pattern:
+1. Add `IdClient` property to the ViewModel
+2. Set `viewmodel.IdClient = userInfo.PreferredClientId` in the controller GET action
+3. Expose via `window.PageContext = { idClient: @Model.IdClient }` in the View
+4. Use `clientContext.idClient` in JavaScript AJAX payloads instead of hardcoding `0`
+
+**Reference Implementation:** See `Views/Helpdesk/Settings/WorkCategory.cshtml` and `wwwroot/assets/js/pages/settings/work-category.js`
 
 ### Pagination
 **Component:** `Views/Shared/_Pagination.cshtml` (auto-preserves query params)

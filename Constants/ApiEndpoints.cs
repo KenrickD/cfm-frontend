@@ -338,35 +338,48 @@ namespace cfm_frontend.Constants
         #region Work Category
 
         /// <summary>
-        /// Work category management endpoints
+        /// Work category management endpoints (Settings)
+        /// Base path: /api/v1/work-request/work-category
         /// </summary>
         public static class WorkCategory
         {
-            private const string Base = ApiBase + "/workcategory";
+            private const string Base = ApiBase + "/work-request/work-category";
 
             /// <summary>
-            /// GET: Get all work categories
-            /// Query params: idClient (optional), categoryType (optional)
+            /// GET: Get paginated work categories list
+            /// Query params: cid (client id), keyword (search), page (pagination)
+            /// Response: Paginated list of TypeFormDetailResponse
             /// </summary>
             public const string List = Base + "/list";
 
             /// <summary>
-            /// POST: Create new work category
+            /// GET: Get work category by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: Type_PayloadDto structure
             /// </summary>
-            public const string Create = Base + "/create";
+            public static string GetById(int id) => $"{Base}/{id}";
 
             /// <summary>
-            /// PUT: Update existing work category
+            /// POST: Create new work category
+            /// Body: WorkCategoryPayloadDto
+            /// Response: int (new ID)
             /// </summary>
-            public const string Update = Base + "/update";
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update work category
+            /// Body: WorkCategoryPayloadDto
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
 
             /// <summary>
             /// DELETE: Delete work category by ID
             /// Path params: {id}
+            /// Query params: cid (client id)
             /// </summary>
-            /// <param name="id">Work category ID</param>
-            /// <returns>Delete endpoint URL</returns>
-            public static string Delete(int id) => $"{Base}/delete/{id}";
+            public static string Delete(int id) => $"{Base}/{id}";
         }
 
         #endregion

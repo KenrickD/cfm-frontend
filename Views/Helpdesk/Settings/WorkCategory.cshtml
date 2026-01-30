@@ -1,4 +1,4 @@
-@model List<cfm_frontend.Models.WorkRequest.WorkRequestFilterModel.WorkCategoryModel>
+@model cfm_frontend.ViewModels.WorkCategoryViewModel
 
 @{
     ViewBag.Title = "Work Category List";
@@ -111,6 +111,8 @@
     </style>
 }
 
+@Html.AntiForgeryToken()
+
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
@@ -132,13 +134,34 @@
         <!-- Stats and Search -->
         <div class="stats-section">
             <div class="total-count">
-                Showing total of <strong><span id="totalCount">0</span></strong> Work Categories
+                @if (Model?.Paging != null && Model.Paging.TotalCount > 0)
+                {
+                    var startRecord = (Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1;
+                    var endRecord = Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalCount);
+                    <span>Showing <strong>@startRecord</strong> to <strong>@endRecord</strong> of <strong>@Model.Paging.TotalCount</strong> Work Categories</span>
+                }
+                else
+                {
+                    <span>Showing total of <strong>0</strong> Work Categories</span>
+                }
             </div>
             <div class="search-box">
-                <input type="text"
-                       class="form-control form-control-sm"
-                       id="searchInput"
-                       placeholder="Search categories...">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           id="searchInput"
+                           placeholder="Search categories..."
+                           value="@Model?.SearchKeyword">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="searchBtn">
+                        <i class="ti ti-search"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model?.SearchKeyword))
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearchBtn">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
 
@@ -185,13 +208,42 @@
                 <h6 class="mb-0">Description</h6>
             </div>
             <div class="card-body" id="categoryTableBody">
-                <!-- Categories will be loaded here -->
-                <div class="empty-state" id="emptyState">
-                    <i class="ti ti-folder-off"></i>
-                    <p>No work categories found</p>
-                </div>
+                @if (Model?.Categories != null && Model.Categories.Any())
+                {
+                    @foreach (var category in Model.Categories)
+                    {
+                        <div class="category-row" data-id="@category.IdType">
+                            <div class="category-description">@category.TypeName</div>
+                            <div class="category-actions">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-action"
+                                        onclick="editCategory(@category.IdType)">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-danger btn-action"
+                                        onclick="deleteCategory(@category.IdType, '@Html.Raw(category.TypeName?.Replace("'", "\\'") ?? "")')">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state" id="emptyState">
+                        <i class="ti ti-folder-off"></i>
+                        <p>No work categories found</p>
+                    </div>
+                }
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if (Model?.Paging != null)
+        {
+            @await Html.PartialAsync("_Pagination", Model.Paging)
+        }
     </div>
 </div>
 
@@ -222,5 +274,15 @@
 </div>
 
 @section scripts {
+    <script>
+        // Pass current state to JavaScript
+        window.currentPage = @(Model?.Paging?.CurrentPage ?? 1);
+        window.searchKeyword = '@Html.Raw(Model?.SearchKeyword ?? "")';
+
+        // Client context for multi-tab session safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+    </script>
     <script src="~/assets/js/pages/settings/work-category.js"></script>
 }
