@@ -222,6 +222,121 @@ if (apiResponse?.Success == true && apiResponse.Data != null)
 await Task.WhenAll(GetLocationsAsync(...), GetCategoriesAsync(...), GetProvidersAsync(...));
 ```
 
+### Multi-Tab Session Safety
+
+**Problem:** User opens form in Tab A with Client X, switches to Client Y in Tab B, returns to Tab A and submits. Without safeguards, the form submits with wrong client context.
+
+**Solution Pattern:**
+1. **Capture client context at page load** (ViewModel + JS)
+2. **Pass captured context in all AJAX calls** (optional params)
+3. **Monitor for client changes** (ClientSessionMonitor)
+4. **Validate on form submission** (backend)
+
+**Implementation:**
+
+**1. ViewModel - Capture at page load:**
+```csharp
+// In GET action
+viewmodel.IdClient = userInfo.PreferredClientId;
+viewmodel.IdCompany = userInfo.IdCompany;
+```
+
+**2. View - Expose to JavaScript:**
+```html
+<script>
+    window.PageContext = {
+        idClient: @Model.IdClient,
+        idCompany: @Model.IdCompany
+    };
+</script>
+```
+
+**3. JavaScript - Client context helpers:**
+```javascript
+const clientContext = {
+    get idClient() { return window.PageContext?.idClient || null; },
+    get idCompany() { return window.PageContext?.idCompany || null; }
+};
+
+function getClientParams() {
+    const params = {};
+    if (clientContext.idClient) params.idClient = clientContext.idClient;
+    if (clientContext.idCompany) params.idCompany = clientContext.idCompany;
+    return params;
+}
+
+function withClientParams(data) {
+    return { ...getClientParams(), ...data };
+}
+
+// Use in AJAX calls
+$.ajax({
+    url: '/api/endpoint',
+    data: getClientParams()  // or withClientParams({ otherParam: value })
+});
+```
+
+**4. Controller - Optional parameters with fallback:**
+```csharp
+[HttpGet]
+public async Task<IActionResult> GetData(int? idClient = null)
+{
+    var userSessionJson = HttpContext.Session.GetString("UserSession");
+    var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, ...);
+
+    // Use passed idClient if provided, otherwise fall back to session
+    var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
+    // Use effectiveIdClient in API calls...
+}
+```
+
+**5. Form Submission - Validate client match:**
+```javascript
+// Set captured client in form payload
+const payload = {
+    // ... form fields ...
+    Client_idClient: clientContext.idClient  // Page-load client
+};
+```
+
+```csharp
+// Backend validation
+[HttpPost]
+public async Task<IActionResult> SubmitForm([FromBody] RequestDto model)
+{
+    var userInfo = // ... get from session
+    var sessionClient = userInfo.PreferredClientId;
+
+    // Reject if submitted client doesn't match current session
+    if (model.Client_idClient != sessionClient)
+    {
+        return Json(new {
+            success = false,
+            message = "Client context has changed. Please refresh the page.",
+            clientMismatch = true
+        });
+    }
+
+    // Proceed with submission using model.Client_idClient
+}
+```
+
+**6. Tab Focus Monitoring:**
+```javascript
+// Initialize ClientSessionMonitor (see Client Session Monitor section)
+const monitor = new ClientSessionMonitor({
+    pageLoadClientId: clientContext.idClient
+});
+monitor.start();
+```
+
+**When to Use:**
+- ✅ Always use for forms that submit client-specific data
+- ✅ Use for pages with client-specific AJAX calls
+- ⚠️ Optional for read-only pages
+- ❌ Not needed for client-agnostic pages
+
 ### Pagination
 **Component:** `Views/Shared/_Pagination.cshtml` (auto-preserves query params)
 **Model:** `Models/PagingInfo.cs`
@@ -261,6 +376,98 @@ dd.enable(); dd.disable(); dd.clear(); dd.setValue('2', 'Label', true);
 ```
 
 **Cascade Pattern:** Use `onChange` to enable/populate dependent dropdowns. Call `clear()`, `loadFromSelect()`, `disable()` on children when parent changes.
+
+### Client Session Monitor
+**File:** `wwwroot/assets/js/helpers/client-session-monitor.js`
+
+Monitors for client context changes across browser tabs and alerts users when the session client differs from the page-load client. Essential for multi-tab session safety.
+
+**Use Case:** When a user opens a form in Tab A, switches clients in Tab B, then returns to Tab A, the monitor detects the mismatch and warns the user.
+
+**Basic Usage:**
+```javascript
+// Include the script in your view
+<script src="~/assets/js/helpers/client-session-monitor.js"></script>
+
+// Initialize with page-load client context
+const monitor = new ClientSessionMonitor({
+    pageLoadClientId: clientContext.idClient,
+    pageLoadCompanyId: clientContext.idCompany
+});
+monitor.start();
+```
+
+**Configuration Options:**
+```javascript
+{
+    pageLoadClientId: null,              // Required - Client ID at page load
+    pageLoadCompanyId: null,             // Optional - Company ID at page load
+    checkEndpoint: '/Helpdesk/CheckSessionClient',  // API endpoint
+    onMismatch: null,                    // Callback(sessionClient, pageLoadClient)
+    onSessionExpired: null,              // Callback(response)
+    onCheckError: null,                  // Callback(error)
+    enableBanner: true,                  // Show default warning banner
+    checkOnFocus: true,                  // Check when window gains focus
+    checkOnVisibility: true              // Check when tab becomes visible
+}
+```
+
+**Methods:**
+```javascript
+monitor.start();           // Start monitoring
+monitor.stop();            // Stop monitoring
+monitor.checkSession();    // Manually trigger check
+```
+
+**Custom Callbacks:**
+```javascript
+const monitor = new ClientSessionMonitor({
+    pageLoadClientId: clientContext.idClient,
+    onMismatch: (sessionClient, pageLoadClient) => {
+        console.warn('Client changed!', sessionClient);
+        // Custom handling
+    },
+    enableBanner: false  // Disable default banner when using custom callback
+});
+```
+
+**Backend Requirement:** The `checkEndpoint` must return:
+```json
+{
+  "success": true,
+  "idClient": 123,
+  "idCompany": 456,
+  "sessionExpired": false
+}
+```
+
+**Example Implementation:**
+```csharp
+// Controller action for CheckSessionClient
+[HttpGet]
+public IActionResult CheckSessionClient()
+{
+    var userSessionJson = HttpContext.Session.GetString("UserSession");
+    if (string.IsNullOrEmpty(userSessionJson))
+    {
+        return Json(new { success = false, sessionExpired = true });
+    }
+    var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    return Json(new
+    {
+        success = true,
+        idClient = userInfo.PreferredClientId,
+        idCompany = userInfo.IdCompany
+    });
+}
+```
+
+**Best Practices:**
+- Always use for forms that submit client-specific data
+- Initialize after `$(document).ready()` or page context is set
+- Store the monitor instance if you need to stop it later
+- For read-only pages, monitoring is optional but recommended
 
 ### Breadcrumbs
 Set in controllers via ViewBag:
