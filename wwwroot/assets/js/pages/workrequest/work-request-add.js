@@ -57,6 +57,65 @@
     };
 
     // ========================================
+    // Client Context (Multi-Tab Session Safety)
+    // ========================================
+
+    /**
+     * Client context captured at page load.
+     * This prevents issues when user switches clients in another tab.
+     */
+    const clientContext = {
+        get idClient() {
+            return window.WorkRequestContext?.idClient || null;
+        },
+        get idCompany() {
+            return window.WorkRequestContext?.idCompany || null;
+        },
+        get pageLoadTime() {
+            return window.WorkRequestContext?.pageLoadTime || null;
+        }
+    };
+
+    /**
+     * Get client parameters to include in AJAX data.
+     * These are captured at page load, not from current session.
+     * @returns {Object} Object with idClient and/or idCompany
+     */
+    function getClientParams() {
+        const params = {};
+        if (clientContext.idClient) {
+            params.idClient = clientContext.idClient;
+        }
+        if (clientContext.idCompany) {
+            params.idCompany = clientContext.idCompany;
+        }
+        return params;
+    }
+
+    /**
+     * Merge client params with existing data object.
+     * @param {Object} data - Existing data object
+     * @returns {Object} Merged object with client params
+     */
+    function withClientParams(data) {
+        return { ...getClientParams(), ...data };
+    }
+
+    // Expose globally for extended module
+    window.getClientParams = getClientParams;
+    window.withClientParams = withClientParams;
+
+    // ========================================
+    // Tab Focus Detection (Multi-Tab Session Safety)
+    // ========================================
+
+    /**
+     * Client session monitor instance
+     * Monitors for client changes across tabs using the ClientSessionMonitor helper
+     */
+    let sessionMonitor = null;
+
+    // ========================================
     // Loading State Helper Functions
     // ========================================
 
@@ -163,6 +222,19 @@
         setTimeout(function () {
             autoSelectFirstLocation();
         }, 150);
+
+        // Initialize client session monitoring for multi-tab session safety
+        if (typeof ClientSessionMonitor !== 'undefined') {
+            sessionMonitor = new ClientSessionMonitor({
+                pageLoadClientId: clientContext.idClient,
+                pageLoadCompanyId: clientContext.idCompany,
+                checkEndpoint: '/Helpdesk/CheckSessionClient',
+                enableBanner: true
+            });
+            sessionMonitor.start();
+        } else {
+            console.warn('ClientSessionMonitor not loaded - tab session monitoring disabled');
+        }
 
         console.log('Work Request Add page initialized');
     }
@@ -280,6 +352,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.locations,
             method: 'GET',
+            data: getClientParams(),
             success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#locationSelect');
@@ -310,6 +383,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.workCategories,
             method: 'GET',
+            data: getClientParams(),
             success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#workCategorySelect');
@@ -337,7 +411,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.otherCategories,
             method: 'GET',
-            data: { categoryType: 'workRequestCustomCategory' },
+            data: withClientParams({ categoryType: 'workRequestCustomCategory' }),
             success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#otherCategorySelect');
@@ -357,7 +431,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.otherCategories,
             method: 'GET',
-            data: { categoryType: 'workRequestCustomCategory2' },
+            data: withClientParams({ categoryType: 'workRequestCustomCategory2' }),
             success: function (response) {
                 if (response.success && response.data) {
                     const $container = $('#otherCategory2Container');
@@ -396,6 +470,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.serviceProviders,
             method: 'GET',
+            data: getClientParams(),
             success: function (response) {
                 if (response.success && response.data) {
                     const $select = $('#serviceProviderSelect');
@@ -425,7 +500,8 @@
     async function loadPriorityLevels() {
         try {
             // Fetch the list of priority levels first (for dropdown)
-            const listResponse = await fetch(CONFIG.apiEndpoints.priorityLevels);
+            const clientParams = new URLSearchParams(getClientParams());
+            const listResponse = await fetch(`${CONFIG.apiEndpoints.priorityLevels}?${clientParams}`);
             const listData = await listResponse.json();
 
             if (!listData.success || !listData.data) {
@@ -441,7 +517,8 @@
                 const priorityId = priority.value || priority.id;
 
                 // Fetch full priority level details
-                const detailResponse = await fetch(MvcEndpoints.Helpers.buildUrl(MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevelById, { id: priorityId }));
+                const detailParams = { id: priorityId, ...getClientParams() };
+                const detailResponse = await fetch(MvcEndpoints.Helpers.buildUrl(MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevelById, detailParams));
                 const detailData = await detailResponse.json();
 
                 if (detailData.success && detailData.data) {
@@ -599,6 +676,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.importantChecklist,
             method: 'GET',
+            data: getClientParams(),
             success: function (response) {
                 if (response.success && response.data) {
                     state.importantChecklistData = response.data;
@@ -751,7 +829,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.floors,
             method: 'GET',
-            data: { locationId: propertyId },
+            data: withClientParams({ locationId: propertyId }),
             success: function (response) {
                 $floorSelect.empty()
                     .append('<option value="">Select Floor</option>')
@@ -816,7 +894,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.rooms,
             method: 'GET',
-            data: { propertyId: propertyId, floorId: floorId },
+            data: withClientParams({ propertyId: propertyId, floorId: floorId }),
             success: function (response) {
                 $roomSelect.empty()
                     .append('<option value="">Select Room/Area/Zone</option>')
@@ -960,7 +1038,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.searchRequestors,
             method: 'GET',
-            data: { term: term },
+            data: withClientParams({ term: term }),
             success: function (response) {
                 $dropdown.empty();
 
@@ -1153,10 +1231,10 @@
         $.ajax({
             url: CONFIG.apiEndpoints.searchWorkersByCompany,
             method: 'GET',
-            data: {
+            data: withClientParams({
                 term: term,
                 idLocation: idLocation
-            },
+            }),
             success: function (response) {
                 $dropdown.empty();
 
@@ -1227,7 +1305,7 @@
         $.ajax({
             url: CONFIG.apiEndpoints.personsInCharge,
             method: 'GET',
-            data: params,
+            data: withClientParams(params),
             success: function (response) {
                 $select.empty().append('<option value="">Select Person in Charge</option>');
                 if (response.success && response.data && response.data.length > 0) {
@@ -1342,11 +1420,11 @@
                     $.ajax({
                         url: CONFIG.apiEndpoints.searchWorkersByServiceProvider,
                         method: 'GET',
-                        data: {
+                        data: withClientParams({
                             term: term,
                             idLocation: idLocation,
                             idServiceProvider: idServiceProvider
-                        },
+                        }),
                         success: function (response) {
                             const $dropdown = $('#workerServiceProviderDropdown');
                             $dropdown.empty();
@@ -1436,9 +1514,10 @@
 
         try {
             // Fetch fresh office hours and public holidays (per user requirement)
+            const businessDayParams = new URLSearchParams(getClientParams());
             const [officeHoursResponse, publicHolidaysResponse] = await Promise.all([
-                fetch(CONFIG.apiEndpoints.officeHours),
-                fetch(CONFIG.apiEndpoints.publicHolidays)
+                fetch(`${CONFIG.apiEndpoints.officeHours}?${businessDayParams}`),
+                fetch(`${CONFIG.apiEndpoints.publicHolidays}?${businessDayParams}`)
             ]);
 
             const officeHoursData = await officeHoursResponse.json();
@@ -1921,7 +2000,7 @@
         $.ajax({
             url: endpoint,
             method: 'GET',
-            data: params,
+            data: withClientParams(params),
             success: function (response) {
                 const $dropdown = $('#workerSearchDropdownModal');
                 $dropdown.empty();
@@ -2155,10 +2234,12 @@
             showLoadingOverlay();
 
             // Build the payload matching API structure
-            const payload = buildWorkRequestPayload();
+            // Use window.buildWorkRequestPayload to allow extended.js to override
+            const payload = window.buildWorkRequestPayload();
 
             // Submit via AJAX
-            submitWorkRequest(payload);
+            // Use window.submitWorkRequest to allow extended.js to override
+            window.submitWorkRequest(payload);
         });
     }
 
@@ -2223,6 +2304,24 @@
     }
 
     /**
+     * Get target date value - prioritizes manual override, falls back to calculated
+     * @param {string} targetType - The target type (helpdesk, initialFollowUp, quotation, costApproval, workCompletion, afterWork)
+     * @returns {string|null} - ISO date string or null
+     */
+    function getTargetDateValue(targetType) {
+        // Check for manual override first
+        if (state.targetOverrides[targetType]?.newTarget) {
+            return new Date(state.targetOverrides[targetType].newTarget).toISOString();
+        }
+        // Fall back to auto-calculated target from DOM
+        const calculatedTarget = $(`#${targetType}Target`).data('calculated-target');
+        if (calculatedTarget) {
+            return calculatedTarget; // Already an ISO string
+        }
+        return null;
+    }
+
+    /**
      * Build the work request payload matching API structure
      */
     function buildWorkRequestPayload() {
@@ -2233,14 +2332,14 @@
         const importantChecklist = [];
         $('.important-checklist-item').each(function () {
             importantChecklist.push({
-                type_idType: parseInt($(this).data('type-id')),
+                Type_idType: parseInt($(this).data('type-id')),
                 value: $(this).is(':checked')
             });
         });
 
         // Build workers array with correct property names
         const workers = state.workers.map(worker => ({
-            employee_idEmployee: worker.Employee_idEmployee,
+            Employee_idEmployee: worker.Employee_idEmployee,
             side_Enum_idEnum: worker.side_Enum_idEnum,
             isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false
         }));
@@ -2248,9 +2347,9 @@
         // Build the payload
         const payload = {
             // Location Details
-            property_idProperty: parseInt($('#locationSelect').val()) || 0,
-            propertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
-            roomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
+            Property_idProperty: parseInt($('#locationSelect').val()) || 0,
+            PropertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
+            RoomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
 
             // Requestor and Work Details
             requestor_Employee_idEmployee: parseInt($('#requestorId').val()) || 0,
@@ -2268,74 +2367,65 @@
             customCategory2_Type_idType: parseInt($('#otherCategory2Select').val()) || null,
 
             // PM Finding
-            isPMFinding: $('#pmFindingCheck').is(':checked'),
+            IsPMFinding: $('#pmFindingCheck').is(':checked'),
 
             // Person in Charge and Service Provider
             pic_Employee_idEmployee: parseInt($('#personInChargeSelect').val()) || 0,
-            serviceProvider_idServiceProvider: parseInt($('#serviceProviderSelect').val()) || null,
+            ServiceProvider_idServiceProvider: parseInt($('#serviceProviderSelect').val()) || null,
 
             // Cost Estimation
             costEstimationCurrency_Enum_idEnum: parseInt($('#costEstimationCurrencySelect').val()) || null,
             costEstimation: parseFloat($('#costEstimation').val()) || null,
 
             // Priority and Timeline
-            priorityLevel_idPriorityLevel: parseInt($('#priorityLevelSelect').val()) || 0,
+            PriorityLevel_idPriorityLevel: parseInt($('#priorityLevelSelect').val()) || 0,
             requestDate: requestDateTime,
 
             // Timeline dates - Helpdesk Response
             helpdeskResponse: combineDateTimeToISO('#helpdeskResponseDate', '#helpdeskResponseTime'),
-            helpdeskResponseTarget: state.targetOverrides.helpdesk?.newTarget
-                ? new Date(state.targetOverrides.helpdesk.newTarget).toISOString()
-                : null,
+            helpdeskResponseTarget: getTargetDateValue('helpdesk'),
             helpdeskResponseTargetChangeNote: state.targetOverrides.helpdesk?.remark || null,
 
             // Initial Follow Up (onsite response)
             onsiteResponse: combineDateTimeToISO('#initialFollowUpDate', '#initialFollowUpTime'),
-            onsiteResponseTarget: state.targetOverrides.initialFollowUp?.newTarget
-                ? new Date(state.targetOverrides.initialFollowUp.newTarget).toISOString()
-                : null,
+            onsiteResponseTarget: getTargetDateValue('initialFollowUp'),
             onsiteResponseTargetChangeNote: state.targetOverrides.initialFollowUp?.remark || null,
 
             // Quotation Submission
             quotationSubmission: combineDateTimeToISO('#quotationSubmissionDate', '#quotationSubmissionTime'),
-            quotationSubmissionTarget: state.targetOverrides.quotation?.newTarget
-                ? new Date(state.targetOverrides.quotation.newTarget).toISOString()
-                : null,
+            quotationSubmissionTarget: getTargetDateValue('quotation'),
             quotationSubmissionTargetChangeNote: state.targetOverrides.quotation?.remark || null,
 
             // Cost Approval
             costApproval: combineDateTimeToISO('#costApprovalDate', '#costApprovalTime'),
-            costApprovalTarget: state.targetOverrides.costApproval?.newTarget
-                ? new Date(state.targetOverrides.costApproval.newTarget).toISOString()
-                : null,
+            costApprovalTarget: getTargetDateValue('costApproval'),
             costApprovalTargetChangeNote: state.targetOverrides.costApproval?.remark || null,
 
             // Work Completion
             workCompletion: combineDateTimeToISO('#workCompletionDate', '#workCompletionTime'),
-            workCompletionTarget: state.targetOverrides.workCompletion?.newTarget
-                ? new Date(state.targetOverrides.workCompletion.newTarget).toISOString()
-                : null,
+            workCompletionTarget: getTargetDateValue('workCompletion'),
             workCompletionTargetChangeNote: state.targetOverrides.workCompletion?.remark || null,
 
             // Follow Up (after work)
             followUp: combineDateTimeToISO('#afterWorkFollowUpDate', '#afterWorkFollowUpTime'),
-            followUpTarget: state.targetOverrides.afterWork?.newTarget
-                ? new Date(state.targetOverrides.afterWork.newTarget).toISOString()
-                : null,
+            followUpTarget: getTargetDateValue('afterWork'),
             followUpTargetChangeNote: state.targetOverrides.afterWork?.remark || null,
 
             // Summary and Feedback
             followUpDetail: $('#followUpSummary').val() || null,
             feedbackType_Enum_idEnum: parseInt($('#feedbackStatus').val()) || null,
-            feedbackSummary: $('#feedbackSummary').val() || null,
+            FeedbackSummary: $('#feedbackSummary').val() || null,
 
             // Collections - will be populated by extended.js
-            importantChecklist: importantChecklist,
-            workers: workers,
-            material_Jobcode: [],
-            material_Adhoc: [],
-            assets: [],
-            relatedDocuments: []
+            ImportantChecklist: importantChecklist,
+            Workers: workers,
+            Material_Jobcode: [],
+            Material_Adhoc: [],
+            Assets: [],
+            RelatedDocuments: [],
+
+            // Client context captured at page load (for multi-tab session safety validation)
+            Client_idClient: clientContext.idClient
         };
 
         return payload;

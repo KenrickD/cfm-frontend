@@ -1543,6 +1543,17 @@
     <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
     <script src="~/assets/js/components/searchable-dropdown.js"></script>
     <script src="~/assets/js/utilities/business-date-calculator.js"></script>
+    <script src="~/assets/js/helpers/client-session-monitor.js"></script>
+
+    <!-- Client context captured at page load for multi-tab session safety -->
+    <script>
+        window.WorkRequestContext = {
+            idClient: @Model.IdClient,
+            idCompany: @Model.IdCompany,
+            pageLoadTime: '@DateTime.UtcNow.ToString("o")'
+        };
+    </script>
+
     <script src="~/assets/js/pages/workrequest/work-request-add.js"></script>
     <script src="~/assets/js/pages/workrequest/work-request-add-extended.js"></script>
 }

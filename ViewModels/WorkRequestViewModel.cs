@@ -7,6 +7,10 @@ namespace cfm_frontend.ViewModels
 {
     public class WorkRequestViewModel
     {
+        // Client identification - captured at page load to prevent multi-tab session issues
+        public int IdClient { get; set; }
+        public int IdCompany { get; set; }
+
         // Work Request List
         public List<WorkRequestResponseModel>? WorkRequest { get; set; }
         public PagingInfo? Paging { get; set; }

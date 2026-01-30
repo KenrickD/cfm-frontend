@@ -223,7 +223,7 @@
                                         <td>
                                             <div class="align-items-center text-wrap" style="width: 250px">
                                                 <span>
-                                                    <a href="work-requests/@workRequest.idWorkRequest">@workRequest.workRequestCode</a>
+                                                    <a href="@Url.Action("WorkRequestDetail", "Helpdesk", new { id = workRequest.idWorkRequest })">@workRequest.workRequestCode</a>
                                                     @* <span class="badge" style="background-color: @workRequest.plmColor;">@workRequest.plm</span> *@
                                                 </span>
                                                 <div>

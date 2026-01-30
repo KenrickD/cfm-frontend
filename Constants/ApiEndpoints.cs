@@ -104,6 +104,13 @@ namespace cfm_frontend.Constants
             /// Query params: idClient
             /// </summary>
             public const string GetFilterOptions = Base + "/list-filter";
+
+            /// <summary>
+            /// GET: Get work request by ID
+            /// Path params: {id}
+            /// Query params: cid (client ID)
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
         }
 
         #endregion

@@ -6,144 +6,15 @@
 (function () {
     'use strict';
 
-    // Configuration
-    const CONFIG = {
-        apiEndpoints: {
-            locations: MvcEndpoints.Helpdesk.Extended.GetLocationsByClient,
-            workCategories: MvcEndpoints.Helpdesk.Extended.GetAllWorkCategory,
-            otherCategories: MvcEndpoints.Helpdesk.Extended.GetAllOtherCategory,
-            serviceProviders: MvcEndpoints.Helpdesk.Extended.GetServiceProvidersByClient
-        }
-    };
-
     // Initialize when document is ready
     $(document).ready(function () {
         initializePage();
     });
 
-    async function initializePage() {
-        try {
-            await loadDropdownData();
-            initializePopovers();
-            initializeDownloadButton();
-            initializeDeleteModal();
-        } catch (error) {
-            console.error('Error initializing page:', error);
-            showNotification('Failed to initialize page', 'error', 'Error');
-        }
-    }
-
-    /**
-     * Load all dropdown data in parallel
-     */
-    async function loadDropdownData() {
-        try {
-            await Promise.all([
-                loadLocations(),
-                loadWorkCategories(),
-                loadOtherCategories(),
-                loadServiceProviders()
-            ]);
-        } catch (error) {
-            console.error('Error loading dropdown data:', error);
-            showNotification('Failed to load dropdown data', 'error', 'Error');
-        }
-    }
-
-    /**
-     * Load locations dropdown
-     */
-    async function loadLocations() {
-        try {
-            const response = await fetch(CONFIG.apiEndpoints.locations);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (data.success && data.data) {
-                populateDropdown('#locationSelect', data.data, 'value', 'text');
-            }
-        } catch (error) {
-            console.error('Error loading locations:', error);
-        }
-    }
-
-    /**
-     * Load work categories dropdown
-     */
-    async function loadWorkCategories() {
-        try {
-            const response = await fetch(CONFIG.apiEndpoints.workCategories);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (data.success && data.data) {
-                populateDropdown('#workCategorySelect', data.data, 'value', 'text');
-            }
-        } catch (error) {
-            console.error('Error loading work categories:', error);
-        }
-    }
-
-    /**
-     * Load other categories dropdown
-     */
-    async function loadOtherCategories() {
-        try {
-            const response = await fetch(CONFIG.apiEndpoints.otherCategories);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (data.success && data.data) {
-                populateDropdown('#otherCategorySelect', data.data, 'value', 'text');
-            }
-        } catch (error) {
-            console.error('Error loading other categories:', error);
-        }
-    }
-
-    /**
-     * Load service providers dropdown
-     */
-    async function loadServiceProviders() {
-        try {
-            const response = await fetch(CONFIG.apiEndpoints.serviceProviders);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (data.success && data.data) {
-                populateDropdown('#serviceProviderSelect', data.data, 'value', 'text');
-            }
-        } catch (error) {
-            console.error('Error loading service providers:', error);
-        }
-    }
-
-    /**
-     * Populate dropdown with data
-     */
-    function populateDropdown(selector, data, valueField, textField) {
-        const $select = $(selector);
-        if ($select.length === 0) return;
-
-        // Keep the first option (placeholder)
-        const $firstOption = $select.find('option:first');
-
-        // Clear existing options except first
-        $select.find('option:not(:first)').remove();
-
-        // Add new options
-        data.forEach(item => {
-            const option = new Option(item[textField], item[valueField], false, false);
-            $select.append(option);
-        });
+    function initializePage() {
+        initializePopovers();
+        initializeDownloadButton();
+        initializeDeleteModal();
     }
 
     /**
@@ -168,19 +39,18 @@
 
     /**
      * Download change history table as Excel file
-     * TODO: Implement actual Excel export when backend API is ready
      */
     function downloadChangeHistoryAsExcel() {
-        // For now, just show a message
-        console.log('Download Change History as Excel - Feature coming soon');
+        var workRequestId = window.workRequestId;
 
-        // TODO: When backend is ready, make API call to generate Excel
-        // Example:
-        // const workRequestId = getWorkRequestIdFromUrl();
-        // window.location.href = `/api/workrequest/${workRequestId}/changehistory/export`;
+        if (!workRequestId) {
+            showNotification('Work request ID not found', 'error', 'Error');
+            return;
+        }
 
-        // Show temporary message
-        alert('Excel export functionality will be available once the backend API is implemented.');
+        // Show notification that feature is coming
+        showNotification('Excel export will be available when the backend API is ready', 'info', 'Info');
+        console.log('Download Change History for Work Request ID:', workRequestId);
     }
 
     /**
@@ -207,7 +77,7 @@
         });
 
         // Handle delete button click
-        $('#deleteModal .btn-danger').on('click', function () {
+        $('#confirmDeleteBtn').on('click', function () {
             handleDeleteWorkRequest();
         });
     }
@@ -223,39 +93,47 @@
 
     /**
      * Handle work request deletion
-     * TODO: Implement actual delete API call when backend is ready
      */
     function handleDeleteWorkRequest() {
-        // TODO: Get work request ID from URL or data attribute
-        // const workRequestId = getWorkRequestIdFromUrl();
+        var workRequestId = window.workRequestId;
+        var workRequestCode = window.workRequestCode;
 
-        console.log('Delete Work Request - Feature coming soon');
+        if (!workRequestId) {
+            showNotification('Work request ID not found', 'error', 'Error');
+            return;
+        }
 
-        // TODO: When backend is ready, make API call to delete work request
-        // Example:
-        // $.ajax({
-        //     url: `/api/workrequest/${workRequestId}`,
-        //     type: 'DELETE',
-        //     success: function(result) {
-        //         $('#deleteModal').modal('hide');
-        //         window.location.href = '/Helpdesk/Index';
-        //     },
-        //     error: function(xhr, status, error) {
-        //         alert('Failed to delete work request: ' + error);
-        //     }
-        // });
+        // Show loading state on button
+        var $btn = $('#confirmDeleteBtn');
+        var originalText = $btn.html();
+        $btn.html('<i class="ti ti-loader me-2"></i>Deleting...').prop('disabled', true);
 
-        // For now, just close the modal
-        $('#deleteModal').modal('hide');
-        alert('Delete functionality will be available once the backend API is implemented.');
-    }
-
-    /**
-     * Get work request ID from current URL
-     */
-    function getWorkRequestIdFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('id');
+        // Make API call to delete work request
+        $.ajax({
+            url: '/Helpdesk/DeleteWorkRequest/' + workRequestId,
+            type: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function (result) {
+                if (result.success) {
+                    showNotification('Work Request ' + workRequestCode + ' deleted successfully', 'success', 'Success');
+                    $('#deleteModal').modal('hide');
+                    // Redirect to list after short delay
+                    setTimeout(function () {
+                        window.location.href = '/Helpdesk/Index';
+                    }, 1500);
+                } else {
+                    showNotification(result.message || 'Failed to delete work request', 'error', 'Error');
+                    $btn.html(originalText).prop('disabled', false);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Delete error:', error);
+                showNotification('An error occurred while deleting the work request', 'error', 'Error');
+                $btn.html(originalText).prop('disabled', false);
+            }
+        });
     }
 
 })();

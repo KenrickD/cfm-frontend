@@ -80,6 +80,12 @@ app.UseAuthorization();
 // Auto-restore session when expired but tokens still valid
 app.UseSessionRestore();
 
+// Work Request Detail route - maps /work-requests/{id} to HelpdeskController.WorkRequestDetail
+app.MapControllerRoute(
+    name: "work-request-detail",
+    pattern: "work-requests/{id:int}",
+    defaults: new { controller = "Helpdesk", action = "WorkRequestDetail" });
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=home}/{action=Index}/{id?}");

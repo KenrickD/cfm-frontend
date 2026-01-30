@@ -1,23 +1,42 @@
+@using cfm_frontend.Models.WorkRequest
+@using cfm_frontend.Extensions
 @model cfm_frontend.ViewModels.WorkRequestDetailViewModel
 
 @{
-    ViewBag.Title = "Work Request Detail";
+    var wr = Model.WorkRequestDetail;
+    ViewBag.Title = $"Work Request - {wr?.WorkRequestCode ?? "Detail"}";
     ViewBag.pTitle = "Helpdesk";
     ViewBag.cTitle = "Work Request Detail";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Helper functions for date formatting
+    string FormatDate(DateTime? date) => date?.ToString("dd MMM yyyy HH:mm") ?? "-";
+    bool IsValidDate(DateTime? date) => date.HasValue && date.Value.Year > 1;
+
+    // Helper function to generate avatar initials
+    string GetInitials(string? fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return "?";
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts.Length > 0 ? parts[0][0].ToString().ToUpper() : "?";
+    }
+
+    // Generate a consistent color from a string
+    string GetAvatarColor(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return "#6c757d";
+        var colors = new[] { "#3498db", "#e74c3c", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c", "#e67e22", "#34495e" };
+        var hash = name.GetHashCode();
+        return colors[Math.Abs(hash) % colors.Length];
+    }
 }
 
 @section styles {
     <link rel="stylesheet" href="~/assets/css/plugins/datepicker-bs5.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
     <style>
-        .required-field::after {
-            content: " *";
-            color: #dc3545;
-        }
-
         .form-control-sm, .form-select-sm {
             font-size: 0.875rem;
         }
@@ -30,7 +49,7 @@
         .datetime-group {
             display: flex;
             gap: 0.5rem;
-            align-items-center;
+            align-items: center;
         }
 
         .datetime-group input[type="date"],
@@ -78,6 +97,142 @@
             background-color: #218838;
             color: white;
         }
+
+        /* Requestor Card Styles */
+        .requestor-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #9b59b6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+
+        [data-pc-theme="dark"] .requestor-card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+            border-left-color: #9b59b6;
+        }
+
+        .requestor-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .requestor-card h6 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        [data-pc-theme="dark"] .requestor-card h6 {
+            color: #e5e7eb;
+        }
+
+        .requestor-details {
+            font-size: 0.8rem;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        /* Worker Card Styles */
+        .worker-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.875rem;
+            height: 100%;
+        }
+
+        .worker-card.worker-company {
+            border-left: 4px solid #3498db;
+        }
+
+        .worker-card.worker-provider {
+            border-left: 4px solid #e67e22;
+        }
+
+        [data-pc-theme="dark"] .worker-card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+
+        .worker-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .worker-card .worker-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        [data-pc-theme="dark"] .worker-card .worker-name {
+            color: #e5e7eb;
+        }
+
+        .worker-card .worker-details {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .worker-card .worker-source-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+
+        .worker-card .worker-source-badge.badge-company {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .worker-card .worker-source-badge.badge-provider {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+
+        .worker-card .worker-chat-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        /* PIC Card Styles */
+        .pic-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #3498db;
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+
+        [data-pc-theme="dark"] .pic-card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+            border-left-color: #3498db;
+        }
     </style>
 }
 
@@ -88,7 +243,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="m-b-10">@ViewBag.cTitle</h5>
-                    <p class="m-b-0 text-muted">View work request details and change history</p>
+                    <p class="m-b-0 text-muted">View work request details</p>
                 </div>
                 <div>
                     <a href="/Helpdesk/Index" class="btn btn-outline-secondary btn-sm">
@@ -107,7 +262,7 @@
             <div class="card-body">
                 <div class="alert alert-info mb-0">
                     <i class="ti ti-info-circle me-2"></i>
-                    <strong>WR-2024-00001</strong> <!-- TODO: Replace with actual work request code from Model -->
+                    <strong>@(wr?.WorkRequestCode ?? "-")</strong>
                 </div>
             </div>
         </div>
@@ -122,15 +277,18 @@
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Location</label>
-                        <input type="text" class="form-control form-control-sm" value="Location Name" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.Location?.Property?.PropertyName ?? "-")" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Floor</label>
-                        <input type="text" class="form-control form-control-sm" value="Floor 1" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.Location?.FloorDetail?.FloorUnitName ?? "-")" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Room/Area/Zone</label>
-                        <input type="text" class="form-control form-control-sm" value="Room 101" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.Location?.RoomZone?.RoomZoneName ?? "-")" readonly>
                     </div>
                 </div>
             </div>
@@ -144,21 +302,63 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <!-- Requestor Card -->
                     <div class="col-md-12 mb-3">
-                        <label class="form-label fw-semibold">Requestor Name</label>
-                        <input type="text" class="form-control form-control-sm" value="John Doe" readonly>
+                        <label class="form-label fw-semibold">Requestor</label>
+                        @if (wr?.Requestor != null)
+                        {
+                            <div class="requestor-card">
+                                <div class="d-flex align-items-start">
+                                    <div class="requestor-avatar me-3" style="background-color: @GetAvatarColor(wr.Requestor.FullName)">
+                                        @GetInitials(wr.Requestor.FullName)
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">@(wr.Requestor.FullName ?? "-")</h6>
+                                        <div class="requestor-details">
+                                            @if (!string.IsNullOrEmpty(wr.Requestor.DepartmentName))
+                                            {
+                                                <div><i class="ti ti-building me-1"></i>@wr.Requestor.DepartmentName</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(wr.Requestor.Title))
+                                            {
+                                                <div><i class="ti ti-badge me-1"></i>@wr.Requestor.Title</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(wr.Requestor.EmailAddress))
+                                            {
+                                                <div><i class="ti ti-mail me-1"></i>@wr.Requestor.EmailAddress</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(wr.Requestor.PhoneNumber))
+                                            {
+                                                <div><i class="ti ti-phone me-1"></i>@wr.Requestor.PhoneNumber</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        }
                     </div>
+
+                    <!-- Work Title -->
                     <div class="col-md-12 mb-3">
                         <label class="form-label fw-semibold">Work Title</label>
-                        <input type="text" class="form-control form-control-sm" value="Fix air conditioning unit" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.WorkTitle ?? "-")" readonly>
                     </div>
+
+                    <!-- Request Detail -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Request Detail</label>
-                        <textarea class="form-control form-control-sm" rows="5" readonly>The air conditioning unit in the office is not cooling properly.</textarea>
+                        <textarea class="form-control form-control-sm" rows="5" readonly>@(wr?.RequestDetail ?? "-")</textarea>
                     </div>
+
+                    <!-- Solution -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Solution</label>
-                        <textarea class="form-control form-control-sm" rows="5" readonly>Cleaned the filters and refilled refrigerant.</textarea>
+                        <textarea class="form-control form-control-sm" rows="5" readonly>@(wr?.Solution ?? "-")</textarea>
                     </div>
                 </div>
             </div>
@@ -174,11 +374,13 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Request Method</label>
-                        <input type="text" class="form-control form-control-sm" value="Email" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.RequestMethod?.EnumName ?? "-")" readonly>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Status</label>
-                        <input type="text" class="form-control form-control-sm" value="Completed" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.Status?.EnumName ?? "-")" readonly>
                     </div>
                 </div>
             </div>
@@ -194,24 +396,38 @@
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Work Category</label>
-                        <input type="text" class="form-control form-control-sm" value="HVAC Maintenance" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.WorkCategory?.TypeName ?? "-")" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Other Category</label>
-                        <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.OtherCategory?.TypeName ?? "-")" readonly>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Other Category 2</label>
-                        <input type="text" class="form-control form-control-sm" value="-" readonly>
-                    </div>
+                    @if (wr?.OtherCategory2 != null)
+                    {
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Other Category 2</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   value="@wr.OtherCategory2.TypeName" readonly>
+                        </div>
+                    }
                     <div class="col-md-12 mb-3">
                         <label class="form-label fw-semibold">Based on PM Finding</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
+                            <input class="form-check-input" type="checkbox"
+                                   @(wr?.ReferenceToPPM != null ? "checked" : "") disabled>
                             <label class="form-check-label">
                                 Yes, this work request is based on Preventive Maintenance finding
                             </label>
                         </div>
+                        @if (wr?.ReferenceToPPM != null)
+                        {
+                            <div class="mt-2 small text-muted">
+                                <i class="ti ti-link me-1"></i>
+                                Reference: @wr.ReferenceToPPM.ReferenceCode - @wr.ReferenceToPPM.WorkTitle
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -225,18 +441,122 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <!-- Person in Charge Card -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Person in Charge</label>
-                        <input type="text" class="form-control form-control-sm" value="Jane Smith" readonly>
+                        @if (wr?.Pic != null)
+                        {
+                            <div class="pic-card">
+                                <div class="d-flex align-items-start">
+                                    <div class="requestor-avatar me-3" style="background-color: @GetAvatarColor(wr.Pic.FullName)">
+                                        @GetInitials(wr.Pic.FullName)
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">@(wr.Pic.FullName ?? "-")</h6>
+                                        <div class="requestor-details">
+                                            @if (!string.IsNullOrEmpty(wr.Pic.DepartmentName))
+                                            {
+                                                <div><i class="ti ti-building me-1"></i>@wr.Pic.DepartmentName</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(wr.Pic.Title))
+                                            {
+                                                <div><i class="ti ti-badge me-1"></i>@wr.Pic.Title</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(wr.Pic.EmailAddress))
+                                            {
+                                                <div><i class="ti ti-mail me-1"></i>@wr.Pic.EmailAddress</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        }
                     </div>
+
+                    <!-- Service Provider -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Service Provider</label>
-                        <input type="text" class="form-control form-control-sm" value="Self-Performed" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.ServiceProvider?.AliasCompanyName ?? "Not Specified")" readonly>
                     </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label fw-semibold">Worker from Company</label>
-                        <input type="text" class="form-control form-control-sm" value="Mike Johnson" readonly>
-                    </div>
+
+                    <!-- Workers from Company -->
+                    @if (wr?.WorkerFromCompany?.Any() == true || wr?.WorkerFromServiceProvider?.Any() == true)
+                    {
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Workers</label>
+                            <div class="row g-2">
+                                @if (wr.WorkerFromCompany?.Any() == true)
+                                {
+                                    @foreach (var worker in wr.WorkerFromCompany)
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="worker-card worker-company">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="worker-avatar me-2" style="background-color: @GetAvatarColor(worker.FullName)">
+                                                        @GetInitials(worker.FullName)
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <div class="worker-name">@worker.FullName</div>
+                                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                                            <span class="worker-source-badge badge-company">Company</span>
+                                                            @if (worker.IsJoinToExternalChatRoom)
+                                                            {
+                                                                <span class="worker-chat-badge">
+                                                                    <i class="ti ti-message-circle"></i> Chat
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                @if (wr.WorkerFromServiceProvider?.Any() == true)
+                                {
+                                    @foreach (var worker in wr.WorkerFromServiceProvider)
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="worker-card worker-provider">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="worker-avatar me-2" style="background-color: @GetAvatarColor(worker.FullName)">
+                                                        @GetInitials(worker.FullName)
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <div class="worker-name">@worker.FullName</div>
+                                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                                            <span class="worker-source-badge badge-provider">Service Provider</span>
+                                                            @if (worker.IsJoinToExternalChatRoom)
+                                                            {
+                                                                <span class="worker-chat-badge">
+                                                                    <i class="ti ti-message-circle"></i> Chat
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Workers</label>
+                            <div class="text-center text-muted py-3 border rounded">
+                                <i class="ti ti-users-group fs-3 d-block mb-2"></i>
+                                <em>No workers assigned</em>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -249,48 +569,25 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Is Permit to Work approved?</label>
+                    @if (wr?.ImportantChecklists?.Any() == true)
+                    {
+                        @foreach (var item in wr.ImportantChecklists)
+                        {
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           @(item.IsChecked ? "checked" : "") disabled>
+                                    <label class="form-check-label">@item.Text</label>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="col-12 text-center text-muted py-3">
+                            <em>No checklist items</em>
                         </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Hazardous material</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Isolation</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Work at height</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Lifting operations</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Equipment safeguarding</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" disabled>
-                            <label class="form-check-label">Is JSA required?</label>
-                        </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
@@ -313,11 +610,32 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">
-                                    <em>No Labor/Material recorded</em>
-                                </td>
-                            </tr>
+                            @if (wr?.LaborMaterials?.Any() == true)
+                            {
+                                @foreach (var item in wr.LaborMaterials)
+                                {
+                                    <tr>
+                                        <td>
+                                            @item.Name
+                                            @if (!string.IsNullOrEmpty(item.Label))
+                                            {
+                                                <span class="badge bg-light text-dark ms-1">@item.Label</span>
+                                            }
+                                        </td>
+                                        <td>@item.Quantity.ToString("N2") @item.MeasurementUnit</td>
+                                        <td>@item.PriceCurrency @item.Price.ToString("N2")</td>
+                                        <td>@item.PriceCurrency @((item.Price * item.Quantity).ToString("N2"))</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        <em>No Labor/Material recorded</em>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -333,8 +651,13 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Cost Estimation (IDR)</label>
-                        <input type="text" class="form-control form-control-sm" value="IDR 1,500,000" readonly>
+                        <label class="form-label fw-semibold">Cost Estimation</label>
+                        @{
+                            var costDisplay = wr?.CostEstimation != null
+                                ? $"{wr.CostEstimationCurrency ?? ""} {wr.CostEstimation:N2}"
+                                : "-";
+                        }
+                        <input type="text" class="form-control form-control-sm" value="@costDisplay" readonly>
                     </div>
                 </div>
             </div>
@@ -350,98 +673,128 @@
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Priority Level</label>
-                        <input type="text" class="form-control form-control-sm" value="High" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.PriorityLevel?.Name ?? "-")" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Request Date</label>
-                        <input type="text" class="form-control form-control-sm" value="2024-07-15 09:30" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.RequestDate != null ? wr.RequestDate.ToString("dd MMM yyyy HH:mm") : "-")" readonly>
                     </div>
                     <div class="col-md-4 mb-3"></div>
 
                     <!-- Helpdesk Response -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Helpdesk Response</label>
-                        <input type="text" class="form-control form-control-sm" value="2024-07-15 10:00" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.HelpdeskResponse?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>2024-07-15 12:00</span>
+                            <span>@(IsValidDate(wr?.HelpdeskResponse?.TargetDate) ? FormatDate(wr.HelpdeskResponse.TargetDate) : "-")</span>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Remark</label>
-                        <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.HelpdeskResponse?.TargetChangeNote ?? "-")" readonly>
                     </div>
 
                     <!-- Initial Follow Up -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Initial Follow Up</label>
-                        <input type="text" class="form-control form-control-sm" value="2024-07-16 14:00" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.InitialFollowUp?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>2024-07-16 16:00</span>
+                            <span>@(IsValidDate(wr?.InitialFollowUp?.TargetDate) ? FormatDate(wr.InitialFollowUp.TargetDate) : "-")</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3"></div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Remark</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.InitialFollowUp?.TargetChangeNote ?? "-")" readonly>
+                    </div>
 
                     <!-- Quotation Submission -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Quotation Submission</label>
-                        <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.QuotationSubmission?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>-</span>
+                            <span>@(IsValidDate(wr?.QuotationSubmission?.TargetDate) ? FormatDate(wr.QuotationSubmission.TargetDate) : "-")</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3"></div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Remark</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.QuotationSubmission?.TargetChangeNote ?? "-")" readonly>
+                    </div>
 
                     <!-- Cost Approval -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Cost Approval</label>
-                        <input type="text" class="form-control form-control-sm" value="-" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.CostApproval?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>-</span>
+                            <span>@(IsValidDate(wr?.CostApproval?.TargetDate) ? FormatDate(wr.CostApproval.TargetDate) : "-")</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3"></div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Remark</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.CostApproval?.TargetChangeNote ?? "-")" readonly>
+                    </div>
 
                     <!-- Work Completion -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Work Completion</label>
-                        <input type="text" class="form-control form-control-sm" value="2024-07-20 15:30" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.WorkCompletion?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>2024-07-20 17:00</span>
+                            <span>@(IsValidDate(wr?.WorkCompletion?.TargetDate) ? FormatDate(wr.WorkCompletion.TargetDate) : "-")</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3"></div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Remark</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.WorkCompletion?.TargetChangeNote ?? "-")" readonly>
+                    </div>
 
                     <!-- After Work Follow Up -->
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">After Work Follow Up</label>
-                        <input type="text" class="form-control form-control-sm" value="2024-07-22 10:00" readonly>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@FormatDate(wr?.AfterWorkFollowUp?.ActualDate)" readonly>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Target</label>
                         <div class="target-time-display">
                             <i class="ti ti-target me-1"></i>
-                            <span>2024-07-22 12:00</span>
+                            <span>@(IsValidDate(wr?.AfterWorkFollowUp?.TargetDate) ? FormatDate(wr.AfterWorkFollowUp.TargetDate) : "-")</span>
                         </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Remark</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.AfterWorkFollowUp?.TargetChangeNote ?? "-")" readonly>
                     </div>
                 </div>
             </div>
@@ -454,7 +807,7 @@
                 <p class="text-muted mb-0 small">Summary after work completion</p>
             </div>
             <div class="card-body">
-                <textarea class="form-control form-control-sm" rows="4" readonly>Work completed successfully. Customer is satisfied with the result.</textarea>
+                <textarea class="form-control form-control-sm" rows="4" readonly>@(wr?.AfterWorkFollowUp?.Summary ?? "-")</textarea>
             </div>
         </div>
 
@@ -465,13 +818,141 @@
                 <p class="text-muted mb-0 small">Customer or requestor feedback</p>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Feedback Status</label>
-                    <input type="text" class="form-control form-control-sm" value="Satisfied" readonly>
+                @* Note: FeedbackType and FeedbackSummary are not in the current DTO - add when available *@
+                <div class="text-center text-muted py-3">
+                    <em>No feedback recorded</em>
                 </div>
-                <textarea class="form-control form-control-sm" rows="4" readonly>The air conditioning is working perfectly now. Thank you for the quick response!</textarea>
             </div>
         </div>
+
+        <!-- Related Documents -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-1">Related Documents</h5>
+                <p class="text-muted mb-0 small">Documents attached to this work request</p>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>Document Label</th>
+                                <th>File</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (wr?.RelatedDocuments?.Any() == true)
+                            {
+                                @foreach (var doc in wr.RelatedDocuments)
+                                {
+                                    <tr>
+                                        <td>@(doc.DocumentName ?? "-")</td>
+                                        <td>
+                                            <a href="@doc.DocumentUrl" target="_blank" class="text-primary">
+                                                <i class="ti ti-file me-1"></i>@doc.FileName
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">
+                                        <em>No documents attached</em>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Assets -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-1">Related Assets</h5>
+                <p class="text-muted mb-0 small">Assets linked to this work request</p>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th width="5%">No.</th>
+                                <th>Asset Label</th>
+                                <th>Asset Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (wr?.RelatesAssets?.Any() == true)
+                            {
+                                var index = 1;
+                                @foreach (var asset in wr.RelatesAssets)
+                                {
+                                    <tr>
+                                        <td>@(index++)</td>
+                                        <td>@asset.Label</td>
+                                        <td>@asset.Name</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        <em>No related assets</em>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Update Emails -->
+        @if (wr?.WorkUpdateEmails?.Any() == true)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-1">Work Update Emails</h5>
+                    <p class="text-muted mb-0 small">Email notifications sent for this work request</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Email Code</th>
+                                    <th>Subject</th>
+                                    <th>Category</th>
+                                    <th>Sent Date</th>
+                                    <th width="8%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var email in wr.WorkUpdateEmails)
+                                {
+                                    <tr>
+                                        <td>@email.EmailCode</td>
+                                        <td>@email.Subject</td>
+                                        <td>@email.Category</td>
+                                        <td>@email.SentDate.ToString("dd MMM yyyy HH:mm")</td>
+                                        <td>
+                                            <a href="@email.EmailUrl" target="_blank" class="btn btn-sm btn-light">
+                                                <i class="ti ti-external-link"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
 
         <!-- Change History -->
         <div class="card mb-3">
@@ -539,14 +1020,20 @@
                         Back to List
                     </a>
                     <div>
-                        <a href="#" class="btn btn-outline-primary me-2">
-                            <i class="ti ti-edit me-1"></i>
-                            Edit Work Request
-                        </a>
-                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                            <i class="ti ti-trash me-1"></i>
-                            Delete
-                        </button>
+                        @if (Context.Session.CanEdit("Helpdesk", "Work Request Management"))
+                        {
+                            <a href="/Helpdesk/WorkRequestEdit/@wr?.IdWorkRequest" class="btn btn-outline-primary me-2">
+                                <i class="ti ti-edit me-1"></i>
+                                Edit Work Request
+                            </a>
+                        }
+                        @if (Context.Session.CanDelete("Helpdesk", "Work Request Management"))
+                        {
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="ti ti-trash me-1"></i>
+                                Delete
+                            </button>
+                        }
                     </div>
                 </div>
             </div>
@@ -566,7 +1053,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h5>You are about to delete this Work Request</h5>
+                <h5>You are about to delete Work Request &mdash; @(wr?.WorkRequestCode ?? "")</h5>
                 <p>Are you sure you want to delete this Work Request? This action cannot be undone.</p>
             </div>
             <div class="modal-footer no-divider bg-gray-100">
@@ -576,7 +1063,7 @@
                             <i class="ti ti-x me-2"></i>
                             Cancel
                         </button>
-                        <button type="button" class="btn btn-danger rounded-3 w-100 d-flex justify-content-center align-items-center">
+                        <button type="button" class="btn btn-danger rounded-3 w-100 d-flex justify-content-center align-items-center" id="confirmDeleteBtn">
                             <i class="ti ti-trash me-2"></i>
                             Delete
                         </button>
@@ -588,7 +1075,11 @@
 </div>
 
 @section scripts {
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/assets/js/plugins/datepicker-full.min.js"></script>
     <script src="~/assets/js/pages/workrequest/work-request-detail.js"></script>
+    <script>
+        // Pass work request ID to JavaScript
+        window.workRequestId = @(wr?.IdWorkRequest ?? 0);
+        window.workRequestCode = '@(wr?.WorkRequestCode ?? "")';
+    </script>
 }

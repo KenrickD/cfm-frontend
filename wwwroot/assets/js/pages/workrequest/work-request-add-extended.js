@@ -41,6 +41,32 @@
     };
 
     // ========================================
+    // Client Context Helpers (from main module)
+    // ========================================
+
+    /**
+     * Get client parameters from main module.
+     * Falls back to reading from window.WorkRequestContext if main module helpers not available.
+     */
+    const getClientParams = window.getClientParams || function() {
+        const params = {};
+        if (window.WorkRequestContext?.idClient) {
+            params.idClient = window.WorkRequestContext.idClient;
+        }
+        if (window.WorkRequestContext?.idCompany) {
+            params.idCompany = window.WorkRequestContext.idCompany;
+        }
+        return params;
+    };
+
+    /**
+     * Merge client params with existing data object.
+     */
+    const withClientParams = window.withClientParams || function(data) {
+        return { ...getClientParams(), ...data };
+    };
+
+    // ========================================
     // Loading State Helper Functions
     // ========================================
 
@@ -237,7 +263,7 @@
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.searchJobCode,
             method: 'GET',
-            data: { term: term },
+            data: withClientParams({ term: term }),
             success: function(response) {
                 const $dropdown = $('#jobCodeDropdown');
                 $dropdown.empty();
@@ -913,7 +939,7 @@
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.searchAsset,
             method: 'GET',
-            data: { term: term, propertyId: propertyId },
+            data: withClientParams({ term: term, propertyId: propertyId }),
             success: function(response) {
                 const $dropdown = $('#assetIndividualDropdown');
                 $dropdown.empty();
@@ -984,7 +1010,7 @@
         $.ajax({
             url: EXTENDED_CONFIG.apiEndpoints.searchAssetGroup,
             method: 'GET',
-            data: { term: term, propertyId: propertyId },
+            data: withClientParams({ term: term, propertyId: propertyId }),
             success: function(response) {
                 const $dropdown = $('#assetGroupDropdown');
                 $dropdown.empty();
@@ -1314,7 +1340,7 @@
             const payload = originalBuildPayload();
 
             // Add Material_Jobcode array
-            payload.material_Jobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
+            payload.Material_Jobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
                 idJobCode: item.idJobCode,
                 jobCode: item.name || '', // Include job code name
                 quantity: item.quantity,
@@ -1322,7 +1348,7 @@
             }));
 
             // Add Material_Adhoc array
-            payload.material_Adhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
+            payload.Material_Adhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
                 name: item.name,
                 label_Enum_idEnum: item.label_Enum_idEnum,
                 unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum,
@@ -1332,7 +1358,7 @@
             }));
 
             // Add Assets array
-            payload.assets = extendedState.relatedAssets.individual.map(asset => ({
+            payload.Assets = extendedState.relatedAssets.individual.map(asset => ({
                 idAsset: asset.idAsset,
                 asset: asset.label || asset.name || '' // Include asset label/name
             }));
@@ -1345,7 +1371,7 @@
             // If there are documents, convert them to base64 first
             if (extendedState.relatedDocuments.length > 0) {
                 try {
-                    payload.relatedDocuments = await convertDocumentsToBase64();
+                    payload.RelatedDocuments = await convertDocumentsToBase64();
                 } catch (error) {
                     console.error('Error converting documents:', error);
                     showNotification('Error processing documents. Please try again.', 'error');

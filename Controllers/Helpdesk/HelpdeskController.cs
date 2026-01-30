@@ -1,4 +1,4 @@
-﻿using cfm_frontend.Constants;
+using cfm_frontend.Constants;
 using cfm_frontend.DTOs;
 using cfm_frontend.DTOs.Employee;
 using cfm_frontend.DTOs.PIC;
@@ -95,12 +95,12 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var idClient = userInfo.PreferredClientId;
 
                 // Build request body with nested filter structure for new API
-                var requestBody = new WorkRequestListParam
+                var requestBody = new cfm_frontend.Models.WorkRequest.WorkRequestListParam
                 {
                     Client_idClient = idClient,
                     page = page,
                     keywords = search,
-                    filter = new WorkRequestList_Filter
+                    filter = new cfm_frontend.Models.WorkRequest.WorkRequestList_Filter
                     {
                         idPropertyType = propertyGroup ?? -1,
                         idRoomZone = roomZone ?? -1,
@@ -309,6 +309,10 @@ namespace cfm_frontend.Controllers.Helpdesk
                 viewmodel.Statuses = statusesTask.IsCompletedSuccessfully ? statusesTask.Result : [];
                 viewmodel.ImportantChecklist = checklistTask.IsCompletedSuccessfully ? checklistTask.Result : [];
 
+                // Capture client context at page load for multi-tab session safety
+                viewmodel.IdClient = idClient;
+                viewmodel.IdCompany = idCompany;
+
                 // Update record counts in timing results
                 _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Locations", viewmodel.Locations?.Count);
                 _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "WorkCategories", viewmodel.WorkCategories?.Count);
@@ -399,13 +403,29 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Invalid request data." });
             }
 
+            // Check for client mismatch (multi-tab session safety)
+            // Client_idClient is captured at page load - if it doesn't match current session, reject
+            if (model.Client_idClient != idClient)
+            {
+                _logger.LogWarning(
+                    "Work request submitted with client mismatch. SubmittedClientId: {SubmittedClientId}, SessionClientId: {SessionClientId}, UserId: {UserId}",
+                    model.Client_idClient, idClient, userInfo.IdWebUser);
+
+                return Json(new
+                {
+                    success = false,
+                    message = "Client context has changed. You may have switched clients in another tab. Please refresh the page and try again.",
+                    clientMismatch = true
+                });
+            }
+
             try
             {
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 // Set system fields from session
-                model.Client_idClient = idClient;
+                // Note: Client_idClient is already set from page load (for multi-tab safety validation)
                 model.IdEmployee = userInfo.IdWebUser;
                 model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
 
@@ -417,12 +437,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                    WriteIndented = true
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 _logger.LogDebug("Work request payload: {Payload}", jsonPayload);
-
+                //Logged payload to LogFile -- turn off on production -- 
+                _fileLogger.LogInfo("Work request payload: {Payload}", jsonPayload);
                 var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
 
                 if (response.IsSuccessStatusCode)
@@ -667,15 +689,58 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// GET: Work Request Detail page
         /// </summary>
         [Authorize]
-        public IActionResult WorkRequestDetail(int id)
+        public async Task<IActionResult> WorkRequestDetail(int id)
         {
+            var totalStopwatch = Stopwatch.StartNew();
+
             // Check if user has permission to view Work Request Detail
             var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
             if (accessCheck != null) return accessCheck;
 
-            // Return view - all dropdown data is loaded client-side via JavaScript
-            // TODO: When backend is ready, fetch work request detail and pass to view
-            return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml");
+            var viewModel = new WorkRequestDetailViewModel();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Get user session for client ID
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var idClient = userInfo?.PreferredClientId ?? 0;
+
+                // Fetch work request detail from backend
+                var (success, workRequestData, message) = await SafeExecuteApiAsync<WorkRequestFormDetailDto>(
+                    () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.GetById(id)}?cid={idClient}"),
+                    "Failed to load work request details");
+
+                if (!success || workRequestData == null)
+                {
+                    _logger.LogWarning("Work request {Id} not found or access denied: {Message}", id, message);
+                    TempData["ErrorMessage"] = message ?? "Work request not found";
+                    return RedirectToAction("Index", "Helpdesk");
+                }
+
+                viewModel.WorkRequestDetail = workRequestData;
+
+                // Log timing
+                totalStopwatch.Stop();
+                _fileLogger?.LogInfo($"WorkRequestDetail {id} loaded in {totalStopwatch.ElapsedMilliseconds}ms", "PAGE-LOAD");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work request detail for ID {Id}", id);
+                TempData["ErrorMessage"] = "An error occurred while loading the work request";
+                return RedirectToAction("Index", "Helpdesk");
+            }
+
+            return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml", viewModel);
         }
 
 
@@ -769,9 +834,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get locations by idClient and userId from session
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetLocationsByClient()
+        public async Task<IActionResult> GetLocationsByClient(int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -786,13 +852,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<LocationModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Property.List}?idClient={effectiveIdClient}"),
                 "Failed to load properties");
 
             return Json(new { success, data, message });
@@ -800,10 +867,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get persons in charge filtered by work category and location
-        /// idClient is retrieved from session
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPersonsInChargeByFilters(int? idWorkCategory = null, int? idLocation = null)
+        public async Task<IActionResult> GetPersonsInChargeByFilters(int? idWorkCategory = null, int? idLocation = null, int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -818,12 +885,13 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var url = $"{backendUrl}{ApiEndpoints.PersonInCharge.Base}?idClient={idClient}&idProperty={idLocation.Value}";
+            var url = $"{backendUrl}{ApiEndpoints.PersonInCharge.Base}?idClient={effectiveIdClient}&idProperty={idLocation.Value}";
 
             var (success, data, message) = await SafeExecuteApiAsync<List<PICFormDetailResponse>>(
                 () => client.GetAsync(url),
@@ -834,10 +902,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search requestors/employees by term
-        /// idCompany is retrieved from session
+        /// Optional idCompany parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchRequestors(string term)
+        public async Task<IActionResult> SearchRequestors(string term, int? idCompany = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -852,13 +920,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idCompany = userInfo.IdCompany;
+            // Use passed idCompany if provided, otherwise fall back to session
+            var effectiveIdCompany = idCompany ?? userInfo.IdCompany;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<dynamic>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchRequestors}?idCompany={idCompany}&prefiks={Uri.EscapeDataString(term)}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchRequestors}?idCompany={effectiveIdCompany}&prefiks={Uri.EscapeDataString(term)}"),
                 "Error searching requestors");
 
             return Json(new { success, data, message });
@@ -867,10 +936,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get service providers
-        /// idClient and idCompany are retrieved from session
+        /// Optional idClient/idCompany parameters for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetServiceProvidersByClient()
+        public async Task<IActionResult> GetServiceProvidersByClient(int? idClient = null, int? idCompany = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -885,14 +954,15 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
-            var idCompany = userInfo.IdCompany;
+            // Use passed values if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+            var effectiveIdCompany = idCompany ?? userInfo.IdCompany;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<ServiceProviderFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.ServiceProvider.List}?idClient={effectiveIdClient}&idCompany={effectiveIdCompany}"),
                 "Failed to load service providers");
 
             return Json(new { success, data, message });
@@ -900,11 +970,11 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search workers from company by location
-        /// idCompany is retrieved from session
+        /// Optional idCompany parameter for multi-tab session safety
         /// Uses backend endpoint: /api/v1/employee/worker
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchWorkersByCompany(string term, int idLocation)
+        public async Task<IActionResult> SearchWorkersByCompany(string term, int idLocation, int? idCompany = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -919,13 +989,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idCompany = userInfo.IdCompany;
+            // Use passed idCompany if provided, otherwise fall back to session
+            var effectiveIdCompany = idCompany ?? userInfo.IdCompany;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<WorkerFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idCompany}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={effectiveIdCompany}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
                 "Error searching workers");
 
             return Json(new { success, data, message });
@@ -933,10 +1004,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search workers from service provider
-        /// idClient is retrieved from session
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchWorkersByServiceProvider(string term, int idLocation, int idServiceProvider)
+        public async Task<IActionResult> SearchWorkersByServiceProvider(string term, int idLocation, int idServiceProvider, int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -951,7 +1022,8 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session (not currently used in API call but kept for consistency)
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -968,9 +1040,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get important checklist using new Types API
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetImportantChecklistByTypes()
+        public async Task<IActionResult> GetImportantChecklistByTypes(int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -980,14 +1053,16 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation);
             var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={effectiveIdClient}"),
                 "Failed to load important checklist");
 
             return Json(new { success, data, message });
@@ -995,9 +1070,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get work categories using new Types API
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetWorkCategoriesByTypes()
+        public async Task<IActionResult> GetWorkCategoriesByTypes(int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1007,14 +1083,16 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var endpoint = ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory);
             var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={effectiveIdClient}"),
                 "Failed to load work categories");
 
             return Json(new { success, data, message });
@@ -1022,9 +1100,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get other categories using new Types API
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOtherCategoriesByTypes(string categoryType)
+        public async Task<IActionResult> GetOtherCategoriesByTypes(string categoryType, int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1034,14 +1113,16 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var endpoint = ApiEndpoints.Masters.GetTypes(categoryType);
             var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={effectiveIdClient}"),
                 "Failed to load categories");
 
             return Json(new { success, data, message });
@@ -1060,10 +1141,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get priority levels from lookup table
-        /// idClient is retrieved from session
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPriorityLevels()
+        public async Task<IActionResult> GetPriorityLevels(int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1078,13 +1159,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<DropdownOption>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestPriorityLevel}&idClient={effectiveIdClient}"),
                 "Failed to load priority levels");
 
             return Json(new { success, data, message });
@@ -1143,10 +1225,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get office hours for target date calculations
-        /// idClient is retrieved from session
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOfficeHours()
+        public async Task<IActionResult> GetOfficeHours(int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1161,13 +1243,14 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<OfficeHourModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.OfficeHour.List}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.OfficeHour.List}?idClient={effectiveIdClient}"),
                 "Failed to load office hours");
 
             return Json(new { success, data = data ?? new List<OfficeHourModel>(), message });
@@ -1175,11 +1258,11 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Get public holidays for target date calculations
-        /// idClient is retrieved from session
+        /// Optional idClient parameter for multi-tab session safety
         /// Loads current year and next year for 2-year window
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPublicHolidays()
+        public async Task<IActionResult> GetPublicHolidays(int? idClient = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1194,7 +1277,8 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -1206,11 +1290,11 @@ namespace cfm_frontend.Controllers.Helpdesk
             // Fetch both years in parallel using SafeExecuteApiAsync
             // Using /api/v1/masters/public-holidays/{year}?idClient={idClient}
             var currentYearTask = SafeExecuteApiAsync<List<PublicHolidayModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(currentYear)}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(currentYear)}?idClient={effectiveIdClient}"),
                 "Failed to load public holidays for current year");
 
             var nextYearTask = SafeExecuteApiAsync<List<PublicHolidayModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(nextYear)}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PublicHoliday.GetByYear(nextYear)}?idClient={effectiveIdClient}"),
                 "Failed to load public holidays for next year");
 
             await Task.WhenAll(currentYearTask, nextYearTask);
@@ -1259,10 +1343,10 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// <summary>
         /// API: Get priority level by ID for target date calculation
         /// Fetches all priority levels and filters to the requested ID
-        /// Note: Backend provides single endpoint returning all priority levels
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPriorityLevelById(int id)
+        public async Task<IActionResult> GetPriorityLevelById(int id, int? idClient = null)
         {
             // Get user session for idClient
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1277,14 +1361,15 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            var idClient = userInfo.PreferredClientId;
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             // Fetch all priority levels and find the one with matching ID
             var (success, allData, message) = await SafeExecuteApiAsync<List<Models.PriorityLevelModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.List}?idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.List}?idClient={effectiveIdClient}"),
                 "Failed to load priority levels");
 
             if (!success || allData == null)
@@ -1376,9 +1461,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search Job Code by name
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchJobCode(string term)
+        public async Task<IActionResult> SearchJobCode(string term, int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1387,13 +1473,15 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.Models.JobCode.JobCodeSearchResult>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.Base}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.Base}?prefiks={Uri.EscapeDataString(term)}&idClient={effectiveIdClient}"),
                 "Failed to search job codes");
 
             return Json(new { success, data, message });
@@ -1451,9 +1539,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search assets individually by name
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchAsset(string term, int propertyId)
+        public async Task<IActionResult> SearchAsset(string term, int propertyId, int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1462,13 +1551,15 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<AssetSearchResult>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAsset(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAsset(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={effectiveIdClient}"),
                 "Failed to search assets");
 
             return Json(new { success, data, message });
@@ -1476,9 +1567,10 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// API: Search asset groups by name
+        /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchAssetGroup(string term, int propertyId)
+        public async Task<IActionResult> SearchAssetGroup(string term, int propertyId, int? idClient = null)
         {
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
@@ -1487,16 +1579,47 @@ namespace cfm_frontend.Controllers.Helpdesk
             }
 
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var idClient = userInfo.PreferredClientId;
+
+            // Use passed idClient if provided, otherwise fall back to session
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<AssetGroupSearchResult>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAssetByGroup(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={idClient}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Asset.GetAssetByGroup(propertyId)}?prefiks={Uri.EscapeDataString(term)}&idClient={effectiveIdClient}"),
                 "Failed to search asset groups");
 
             return Json(new { success, data, message });
+        }
+
+        /// <summary>
+        /// API: Check if current session client matches the page load client
+        /// Used for tab focus detection to warn users about client mismatch
+        /// </summary>
+        [HttpGet]
+        public IActionResult CheckSessionClient()
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired", sessionExpired = true });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired", sessionExpired = true });
+            }
+
+            return Json(new
+            {
+                success = true,
+                idClient = userInfo.PreferredClientId,
+                idCompany = userInfo.IdCompany
+            });
         }
 
         #endregion
@@ -1518,7 +1641,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         private async Task<WorkRequestListApiResponse?> GetWorkRequestsAsync(
             HttpClient client,
             string backendUrl,
-            WorkRequestListParam requestBody)
+            cfm_frontend.Models.WorkRequest.WorkRequestListParam requestBody)
         {
             var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
             {
