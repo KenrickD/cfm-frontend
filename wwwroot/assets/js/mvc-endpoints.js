@@ -108,6 +108,26 @@
                 },
 
                 /**
+                 * Other Category CRUD (V2 - with pagination)
+                 */
+                OtherCategory: {
+                    List: '/Helpdesk/GetOtherCategoriesPaged',
+                    Create: '/Helpdesk/CreateOtherCategoryV2',
+                    Update: '/Helpdesk/UpdateOtherCategoryV2',
+                    Delete: '/Helpdesk/DeleteOtherCategoryV2'
+                },
+
+                /**
+                 * Other Category 2 CRUD (V2 - with pagination)
+                 */
+                OtherCategory2: {
+                    List: '/Helpdesk/GetOtherCategories2Paged',
+                    Create: '/Helpdesk/CreateOtherCategory2V2',
+                    Update: '/Helpdesk/UpdateOtherCategory2V2',
+                    Delete: '/Helpdesk/DeleteOtherCategory2V2'
+                },
+
+                /**
                  * Important Checklist CRUD
                  */
                 ImportantChecklist: {

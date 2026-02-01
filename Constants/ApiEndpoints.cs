@@ -384,10 +384,104 @@ namespace cfm_frontend.Constants
 
         #endregion
 
-        #region Other Category
+        #region Other Category (V2 - Unified Endpoints)
 
         /// <summary>
-        /// Other category management endpoints
+        /// Other Category management endpoints (Settings) - New unified structure
+        /// Base path: /api/v1/work-request/other-category
+        /// </summary>
+        public static class OtherCategoryV2
+        {
+            private const string Base = ApiBase + "/work-request/other-category";
+
+            /// <summary>
+            /// GET: Get paginated other categories list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of TypeFormDetailResponse
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get other category by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: TypePayloadDto structure
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new other category
+            /// Body: TypePayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update other category
+            /// Body: TypePayloadDto (includes IdType for identifying record)
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete other category by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+        }
+
+        /// <summary>
+        /// Other Category 2 management endpoints (Settings) - New unified structure
+        /// Base path: /api/v1/work-request/other-category2
+        /// </summary>
+        public static class OtherCategory2V2
+        {
+            private const string Base = ApiBase + "/work-request/other-category2";
+
+            /// <summary>
+            /// GET: Get paginated other categories 2 list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of TypeFormDetailResponse
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get other category 2 by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: TypePayloadDto structure
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new other category 2
+            /// Body: TypePayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update other category 2
+            /// Body: TypePayloadDto (includes IdType for identifying record)
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete other category 2 by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+        }
+
+        #endregion
+
+        #region Other Category (Legacy)
+
+        /// <summary>
+        /// Other category management endpoints (Legacy - kept for backward compatibility)
         /// </summary>
         public static class OtherCategory
         {

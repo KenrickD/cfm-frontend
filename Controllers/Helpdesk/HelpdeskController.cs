@@ -4,6 +4,7 @@ using cfm_frontend.DTOs.Employee;
 using cfm_frontend.DTOs.PIC;
 using cfm_frontend.DTOs.PriorityLevel;
 using cfm_frontend.DTOs.ServiceProvider;
+using cfm_frontend.DTOs.TypeSettings;
 using cfm_frontend.DTOs.WorkCategory;
 using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Extensions;
@@ -2261,50 +2262,454 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         #region Other Category
+
+        /// <summary>
+        /// GET: Other Category Settings page with pagination
+        /// </summary>
         [Authorize]
-        public IActionResult OtherCategory()
+        public async Task<IActionResult> OtherCategory(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Other Category";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/OtherCategory.cshtml");
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Other Category",
+                CategoryDisplayNamePlural = "Other Categories"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.OtherCategoryV2.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading other categories");
+                TempData["ErrorMessage"] = "Failed to load other categories. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/OtherCategory.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated other categories for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOtherCategories() => await GetCategoriesGeneric("othercategory", "other categories");
+        public async Task<IActionResult> GetOtherCategoriesPaged(int page = 1, string? keyword = "")
+        {
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.OtherCategoryV2.List, "other categories");
+        }
 
+        /// <summary>
+        /// POST: Create new other category
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateOtherCategory([FromBody] OtherCategoryModel model) => await CreateCategoryGeneric(model, "othercategory", "other category");
+        public async Task<IActionResult> CreateOtherCategoryV2([FromBody] TypePayloadDto model)
+        {
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.OtherCategoryV2.Create, "Other category");
+        }
 
+        /// <summary>
+        /// PUT: Update existing other category
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateOtherCategory([FromBody] OtherCategoryModel model) => await UpdateCategoryGeneric(model, "othercategory", "other category");
+        public async Task<IActionResult> UpdateOtherCategoryV2([FromBody] TypePayloadDto model)
+        {
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.OtherCategoryV2.Update, "Other category");
+        }
 
+        /// <summary>
+        /// DELETE: Delete other category by ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteOtherCategory([FromBody] OtherCategoryModel model) => await DeleteCategoryGeneric(model.id, "othercategory", "other category");
+        public async Task<IActionResult> DeleteOtherCategoryV2(int id)
+        {
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.OtherCategoryV2.Delete(id), "Other category");
+        }
 
         #endregion
 
         #region Other Category 2
+
+        /// <summary>
+        /// GET: Other Category 2 Settings page with pagination
+        /// </summary>
         [Authorize]
-        public IActionResult OtherCategory2()
+        public async Task<IActionResult> OtherCategory2(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Other Category 2";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/OtherCategory2.cshtml");
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Other Category 2",
+                CategoryDisplayNamePlural = "Other Categories 2"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.OtherCategory2V2.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading other categories 2");
+                TempData["ErrorMessage"] = "Failed to load other categories 2. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/OtherCategory2.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated other categories 2 for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOtherCategories2() => await GetCategoriesGeneric("othercategory2", "other categories 2");
+        public async Task<IActionResult> GetOtherCategories2Paged(int page = 1, string? keyword = "")
+        {
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.OtherCategory2V2.List, "other categories 2");
+        }
 
+        /// <summary>
+        /// POST: Create new other category 2
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateOtherCategory2([FromBody] OtherCategoryModel model) => await CreateCategoryGeneric(model, "othercategory2", "other category 2");
+        public async Task<IActionResult> CreateOtherCategory2V2([FromBody] TypePayloadDto model)
+        {
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.OtherCategory2V2.Create, "Other category 2");
+        }
 
+        /// <summary>
+        /// PUT: Update existing other category 2
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateOtherCategory2([FromBody] OtherCategoryModel model) => await UpdateCategoryGeneric(model, "othercategory2", "other category 2");
+        public async Task<IActionResult> UpdateOtherCategory2V2([FromBody] TypePayloadDto model)
+        {
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.OtherCategory2V2.Update, "Other category 2");
+        }
 
+        /// <summary>
+        /// DELETE: Delete other category 2 by ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteOtherCategory2([FromBody] OtherCategoryModel model) => await DeleteCategoryGeneric(model.id, "othercategory2", "other category 2");
+        public async Task<IActionResult> DeleteOtherCategory2V2(int id)
+        {
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.OtherCategory2V2.Delete(id), "Other category 2");
+        }
+
+        #endregion
+
+        #region Type Category Shared Helpers
+
+        /// <summary>
+        /// Helper method to fetch paginated type categories from backend API
+        /// </summary>
+        private async Task<TypeCategoryListResponse?> GetTypeCategoriesPagedAsync(
+            HttpClient client,
+            string? backendUrl,
+            int idClient,
+            int page,
+            string? keyword,
+            string listEndpoint)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"cid={idClient}",
+                    $"page={page}"
+                };
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    queryParams.Add($"keyword={Uri.EscapeDataString(keyword)}");
+                }
+
+                var queryString = string.Join("&", queryParams);
+                var response = await client.GetAsync($"{backendUrl}{listEndpoint}?{queryString}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<TypeCategoryListResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                    return apiResponse?.Data;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to fetch type categories. Status: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching type categories from API");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// AJAX helper for fetching paginated type categories
+        /// </summary>
+        private async Task<IActionResult> GetTypeCategoriesAjax(int page, string? keyword, string listEndpoint, string entityName)
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var idClient = userInfo.PreferredClientId;
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var queryParams = new List<string>
+            {
+                $"cid={idClient}",
+                $"page={page}"
+            };
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                queryParams.Add($"keyword={Uri.EscapeDataString(keyword)}");
+            }
+
+            var queryString = string.Join("&", queryParams);
+
+            var (success, data, message) = await SafeExecuteApiAsync<TypeCategoryListResponse>(
+                () => client.GetAsync($"{backendUrl}{listEndpoint}?{queryString}"),
+                $"Failed to load {entityName}");
+
+            return Json(new { success, data, message });
+        }
+
+        /// <summary>
+        /// Create type category helper
+        /// </summary>
+        private async Task<IActionResult> CreateTypeCategoryAsync(TypePayloadDto model, string endpoint, string entityName)
+        {
+            if (string.IsNullOrWhiteSpace(model.Text))
+            {
+                return Json(new { success = false, message = $"{entityName} name is required" });
+            }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            // Set client ID from session (server override for security)
+            model.IdClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PostAsync($"{backendUrl}{endpoint}", content),
+                $"Failed to create {entityName.ToLower()}");
+
+            return Json(new { success, message = success ? $"{entityName} created successfully" : message });
+        }
+
+        /// <summary>
+        /// Update type category helper
+        /// </summary>
+        private async Task<IActionResult> UpdateTypeCategoryAsync(TypePayloadDto model, string endpoint, string entityName)
+        {
+            if (model.IdType <= 0)
+            {
+                return Json(new { success = false, message = $"Invalid {entityName.ToLower()} ID" });
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Text))
+            {
+                return Json(new { success = false, message = $"{entityName} name is required" });
+            }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            // Set client ID from session (server override for security)
+            model.IdClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var fullUrl = $"{backendUrl}{endpoint}";
+            _logger.LogInformation("PUT {EntityName} to: {Url}", entityName, fullUrl);
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.PutAsync(fullUrl, content),
+                $"Failed to update {entityName.ToLower()}");
+
+            if (!success)
+            {
+                _logger.LogWarning("PUT {EntityName} failed: {Message}", entityName, message);
+            }
+
+            return Json(new { success, message = success ? $"{entityName} updated successfully" : message });
+        }
+
+        /// <summary>
+        /// Delete type category helper
+        /// </summary>
+        private async Task<IActionResult> DeleteTypeCategoryAsync(int id, string endpoint, string entityName)
+        {
+            if (id <= 0)
+            {
+                return Json(new { success = false, message = $"Invalid {entityName.ToLower()} ID" });
+            }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var idClient = userInfo.PreferredClientId;
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var fullUrl = $"{backendUrl}{endpoint}?cid={idClient}";
+            _logger.LogInformation("DELETE {EntityName} at: {Url}", entityName, fullUrl);
+
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
+                () => client.DeleteAsync(fullUrl),
+                $"Failed to delete {entityName.ToLower()}");
+
+            if (!success)
+            {
+                _logger.LogWarning("DELETE {EntityName} failed: {Message}", entityName, message);
+            }
+
+            return Json(new { success, message = success ? $"{entityName} deleted successfully" : message });
+        }
 
         #endregion
 
