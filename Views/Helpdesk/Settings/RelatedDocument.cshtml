@@ -1,90 +1,249 @@
+@model cfm_frontend.ViewModels.TypeCategoryViewModel
+
 @{
-    ViewBag.Title = "Related Document Label";
+    ViewBag.Title = "Document Label List";
     ViewBag.pTitle = "Settings";
-    ViewBag.cTitle = "Related Document Label";
+    ViewBag.cTitle = "Document Label List";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 @section styles {
-    <link rel="stylesheet" href="~/assets/css/settings-inline-editor.css" />
+    <style>
+        .category-row {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s;
+        }
+
+        .category-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .category-row.editing {
+            background-color: #e7f3ff;
+        }
+
+        .category-row.adding {
+            background-color: #fff3cd;
+        }
+
+        .category-description {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .category-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .category-input {
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .btn-action {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .stats-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .total-count {
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+
+        .total-count strong {
+            font-size: 1.1rem;
+        }
+
+        .search-box {
+            max-width: 300px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .invalid-feedback {
+            display: block;
+            margin-top: 0.25rem;
+        }
+
+        /* Dark Mode Support */
+        [data-pc-theme="dark"] .category-row:hover {
+            background-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .category-row.editing {
+            background-color: #1e3a5f;
+        }
+
+        [data-pc-theme="dark"] .category-row.adding {
+            background-color: #3a3010;
+        }
+
+        [data-pc-theme="dark"] .total-count {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .empty-state {
+            color: #9ca3af;
+        }
+    </style>
 }
+
+@Html.AntiForgeryToken()
 
 <div class="row">
     <div class="col-sm-12">
         <!-- Page Header -->
         <div class="page-header-title mb-3">
-            <h4 class="mb-2">
-                <i class="ti ti-file-text me-2"></i>List of Related Document Labels
-            </h4>
-            <p class="text-muted mb-3">Configure document type labels for file attachments in work requests</p>
-            <div>
-                <a href="/Helpdesk/Settings" class="btn btn-light btn-sm">
-                    <i class="ti ti-arrow-left me-1"></i>
-                    Back to Settings
-                </a>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10">List of @Model.CategoryDisplayNamePlural</h5>
+                    <p class="m-b-0 text-muted">Configure document type labels for file attachments in work requests</p>
+                </div>
+                <div>
+                    <a href="/Helpdesk/Settings" class="btn btn-outline-secondary btn-sm">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to Settings
+                    </a>
+                </div>
             </div>
         </div>
 
         <!-- Stats and Search -->
         <div class="stats-section">
             <div class="total-count">
-                Showing total of <strong><span id="totalCount">0</span></strong> Related Document Labels
+                @if (Model?.Paging != null && Model.Paging.TotalCount > 0)
+                {
+                    var startRecord = (Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1;
+                    var endRecord = Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalCount);
+                    <span>Showing <strong>@startRecord</strong> to <strong>@endRecord</strong> of <strong>@Model.Paging.TotalCount</strong> @Model.CategoryDisplayNamePlural</span>
+                }
+                else
+                {
+                    <span>Showing total of <strong>0</strong> @Model.CategoryDisplayNamePlural</span>
+                }
             </div>
             <div class="search-box">
-                <input type="text"
-                       class="form-control form-control-sm"
-                       id="searchInput"
-                       placeholder="Search document labels...">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           id="searchInput"
+                           placeholder="Search document labels..."
+                           value="@Model?.SearchKeyword">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="searchBtn">
+                        <i class="ti ti-search"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model?.SearchKeyword))
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearchBtn">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
 
         <!-- Add New Section -->
-        <div class="add-new-section" id="addNewSection">
-            <div class="d-flex align-items-start">
-                <div class="flex-grow-1">
-                    <button type="button" class="btn btn-primary" id="showAddFormBtn">
-                        <i class="ti ti-plus me-1"></i>
-                        Add New Document Label
-                    </button>
-                </div>
-            </div>
-            <div id="addNewForm" style="display: none; margin-top: 1rem;">
+        <div class="card mb-3" id="addNewSection">
+            <div class="card-body">
                 <div class="d-flex align-items-start">
-                    <div class="flex-grow-1 me-2">
-                        <label class="form-label small text-muted mb-1">Document Label Name</label>
-                        <input type="text"
-                               class="form-control"
-                               id="newItemName"
-                               placeholder="Enter document label name..."
-                               maxlength="200">
-                        <div class="invalid-feedback" id="addValidationError"></div>
+                    <div class="flex-grow-1">
+                        <button type="button" class="btn btn-primary" id="showAddFormBtn">
+                            <i class="ti ti-plus me-1"></i>
+                            Add New @Model.CategoryDisplayName
+                        </button>
                     </div>
-                    <div style="margin-top: 1.75rem;">
-                        <button type="button" class="btn btn-save btn-action me-1" id="saveNewBtn">
-                            <i class="ti ti-check me-1"></i>
-                            Save
-                        </button>
-                        <button type="button" class="btn btn-cancel btn-action" id="cancelNewBtn">
-                            <i class="ti ti-x me-1"></i>
-                            Cancel
-                        </button>
+                </div>
+                <div id="addNewForm" style="display: none; margin-top: 1rem;">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1 me-2">
+                            <label class="form-label small text-muted mb-1">@Model.CategoryDisplayName Name</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="newCategoryName"
+                                   placeholder="Enter document label name..."
+                                   maxlength="200">
+                            <div class="invalid-feedback" id="addValidationError"></div>
+                        </div>
+                        <div style="margin-top: 1.75rem;">
+                            <button type="button" class="btn btn-success btn-action me-1" id="saveNewBtn">
+                                <i class="ti ti-check me-1"></i>
+                                Save
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-action" id="cancelNewBtn">
+                                <i class="ti ti-x me-1"></i>
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Document Label Table -->
-        <div class="category-table">
-            <div class="category-table-header">
+        <!-- Category Table -->
+        <div class="card">
+            <div class="card-header">
                 <h6 class="mb-0">Description</h6>
             </div>
-            <div class="category-table-body" id="categoryTableBody">
-                <div class="empty-state" id="emptyState">
-                    <i class="ti ti-file-off"></i>
-                    <p>No document labels found</p>
-                </div>
+            <div class="card-body" id="categoryTableBody">
+                @if (Model?.Categories != null && Model.Categories.Any())
+                {
+                    @foreach (var category in Model.Categories)
+                    {
+                        <div class="category-row" data-id="@category.IdType">
+                            <div class="category-description">@category.TypeName</div>
+                            <div class="category-actions">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-action"
+                                        onclick="editCategory(@category.IdType)">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-danger btn-action"
+                                        onclick="deleteCategory(@category.IdType, '@Html.Raw(category.TypeName?.Replace("'", "\\'") ?? "")')">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state" id="emptyState">
+                        <i class="ti ti-file-off"></i>
+                        <p>No @Model.CategoryDisplayNamePlural.ToLower() found</p>
+                    </div>
+                }
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if (Model?.Paging != null)
+        {
+            @await Html.PartialAsync("_Pagination", Model.Paging)
+        }
     </div>
 </div>
 
@@ -97,7 +256,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete this document label?</p>
+                <p>Are you sure you want to delete this @Model.CategoryDisplayName.ToLower()?</p>
                 <p class="text-muted small mb-0">
                     <strong id="deleteItemName"></strong>
                 </p>
@@ -115,19 +274,27 @@
 </div>
 
 @section scripts {
-    <script src="~/assets/js/pages/settings/settings-inline-base.js"></script>
     <script>
-        $(document).ready(function () {
-            SettingsInlineEditor.create({
-                entityName: 'Related Document Label',
-                entityNamePlural: 'Related Document Labels',
-                apiEndpoints: {
-                    list: '/Helpdesk/Settings/GetRelatedDocuments',
-                    create: '/Helpdesk/Settings/CreateRelatedDocument',
-                    update: '/Helpdesk/Settings/UpdateRelatedDocument',
-                    delete: '/Helpdesk/Settings/DeleteRelatedDocument'
-                }
-            });
-        });
+        // Pass current state to JavaScript
+        window.currentPage = @(Model?.Paging?.CurrentPage ?? 1);
+        window.searchKeyword = '@Html.Raw(Model?.SearchKeyword ?? "")';
+
+        // Client context for multi-tab session safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+
+        // Category configuration for type-category.js
+        window.CategoryConfig = {
+            entityName: '@Model.CategoryDisplayName',
+            entityNamePlural: '@Model.CategoryDisplayNamePlural',
+            endpoints: {
+                list: MvcEndpoints.Helpdesk.Settings.DocumentLabel.List,
+                create: MvcEndpoints.Helpdesk.Settings.DocumentLabel.Create,
+                update: MvcEndpoints.Helpdesk.Settings.DocumentLabel.Update,
+                delete: MvcEndpoints.Helpdesk.Settings.DocumentLabel.Delete
+            }
+        };
     </script>
+    <script src="~/assets/js/pages/settings/type-category.js"></script>
 }

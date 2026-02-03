@@ -128,14 +128,44 @@
                 },
 
                 /**
-                 * Important Checklist CRUD
+                 * Important Checklist CRUD (with pagination)
                  */
                 ImportantChecklist: {
-                    List: '/Helpdesk/GetImportantChecklists',
+                    List: '/Helpdesk/GetImportantChecklistsPaged',
                     Create: '/Helpdesk/CreateImportantChecklist',
                     Update: '/Helpdesk/UpdateImportantChecklist',
                     Delete: '/Helpdesk/DeleteImportantChecklist',
                     UpdateOrder: '/Helpdesk/UpdateImportantChecklistOrder'
+                },
+
+                /**
+                 * Document Label (Related Document) CRUD (with pagination)
+                 */
+                DocumentLabel: {
+                    List: '/Helpdesk/GetDocumentLabelsPaged',
+                    Create: '/Helpdesk/CreateDocumentLabelV2',
+                    Update: '/Helpdesk/UpdateDocumentLabelV2',
+                    Delete: '/Helpdesk/DeleteDocumentLabelV2'
+                },
+
+                /**
+                 * Job Code Group CRUD (V2 - with pagination)
+                 */
+                JobCodeGroup: {
+                    List: '/Helpdesk/GetJobCodeGroupsPaged',
+                    Create: '/Helpdesk/CreateJobCodeGroupV2',
+                    Update: '/Helpdesk/UpdateJobCodeGroupV2',
+                    Delete: '/Helpdesk/DeleteJobCodeGroupV2'
+                },
+
+                /**
+                 * Material Type CRUD (V2 - with pagination)
+                 */
+                MaterialType: {
+                    List: '/Helpdesk/GetMaterialTypesPaged',
+                    Create: '/Helpdesk/CreateMaterialTypeV2',
+                    Update: '/Helpdesk/UpdateMaterialTypeV2',
+                    Delete: '/Helpdesk/DeleteMaterialTypeV2'
                 },
 
                 /**

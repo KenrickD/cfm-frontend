@@ -1,47 +1,79 @@
+/**
+ * Important Checklist Settings Page
+ * Handles CRUD operations and reordering via up/down buttons
+ * Uses server-side pagination
+ */
 (function ($) {
     'use strict';
 
+    // Configuration from window.CategoryConfig set in View
     const CONFIG = {
-        apiEndpoints: {
-            list: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.List,
-            create: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Create,
-            update: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Update,
-            delete: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Delete,
-            updateOrder: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.UpdateOrder
+        get apiEndpoints() {
+            return window.CategoryConfig?.endpoints || {
+                list: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.List,
+                create: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Create,
+                update: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Update,
+                delete: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.Delete,
+                updateOrder: MvcEndpoints.Helpdesk.Settings.ImportantChecklist.UpdateOrder
+            };
         },
-        entityName: 'Important Checklist Item',
-        entityNamePlural: 'Important Checklist Items'
+        get entityName() {
+            return window.CategoryConfig?.entityName || 'Important Checklist Item';
+        },
+        get entityNamePlural() {
+            return window.CategoryConfig?.entityNamePlural || 'Important Checklist Items';
+        }
     };
 
     const state = {
-        items: [],
-        filteredItems: [],
         editingId: null,
         deleteModal: null,
         deleteItemId: null,
-        dragulaInstance: null
+        deleteItemName: null
     };
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
 
     /**
      * Initialize the page
      */
     function init() {
         // Initialize delete modal
-        state.deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const deleteModalEl = document.getElementById('deleteConfirmModal');
+        if (deleteModalEl) {
+            state.deleteModal = new bootstrap.Modal(deleteModalEl);
+        }
 
         // Bind event handlers
         bindEvents();
-
-        // Load initial data
-        loadItems();
     }
 
     /**
      * Bind all event handlers
      */
     function bindEvents() {
-        // Search functionality
-        $('#searchInput').on('input', handleSearch);
+        // Search functionality - server-side search via page navigation
+        $('#searchBtn').on('click', handleSearch);
+        $('#searchInput').on('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch();
+            }
+        });
+        $('#clearSearchBtn').on('click', clearSearch);
 
         // Add new item
         $('#showAddFormBtn').on('click', showAddForm);
@@ -64,234 +96,30 @@
     }
 
     /**
-     * Load items from API
-     */
-    function loadItems() {
-        showSpinner();
-
-        $.ajax({
-            url: CONFIG.apiEndpoints.list,
-            method: 'GET',
-            success: function (response) {
-                hideSpinner();
-
-                if (response.success && response.data) {
-                    state.items = response.data;
-                    state.filteredItems = [...state.items];
-                    renderItems();
-                    updateTotalCount();
-                    initializeDragula();
-                } else {
-                    showNotification(response.message || 'Failed to load items', 'error');
-                }
-            },
-            error: function () {
-                hideSpinner();
-                showNotification('Error loading items', 'error');
-            }
-        });
-    }
-
-    /**
-     * Initialize Dragula for drag-and-drop reordering
-     */
-    function initializeDragula() {
-        // Destroy existing instance if any
-        if (state.dragulaInstance) {
-            state.dragulaInstance.destroy();
-        }
-
-        const container = document.getElementById('checklistTableBody');
-        if (!container) return;
-
-        // Initialize Dragula
-        state.dragulaInstance = dragula([container], {
-            moves: function (el, container, handle) {
-                // Only allow dragging from the drag handle
-                return handle.classList.contains('drag-handle') || handle.closest('.drag-handle');
-            },
-            accepts: function (el, target, source, sibling) {
-                // Don't allow dropping on empty state or editing rows
-                return !el.classList.contains('empty-state') &&
-                       !el.classList.contains('editing') &&
-                       !el.id.includes('emptyState');
-            }
-        });
-
-        // Handle drop event
-        state.dragulaInstance.on('drop', function (el, target, source, sibling) {
-            handleReorder();
-        });
-    }
-
-    /**
-     * Handle reordering after drag-and-drop
-     */
-    function handleReorder() {
-        const container = document.getElementById('checklistTableBody');
-        const rows = Array.from(container.querySelectorAll('.category-row'));
-
-        // Build new order array
-        const orderUpdates = rows.map((row, index) => ({
-            id: parseInt(row.dataset.id),
-            displayOrder: index + 1
-        }));
-
-        // Update local state
-        orderUpdates.forEach(update => {
-            const item = state.items.find(i => i.id === update.id);
-            if (item) {
-                item.displayOrder = update.displayOrder;
-            }
-        });
-
-        // Re-render with new order numbers
-        renderItems();
-
-        // Send update to server
-        saveOrder(orderUpdates);
-    }
-
-    /**
-     * Save new order to server
-     */
-    function saveOrder(orderUpdates) {
-        $.ajax({
-            url: CONFIG.apiEndpoints.updateOrder,
-            method: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify({ items: orderUpdates }),
-            success: function (response) {
-                if (response.success) {
-                    showNotification('Order updated successfully', 'success');
-                } else {
-                    showNotification(response.message || 'Failed to update order', 'error');
-                    // Reload to get correct order
-                    loadItems();
-                }
-            },
-            error: function () {
-                showNotification('Error updating order', 'error');
-                // Reload to get correct order
-                loadItems();
-            }
-        });
-    }
-
-    /**
-     * Render items to the table
-     */
-    function renderItems() {
-        const $container = $('#checklistTableBody');
-        const $emptyState = $('#emptyState');
-
-        // Clear non-empty-state content
-        $container.children('.category-row').remove();
-
-        if (state.filteredItems.length === 0) {
-            $emptyState.show();
-            return;
-        }
-
-        $emptyState.hide();
-
-        // Sort by displayOrder
-        const sortedItems = [...state.filteredItems].sort((a, b) => a.displayOrder - b.displayOrder);
-
-        sortedItems.forEach(item => {
-            const row = createItemRow(item);
-            $emptyState.before(row);
-        });
-    }
-
-    /**
-     * Create HTML for a single item row
-     */
-    function createItemRow(item) {
-        const isEditing = state.editingId === item.id;
-        const escapedName = escapeHtml(item.name || item.label || '');
-
-        if (isEditing) {
-            return `
-                <div class="category-row editing" data-id="${item.id}">
-                    <div class="row align-items-center">
-                        <div class="col-1 text-center">
-                            <span class="display-order-badge">${item.displayOrder || ''}</span>
-                        </div>
-                        <div class="col-10">
-                            <input type="text"
-                                   class="form-control form-control-sm"
-                                   id="editInput${item.id}"
-                                   value="${escapedName}"
-                                   maxlength="200">
-                            <div class="invalid-feedback" id="editError${item.id}"></div>
-                        </div>
-                        <div class="col-1">
-                            <div class="category-actions">
-                                <button type="button"
-                                        class="btn btn-save btn-sm"
-                                        onclick="window.saveItem(${item.id})">
-                                    <i class="ti ti-check"></i>
-                                </button>
-                                <button type="button"
-                                        class="btn btn-cancel btn-sm"
-                                        onclick="window.cancelEdit()">
-                                    <i class="ti ti-x"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="category-row" data-id="${item.id}">
-                <div class="row align-items-center">
-                    <div class="col-1 text-center">
-                        <i class="ti ti-grip-vertical drag-handle"></i>
-                    </div>
-                    <div class="col-10">
-                        <span class="category-name">${escapedName}</span>
-                    </div>
-                    <div class="col-1">
-                        <div class="category-actions">
-                            <button type="button"
-                                    class="btn btn-edit btn-sm"
-                                    onclick="window.editItem(${item.id})"
-                                    title="Edit">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                            <button type="button"
-                                    class="btn btn-delete btn-sm"
-                                    onclick="window.deleteItem(${item.id})"
-                                    title="Delete">
-                                <i class="ti ti-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Handle search input
+     * Handle search - navigate to page with search parameter
      */
     function handleSearch() {
-        const searchTerm = $(this).val().toLowerCase().trim();
+        const searchTerm = $('#searchInput').val().trim();
+        const url = new URL(window.location.href);
 
-        if (!searchTerm) {
-            state.filteredItems = [...state.items];
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
         } else {
-            state.filteredItems = state.items.filter(item => {
-                const name = (item.name || item.label || '').toLowerCase();
-                return name.includes(searchTerm);
-            });
+            url.searchParams.delete('search');
         }
+        url.searchParams.set('page', '1'); // Reset to first page on search
 
-        renderItems();
-        updateTotalCount();
+        window.location.href = url.toString();
+    }
+
+    /**
+     * Clear search and reload
+     */
+    function clearSearch() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('search');
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
     }
 
     /**
@@ -316,6 +144,7 @@
 
     /**
      * Handle creating new item
+     * Creates TypePayloadDto: { Text, DisplayOrder }
      */
     function handleCreateItem() {
         const name = $('#newItemName').val().trim();
@@ -329,30 +158,20 @@
             return;
         }
 
-        // Check for duplicates
-        const isDuplicate = state.items.some(item =>
-            (item.name || item.label || '').toLowerCase() === name.toLowerCase()
-        );
-
-        if (isDuplicate) {
-            $input.addClass('is-invalid');
-            $error.text('This checklist item already exists');
-            return;
-        }
-
         $input.removeClass('is-invalid');
         $error.text('');
 
-        // Calculate next display order
-        const maxOrder = state.items.length > 0
-            ? Math.max(...state.items.map(i => i.displayOrder || 0))
-            : 0;
+        // Get max display order from current items on page
+        let maxOrder = 0;
+        $('.category-row').each(function() {
+            const order = parseInt($(this).data('order')) || 0;
+            if (order > maxOrder) maxOrder = order;
+        });
 
+        // Create TypePayloadDto structure
         const newItem = {
-            name: name,
-            label: name,
-            displayOrder: maxOrder + 1,
-            isActive: true
+            text: name,
+            displayOrder: maxOrder + 1
         };
 
         createItem(newItem);
@@ -375,7 +194,8 @@
                 if (response.success) {
                     showNotification(response.message || `${CONFIG.entityName} created successfully`, 'success');
                     hideAddForm();
-                    loadItems();
+                    // Reload page to show new item
+                    window.location.reload();
                 } else {
                     showNotification(response.message || `Failed to create ${CONFIG.entityName}`, 'error');
                 }
@@ -388,7 +208,7 @@
     }
 
     /**
-     * Start editing an item
+     * Start editing an item - transforms row to edit mode
      */
     window.editItem = function (id) {
         // Cancel any existing edit
@@ -396,8 +216,38 @@
             cancelEdit();
         }
 
+        const $row = $(`.category-row[data-id="${id}"]`);
+        if (!$row.length) return;
+
+        const currentName = $row.find('.category-description').text().trim();
+        const currentOrder = $row.data('order');
+
         state.editingId = id;
-        renderItems();
+        $row.addClass('editing');
+
+        // Replace description with input
+        $row.find('.category-description').html(`
+            <input type="text"
+                   class="form-control form-control-sm"
+                   id="editInput${id}"
+                   value="${escapeHtml(currentName)}"
+                   maxlength="200">
+            <div class="invalid-feedback" id="editError${id}"></div>
+        `);
+
+        // Replace action buttons
+        $row.find('.category-actions').html(`
+            <button type="button"
+                    class="btn btn-success btn-action btn-sm"
+                    onclick="saveItem(${id}, ${currentOrder})">
+                <i class="ti ti-check"></i>
+            </button>
+            <button type="button"
+                    class="btn btn-secondary btn-action btn-sm"
+                    onclick="cancelEdit()">
+                <i class="ti ti-x"></i>
+            </button>
+        `);
 
         // Focus and select the input
         const $input = $(`#editInput${id}`);
@@ -405,10 +255,10 @@
         $input[0].select();
 
         // Bind keyboard handlers
-        $input.off('keydown').on('keydown', function (e) {
+        $input.on('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                window.saveItem(id);
+                window.saveItem(id, currentOrder);
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 cancelEdit();
@@ -419,7 +269,7 @@
     /**
      * Save edited item
      */
-    window.saveItem = function (id) {
+    window.saveItem = function (id, displayOrder) {
         const $input = $(`#editInput${id}`);
         const $error = $(`#editError${id}`);
         const newName = $input.val().trim();
@@ -431,35 +281,22 @@
             return;
         }
 
-        // Check for duplicates (excluding current item)
-        const isDuplicate = state.items.some(item =>
-            item.id !== id && (item.name || item.label || '').toLowerCase() === newName.toLowerCase()
-        );
-
-        if (isDuplicate) {
-            $input.addClass('is-invalid');
-            $error.text('This checklist item already exists');
-            return;
-        }
-
-        const item = state.items.find(i => i.id === id);
-        if (!item) return;
-
+        // Create TypePayloadDto structure
         const updatedItem = {
-            ...item,
-            name: newName,
-            label: newName
+            idType: id,
+            text: newName,
+            displayOrder: displayOrder
         };
 
         updateItem(updatedItem);
     };
 
     /**
-     * Cancel editing
+     * Cancel editing - reload page to restore original state
      */
     window.cancelEdit = function () {
         state.editingId = null;
-        renderItems();
+        window.location.reload();
     };
 
     /**
@@ -479,7 +316,7 @@
                 if (response.success) {
                     showNotification(response.message || `${CONFIG.entityName} updated successfully`, 'success');
                     state.editingId = null;
-                    loadItems();
+                    window.location.reload();
                 } else {
                     showNotification(response.message || `Failed to update ${CONFIG.entityName}`, 'error');
                 }
@@ -492,14 +329,85 @@
     }
 
     /**
+     * Move item up in order
+     */
+    window.moveItemUp = function (id) {
+        const $currentRow = $(`.category-row[data-id="${id}"]`);
+        const $prevRow = $currentRow.prev('.category-row');
+
+        if (!$prevRow.length) return;
+
+        const currentOrder = parseInt($currentRow.data('order'));
+        const prevOrder = parseInt($prevRow.data('order'));
+        const prevId = parseInt($prevRow.data('id'));
+
+        // Swap orders
+        const orderUpdates = [
+            { idType: id, displayOrder: prevOrder },
+            { idType: prevId, displayOrder: currentOrder }
+        ];
+
+        saveOrderChanges(orderUpdates);
+    };
+
+    /**
+     * Move item down in order
+     */
+    window.moveItemDown = function (id) {
+        const $currentRow = $(`.category-row[data-id="${id}"]`);
+        const $nextRow = $currentRow.next('.category-row');
+
+        if (!$nextRow.length) return;
+
+        const currentOrder = parseInt($currentRow.data('order'));
+        const nextOrder = parseInt($nextRow.data('order'));
+        const nextId = parseInt($nextRow.data('id'));
+
+        // Swap orders
+        const orderUpdates = [
+            { idType: id, displayOrder: nextOrder },
+            { idType: nextId, displayOrder: currentOrder }
+        ];
+
+        saveOrderChanges(orderUpdates);
+    };
+
+    /**
+     * Save order changes to server
+     */
+    function saveOrderChanges(orderUpdates) {
+        showSpinner();
+
+        $.ajax({
+            url: CONFIG.apiEndpoints.updateOrder,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ items: orderUpdates }),
+            success: function (response) {
+                hideSpinner();
+
+                if (response.success) {
+                    showNotification('Order updated', 'success');
+                    // Reload page to show updated order
+                    window.location.reload();
+                } else {
+                    showNotification(response.message || 'Failed to update order', 'error');
+                }
+            },
+            error: function () {
+                hideSpinner();
+                showNotification('Error updating order', 'error');
+            }
+        });
+    }
+
+    /**
      * Show delete confirmation modal
      */
-    window.deleteItem = function (id) {
-        const item = state.items.find(i => i.id === id);
-        if (!item) return;
-
+    window.deleteItem = function (id, name) {
         state.deleteItemId = id;
-        $('#deleteItemName').text(item.name || item.label || '');
+        state.deleteItemName = name;
+        $('#deleteItemName').text(name);
         state.deleteModal.show();
     };
 
@@ -509,31 +417,28 @@
     function handleDeleteConfirmed() {
         if (state.deleteItemId === null) return;
 
-        const item = state.items.find(i => i.id === state.deleteItemId);
-        if (!item) return;
-
-        deleteItem(item);
+        deleteItemById(state.deleteItemId);
         state.deleteModal.hide();
     }
 
     /**
      * Delete item via API
      */
-    function deleteItem(item) {
+    function deleteItemById(id) {
         showSpinner();
 
         $.ajax({
-            url: CONFIG.apiEndpoints.delete,
+            url: `${CONFIG.apiEndpoints.delete}?id=${id}`,
             method: 'DELETE',
-            contentType: 'application/json',
-            data: JSON.stringify(item),
             success: function (response) {
                 hideSpinner();
 
                 if (response.success) {
                     showNotification(response.message || `${CONFIG.entityName} deleted successfully`, 'success');
                     state.deleteItemId = null;
-                    loadItems();
+                    state.deleteItemName = null;
+                    // Reload page to update list
+                    window.location.reload();
                 } else {
                     showNotification(response.message || `Failed to delete ${CONFIG.entityName}`, 'error');
                 }
@@ -546,18 +451,18 @@
     }
 
     /**
-     * Update total count display
-     */
-    function updateTotalCount() {
-        $('#totalCount').text(state.filteredItems.length);
-    }
-
-    /**
      * Show loading spinner
      */
     function showSpinner() {
-        // Use existing spinner implementation or create a simple overlay
-        $('body').append('<div id="loadingSpinner" class="spinner-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
+        if ($('#loadingSpinner').length === 0) {
+            $('body').append(`
+                <div id="loadingSpinner" class="spinner-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: flex; justify-content: center; align-items: center; z-index: 9999;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+        }
     }
 
     /**
@@ -566,12 +471,6 @@
     function hideSpinner() {
         $('#loadingSpinner').remove();
     }
-
-    /**
-     * Note: showNotification() is now a global function defined in _Layout.cshtml
-     * It uses toastr library for consistent notifications across the application
-     * Toastr already handles HTML escaping for XSS protection
-     */
 
     // Initialize on document ready
     $(document).ready(init);

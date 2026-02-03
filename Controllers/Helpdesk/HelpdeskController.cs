@@ -2714,194 +2714,319 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Job Code Group
+
+        /// <summary>
+        /// GET: Job Code Group Settings page with pagination
+        /// </summary>
         [Authorize]
-        public IActionResult JobCodeGroup()
+        public async Task<IActionResult> JobCodeGroup(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Job Code Group";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/JobCodeGroup.cshtml");
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Job Code Group",
+                CategoryDisplayNamePlural = "Job Code Groups"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.JobCodeGroup.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading job code groups");
+                TempData["ErrorMessage"] = "Failed to load job code groups. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/JobCodeGroup.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated job code groups for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetJobCodeGroups() => await GetCategoriesGeneric("jobcodegroup", "job code groups");
+        public async Task<IActionResult> GetJobCodeGroupsPaged(int page = 1, string? keyword = "")
+        {
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.JobCodeGroup.List, "job code groups");
+        }
 
+        /// <summary>
+        /// POST: Create new job code group
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateJobCodeGroup([FromBody] dynamic model) => await CreateCategoryGeneric(model, "jobcodegroup", "job code group");
+        public async Task<IActionResult> CreateJobCodeGroupV2([FromBody] TypePayloadDto model)
+        {
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.JobCodeGroup.Create, "Job code group");
+        }
 
+        /// <summary>
+        /// PUT: Update existing job code group
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateJobCodeGroup([FromBody] dynamic model) => await UpdateCategoryGeneric(model, "jobcodegroup", "job code group");
+        public async Task<IActionResult> UpdateJobCodeGroupV2([FromBody] TypePayloadDto model)
+        {
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.JobCodeGroup.Update, "Job code group");
+        }
 
+        /// <summary>
+        /// DELETE: Delete job code group by ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteJobCodeGroup([FromBody] dynamic model) => await DeleteCategoryGeneric((int)model.id, "jobcodegroup", "job code group");
+        public async Task<IActionResult> DeleteJobCodeGroupV2(int id)
+        {
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.JobCodeGroup.Delete(id), "Job code group");
+        }
 
         #endregion
 
         #region Material Type
+
+        /// <summary>
+        /// GET: Material Type Settings page with pagination
+        /// </summary>
         [Authorize]
-        public IActionResult MaterialType()
+        public async Task<IActionResult> MaterialType(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Material Type";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/MaterialType.cshtml");
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Material Type",
+                CategoryDisplayNamePlural = "Material Types"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.MaterialType.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading material types");
+                TempData["ErrorMessage"] = "Failed to load material types. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/MaterialType.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated material types for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetMaterialTypes() => await GetCategoriesGeneric("materialtype", "material types");
+        public async Task<IActionResult> GetMaterialTypesPaged(int page = 1, string? keyword = "")
+        {
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.MaterialType.List, "material types");
+        }
 
+        /// <summary>
+        /// POST: Create new material type
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateMaterialType([FromBody] dynamic model) => await CreateCategoryGeneric(model, "materialtype", "material type");
+        public async Task<IActionResult> CreateMaterialTypeV2([FromBody] TypePayloadDto model)
+        {
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.MaterialType.Create, "Material type");
+        }
 
+        /// <summary>
+        /// PUT: Update existing material type
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateMaterialType([FromBody] dynamic model) => await UpdateCategoryGeneric(model, "materialtype", "material type");
+        public async Task<IActionResult> UpdateMaterialTypeV2([FromBody] TypePayloadDto model)
+        {
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.MaterialType.Update, "Material type");
+        }
 
+        /// <summary>
+        /// DELETE: Delete material type by ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteMaterialType([FromBody] dynamic model) => await DeleteCategoryGeneric((int)model.id, "materialtype", "material type");
+        public async Task<IActionResult> DeleteMaterialTypeV2(int id)
+        {
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.MaterialType.Delete(id), "Material type");
+        }
 
         #endregion
 
         #region Important Checklist
+
+        /// <summary>
+        /// GET: Important Checklist Settings page with pagination
+        /// </summary>
         [Authorize]
-        public IActionResult ImportantChecklist()
+        public async Task<IActionResult> ImportantChecklist(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Important Checklist";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/ImportantChecklist.cshtml");
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Important Checklist Item",
+                CategoryDisplayNamePlural = "Important Checklist Items"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.ImportantChecklist.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading important checklist items");
+                TempData["ErrorMessage"] = "Failed to load important checklist items. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/ImportantChecklist.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated important checklist items for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetImportantChecklists()
+        public async Task<IActionResult> GetImportantChecklistsPaged(int page = 1, string? keyword = "")
         {
-            // Get user session
-            var userSessionJson = HttpContext.Session.GetString("UserSession");
-            if (string.IsNullOrEmpty(userSessionJson))
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (userInfo == null)
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var idClient = userInfo.PreferredClientId;
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var (success, data, message) = await SafeExecuteApiAsync<List<ImportantChecklistItemModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}&idClient={idClient}"),
-                "Failed to load important checklist");
-
-            // Sort by displayOrder if data exists
-            var sortedData = data?.OrderBy(x => x.displayOrder).ToList();
-
-            return Json(new { success, data = sortedData, message });
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.ImportantChecklist.List, "important checklist items");
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        public async Task<IActionResult> CreateImportantChecklist([FromBody] TypePayloadDto model)
         {
-            if (string.IsNullOrWhiteSpace(model.name))
-            {
-                return Json(new { success = false, message = "Checklist name is required" });
-            }
-
-            // Get user session for idClient
-            var userSessionJson = HttpContext.Session.GetString("UserSession");
-            if (string.IsNullOrEmpty(userSessionJson))
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (userInfo == null)
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            // Set label to name if not provided
-            if (string.IsNullOrWhiteSpace(model.label))
-            {
-                model.label = model.name;
-            }
-
-            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
-                "Failed to create important checklist item");
-
-            return Json(new { success, message = success ? "Important checklist item created successfully" : message });
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.ImportantChecklist.Create, "Important checklist item");
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        public async Task<IActionResult> UpdateImportantChecklist([FromBody] TypePayloadDto model)
         {
-            if (model.id <= 0)
-            {
-                return Json(new { success = false, message = "Invalid checklist ID" });
-            }
-
-            if (string.IsNullOrWhiteSpace(model.name))
-            {
-                return Json(new { success = false, message = "Checklist name is required" });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            // Set label to name if not provided
-            if (string.IsNullOrWhiteSpace(model.label))
-            {
-                model.label = model.name;
-            }
-
-            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
-                "Failed to update important checklist item");
-
-            return Json(new { success, message = success ? "Important checklist item updated successfully" : message });
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.ImportantChecklist.Update, "Important checklist item");
         }
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteImportantChecklist([FromBody] ImportantChecklistItemModel model)
+        public async Task<IActionResult> DeleteImportantChecklist(int id)
         {
-            if (model.id <= 0)
-            {
-                return Json(new { success = false, message = "Invalid checklist ID" });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}"),
-                "Failed to delete important checklist item");
-
-            return Json(new { success, message = success ? "Important checklist item deleted successfully" : message });
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.ImportantChecklist.Delete(id), "Important checklist item");
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateImportantChecklistOrder([FromBody] ImportantChecklistUpdateOrderRequest request)
+        public async Task<IActionResult> UpdateImportantChecklistOrder([FromBody] TypeCategoryUpdateOrderRequest request)
         {
-            if (request.items == null || !request.items.Any())
+            if (request.Items == null || !request.Items.Any())
             {
                 return Json(new { success = false, message = "No items to update" });
             }
@@ -2916,7 +3041,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
             var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.UpdateOrder}?type={ApiEndpoints.Lookup.Types.WorkRequestAdditionalInformation}", content),
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.ImportantChecklist.UpdateOrder}", content),
                 "Failed to update checklist order");
 
             return Json(new { success, message = success ? "Checklist order updated successfully" : message });
@@ -2924,138 +3049,105 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         #endregion
 
-        #region Related Document
+        #region Document Label (Related Document)
+
+        /// <summary>
+        /// GET: Document Label settings page with server-side rendering
+        /// </summary>
         [Authorize]
-        public IActionResult RelatedDocument()
+        public async Task<IActionResult> RelatedDocument(int page = 1, string? search = "")
         {
-            ViewBag.Title = "Related Document";
-            ViewBag.pTitle = "Settings";
-            ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/RelatedDocument.cshtml");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
+            var viewmodel = new TypeCategoryViewModel
+            {
+                SearchKeyword = search,
+                CategoryDisplayName = "Document Label",
+                CategoryDisplayNamePlural = "Document Labels"
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                viewmodel.IdClient = userInfo.PreferredClientId;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetTypeCategoriesPagedAsync(
+                    client, backendUrl, userInfo.PreferredClientId, page, search,
+                    ApiEndpoints.DocumentLabelV2.List);
+
+                if (response != null)
+                {
+                    viewmodel.Categories = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading document labels");
+                TempData["ErrorMessage"] = "Failed to load document labels. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/RelatedDocument.cshtml", viewmodel);
         }
 
+        /// <summary>
+        /// AJAX: Get paginated document labels for AJAX requests
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetRelatedDocuments()
+        public async Task<IActionResult> GetDocumentLabelsPaged(int page = 1, string? keyword = "")
         {
-            // Get user session
-            var userSessionJson = HttpContext.Session.GetString("UserSession");
-            if (string.IsNullOrEmpty(userSessionJson))
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (userInfo == null)
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var idClient = userInfo.PreferredClientId;
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var (success, data, message) = await SafeExecuteApiAsync<List<RelatedDocumentModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}&idClient={idClient}"),
-                "Failed to load related documents");
-
-            return Json(new { success, data, message });
+            return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.DocumentLabelV2.List, "document labels");
         }
 
+        /// <summary>
+        /// POST: Create new document label
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateRelatedDocument([FromBody] RelatedDocumentModel model)
+        public async Task<IActionResult> CreateDocumentLabelV2([FromBody] TypePayloadDto model)
         {
-            if (string.IsNullOrWhiteSpace(model.name))
-            {
-                return Json(new { success = false, message = "Document name is required" });
-            }
-
-            // Get user session for idClient
-            var userSessionJson = HttpContext.Session.GetString("UserSession");
-            if (string.IsNullOrEmpty(userSessionJson))
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (userInfo == null)
-            {
-                return Json(new { success = false, message = "Session expired. Please login again." });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            // Set label to name if not provided
-            if (string.IsNullOrWhiteSpace(model.label))
-            {
-                model.label = model.name;
-            }
-
-            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Lookup.Create}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content),
-                "Failed to create related document");
-
-            return Json(new { success, message = success ? "Related document created successfully" : message });
+            return await CreateTypeCategoryAsync(model, ApiEndpoints.DocumentLabelV2.Create, "Document label");
         }
 
+        /// <summary>
+        /// PUT: Update existing document label
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateRelatedDocument([FromBody] RelatedDocumentModel model)
+        public async Task<IActionResult> UpdateDocumentLabelV2([FromBody] TypePayloadDto model)
         {
-            if (model.id <= 0)
-            {
-                return Json(new { success = false, message = "Invalid document ID" });
-            }
-
-            if (string.IsNullOrWhiteSpace(model.name))
-            {
-                return Json(new { success = false, message = "Document name is required" });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            // Set label to name if not provided
-            if (string.IsNullOrWhiteSpace(model.label))
-            {
-                model.label = model.name;
-            }
-
-            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PutAsync($"{backendUrl}{ApiEndpoints.Lookup.Update}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}", content),
-                "Failed to update related document");
-
-            return Json(new { success, message = success ? "Related document updated successfully" : message });
+            return await UpdateTypeCategoryAsync(model, ApiEndpoints.DocumentLabelV2.Update, "Document label");
         }
 
+        /// <summary>
+        /// DELETE: Delete document label by ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeleteRelatedDocument([FromBody] RelatedDocumentModel model)
+        public async Task<IActionResult> DeleteDocumentLabelV2(int id)
         {
-            if (model.id <= 0)
-            {
-                return Json(new { success = false, message = "Invalid document ID" });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Lookup.Delete(model.id)}?type={ApiEndpoints.Lookup.Types.WorkRequestDocument}"),
-                "Failed to delete related document");
-
-            return Json(new { success, message = success ? "Related document deleted successfully" : message });
+            return await DeleteTypeCategoryAsync(id, ApiEndpoints.DocumentLabelV2.Delete(id), "Document label");
         }
 
         #endregion

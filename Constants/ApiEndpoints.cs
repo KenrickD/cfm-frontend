@@ -476,6 +476,94 @@ namespace cfm_frontend.Constants
             public static string Delete(int id) => $"{Base}/{id}";
         }
 
+        /// <summary>
+        /// Document Label management endpoints (Settings)
+        /// Base path: /api/v1/work-request/document-label
+        /// </summary>
+        public static class DocumentLabelV2
+        {
+            private const string Base = ApiBase + "/work-request/document-label";
+
+            /// <summary>
+            /// GET: Get paginated document labels list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of TypeFormDetailResponse
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get document label by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: TypePayloadDto structure
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new document label
+            /// Body: TypePayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update document label
+            /// Body: TypePayloadDto (includes IdType for identifying record)
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete document label by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+        }
+
+        /// <summary>
+        /// Important Checklist management endpoints (Settings)
+        /// Base path: /api/v1/work-request/important-checklist
+        /// </summary>
+        public static class ImportantChecklist
+        {
+            private const string Base = ApiBase + "/work-request/important-checklist";
+
+            /// <summary>
+            /// GET: Get important checklist items list
+            /// Query params: cid (client id)
+            /// Response: List of ImportantChecklistItemModel
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// POST: Create new important checklist item
+            /// Body: ImportantChecklistItemModel
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update important checklist item
+            /// Body: ImportantChecklistItemModel
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete important checklist item by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// PUT: Update display order of important checklist items
+            /// Body: ImportantChecklistUpdateOrderRequest
+            /// </summary>
+            public const string UpdateOrder = Base + "/update-order";
+        }
+
         #endregion
 
         #region Other Category (Legacy)
@@ -752,6 +840,104 @@ namespace cfm_frontend.Constants
             /// Query params: id, pageReference, module
             /// </summary>
             public const string ChangeHistory = Base + "/change-history";
+        }
+
+        #endregion
+
+        #region Job Code Group (Settings)
+
+        /// <summary>
+        /// Job Code Group management endpoints (Settings)
+        /// Base path: /api/v1/job-code/group
+        /// </summary>
+        public static class JobCodeGroup
+        {
+            private const string Base = ApiBase + "/job-code/group";
+
+            /// <summary>
+            /// GET: Get paginated job code groups list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of TypeFormDetailResponse
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get job code group by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: TypePayloadDto structure
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new job code group
+            /// Body: TypePayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update job code group
+            /// Body: TypePayloadDto (includes IdType for identifying record)
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete job code group by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+        }
+
+        #endregion
+
+        #region Material Type (Settings)
+
+        /// <summary>
+        /// Material Type management endpoints (Settings)
+        /// Base path: /api/v1/job-code/material-type
+        /// </summary>
+        public static class MaterialType
+        {
+            private const string Base = ApiBase + "/job-code/material-type";
+
+            /// <summary>
+            /// GET: Get paginated material types list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of TypeFormDetailResponse
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get material type by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: TypePayloadDto structure
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new material type
+            /// Body: TypePayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update material type
+            /// Body: TypePayloadDto (includes IdType for identifying record)
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete material type by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
         }
 
         #endregion

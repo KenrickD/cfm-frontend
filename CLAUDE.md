@@ -774,3 +774,9 @@ Use `cfm_frontend` for consistency (some legacy use `Mvc.Controllers`)
 - Bootstrap 5, jQuery, "pcoded" theme
 - Location: `wwwroot/`
 - Loaded via `Views/Shared/VendorScripts.cshtml`
+
+### Code Comments & Logging Style
+- **No emojis** in code, comments, or log messages
+- **No AI-like commentary** in debug logs or summary comments (e.g., avoid phrases like "Great job!", "Successfully completed!", "Everything looks good!")
+- Keep log messages factual and technical (e.g., "Loaded 15 records" not "Successfully loaded 15 records!")
+- Comments should be informative, not conversational
