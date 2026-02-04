@@ -365,3 +365,4 @@ FodyWeavers.xsd
 # ASP.NET Core Data Protection keys (sensitive cryptographic material)
 Keys/
 /BackendModels
+/OldSave.cs
