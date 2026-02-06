@@ -12,5 +12,6 @@ namespace cfm_frontend.DTOs.Employee
         public string Title { get; set; } = string.Empty;
         public string EmailAddress { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
+        public bool HasAccess { get; set; }
     }
 }

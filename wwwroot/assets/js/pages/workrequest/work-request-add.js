@@ -1423,7 +1423,8 @@
                         data: withClientParams({
                             term: term,
                             idLocation: idLocation,
-                            idServiceProvider: idServiceProvider
+                            idServiceProvider: idServiceProvider,
+                            idCompany: clientContext.idClient
                         }),
                         success: function (response) {
                             const $dropdown = $('#workerServiceProviderDropdown');
@@ -1730,8 +1731,16 @@
 
         // Calculate and display each target in sequence (order matters for chaining)
         targets.forEach(target => {
-            // Skip if there's a manual override
+            // If there's a manual override, restore its display and store in calculatedTargets for chaining
             if (state.targetOverrides[target.type]) {
+                const override = state.targetOverrides[target.type];
+                const targetDate = new Date(override.newTarget);
+                const formattedDate = formatDateTime(targetDate);
+                $(`#${target.type}Target .target-date`).text(formattedDate);
+                $(`#${target.type}Target`).attr('title', 'Target manually overridden. Click to change.');
+                $(`#${target.type}Target`).show();
+                // Store in calculatedTargets for chaining (subsequent targets may depend on this value)
+                calculatedTargets[target.type] = targetDate;
                 return;
             }
 
@@ -2011,6 +2020,7 @@
                         const name = worker.fullName || worker.FullName || worker.name;
                         const title = worker.title || worker.Title || '';
                         const department = worker.departmentName || worker.DepartmentName || '';
+                        const hasAccess = worker.hasAccess || worker.HasAccess || false;
 
                         let detailsHtml = '';
                         if (title || department) {
@@ -2021,10 +2031,15 @@
                             detailsHtml += '</small>';
                         }
 
+                        // Add access badge
+                        const accessBadge = hasAccess
+                            ? '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">Has Access</span>'
+                            : '<span class="badge bg-secondary ms-2" style="font-size: 0.65rem;">No Access</span>';
+
                         $dropdown.append(
                             $('<div></div>')
                                 .addClass('typeahead-item')
-                                .html(`<strong>${name}</strong>${detailsHtml ? '<br>' + detailsHtml : ''}`)
+                                .html(`<strong>${name}</strong>${accessBadge}${detailsHtml ? '<br>' + detailsHtml : ''}`)
                                 .on('click', () => selectWorkerForModal(worker, source))
                         );
                     });
@@ -2053,10 +2068,11 @@
         const title = worker.title || worker.Title || '';
         const email = worker.emailAddress || worker.EmailAddress || '';
         const phone = worker.phoneNumber || worker.PhoneNumber || '';
+        const hasAccess = worker.hasAccess || worker.HasAccess || false;
 
         $('#workerSearchModal').val(workerName);
         $('#selectedWorkerId').val(workerId);
-        $('#selectedWorkerSide').val(worker.side_Enum_idEnum || (source === 'company' ? 1 : 2));
+        $('#selectedWorkerSide').val(worker.side_Enum_idEnum || (source === 'company' ? 272 : 273));
         $('#workerSearchDropdownModal').removeClass('show').empty();
 
         // Store full worker data for later use
@@ -2066,10 +2082,11 @@
             departmentName: department,
             title: title,
             emailAddress: email,
-            phoneNumber: phone
+            phoneNumber: phone,
+            hasAccess: hasAccess
         });
 
-        console.log('Worker selected:', { id: workerId, name: workerName, source: source });
+        console.log('Worker selected:', { id: workerId, name: workerName, source: source, hasAccess: hasAccess });
     }
 
     function resetWorkerModal() {
@@ -2100,6 +2117,13 @@
             return;
         }
 
+        // Check for duplicate worker
+        const isDuplicate = state.workers.some(w => w.Employee_idEmployee === parseInt(workerId));
+        if (isDuplicate) {
+            showNotification('This worker has already been added', 'warning');
+            return;
+        }
+
         const worker = {
             Employee_idEmployee: parseInt(workerId),
             fullName: selectedWorkerData.fullName,
@@ -2107,6 +2131,7 @@
             title: selectedWorkerData.title,
             emailAddress: selectedWorkerData.emailAddress,
             phoneNumber: selectedWorkerData.phoneNumber,
+            hasAccess: selectedWorkerData.hasAccess || false,
             side_Enum_idEnum: parseInt(workerSide),
             source: source === 'company' ? 'Company' : 'Service Provider',
             isJoinToExternalChatRoom: joinChatRoom
@@ -2169,6 +2194,15 @@
                                     <i class="ti ${isCompany ? 'ti-building-community' : 'ti-truck-delivery'} me-1"></i>
                                     ${worker.source}
                                 </span>
+                                ${worker.hasAccess ? `
+                                    <span class="badge bg-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                                        <i class="ti ti-check me-1"></i>Has Access
+                                    </span>
+                                ` : `
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                                        <i class="ti ti-lock me-1"></i>No Access
+                                    </span>
+                                `}
                                 ${worker.isJoinToExternalChatRoom ? `
                                     <span class="worker-chat-badge">
                                         <i class="ti ti-message-circle me-1"></i>Chat
@@ -2225,8 +2259,10 @@
         $form.on('submit', function (e) {
             e.preventDefault();
 
-            // Validate required fields
-            if (!validateRequiredFields()) {
+            // Run comprehensive validation
+            const errors = validateWorkRequestForm();
+            if (errors.length > 0) {
+                displayValidationErrors(errors);
                 return false;
             }
 
@@ -2243,8 +2279,455 @@
         });
     }
 
+    // ========================================
+    // Form Validation Module
+    // ========================================
+
     /**
-     * Validate required form fields before submission
+     * Helper: Get combined Date object from date and time input fields
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {Date|null} - Date object or null if date is empty
+     */
+    function getDateTimeValue(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        if (!dateVal) return null;
+
+        const timeToUse = timeVal || '00:00';
+        return new Date(`${dateVal}T${timeToUse}`);
+    }
+
+    /**
+     * Helper: Get selected status text (e.g., "New", "Completed")
+     * @returns {string} - The text of the selected status radio button
+     */
+    function getSelectedStatusText() {
+        const $checked = $('input[name="Status"]:checked');
+        if ($checked.length === 0) return '';
+        return $checked.closest('.form-check').find('label').text().trim();
+    }
+
+    /**
+     * Helper: Check if datetime field pair has partial entry (date without time or vice versa)
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {boolean} - True if partially filled
+     */
+    function isPartialDateTime(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        // Both empty or both filled = not partial
+        if ((!dateVal && !timeVal) || (dateVal && timeVal)) return false;
+
+        // One filled, other empty = partial
+        return true;
+    }
+
+    /**
+     * Helper: Check if datetime field pair has any value
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {boolean} - True if either date or time has a value
+     */
+    function hasDateTimeValue(dateSelector, timeSelector) {
+        return !!$(dateSelector).val() || !!$(timeSelector).val();
+    }
+
+    /**
+     * Helper: Get effective target date value (from override or calculated)
+     * @param {string} targetType - Target type key (helpdesk, initialFollowUp, etc.)
+     * @returns {Date|null} - Date object or null
+     */
+    function getEffectiveTargetDate(targetType) {
+        // Check for manual override first
+        if (state.targetOverrides[targetType]?.newTarget) {
+            return new Date(state.targetOverrides[targetType].newTarget);
+        }
+        // Fall back to auto-calculated target from DOM
+        const calculatedTarget = $(`#${targetType}Target`).data('calculated-target');
+        if (calculatedTarget) {
+            return new Date(calculatedTarget);
+        }
+        return null;
+    }
+
+    /**
+     * Helper: Get selected priority level details from cache
+     * @returns {Object|null} - Priority level object or null
+     */
+    function getSelectedPriorityDetails() {
+        const priorityId = $('#priorityLevelSelect').val();
+        if (!priorityId) return null;
+        return state.priorityLevelsCache[priorityId] || null;
+    }
+
+    /**
+     * Validate DateTime fields - future dates, partial entries
+     * @returns {string[]} - Array of error messages
+     */
+    function validateDateTimeFields() {
+        const errors = [];
+        const now = new Date();
+
+        // 1. Request Date cannot be in the future
+        const requestDate = getDateTimeValue('#requestDate', '#requestTime');
+        if (requestDate && requestDate > now) {
+            errors.push('Request Date cannot be in the future');
+        }
+
+        // 2. Work Completion cannot be later than today
+        const workCompletion = getDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletion && workCompletion > now) {
+            errors.push('Work Completion cannot be later than today');
+        }
+
+        // 3. Check for partial datetime entries (date filled but no time, or vice versa)
+        const timelineFields = [
+            { date: '#helpdeskResponseDate', time: '#helpdeskResponseTime', name: 'Helpdesk Response' },
+            { date: '#initialFollowUpDate', time: '#initialFollowUpTime', name: 'Initial Follow Up' },
+            { date: '#quotationSubmissionDate', time: '#quotationSubmissionTime', name: 'Quotation Submission' },
+            { date: '#costApprovalDate', time: '#costApprovalTime', name: 'Cost Approval' },
+            { date: '#workCompletionDate', time: '#workCompletionTime', name: 'Work Completion' },
+            { date: '#afterWorkFollowUpDate', time: '#afterWorkFollowUpTime', name: 'After Work Follow Up' }
+        ];
+
+        timelineFields.forEach(field => {
+            if (isPartialDateTime(field.date, field.time)) {
+                errors.push(`${field.name} requires both date and time`);
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Validate date relationships - all dates must be >= Request Date
+     * @returns {string[]} - Array of error messages
+     */
+    function validateDateRelationships() {
+        const errors = [];
+        const requestDate = getDateTimeValue('#requestDate', '#requestTime');
+
+        if (!requestDate) return errors; // Can't validate relationships without request date
+
+        // Define all timeline fields that must be >= Request Date
+        const timelineFields = [
+            { date: '#helpdeskResponseDate', time: '#helpdeskResponseTime', name: 'Helpdesk Response' },
+            { date: '#initialFollowUpDate', time: '#initialFollowUpTime', name: 'Initial Follow Up' },
+            { date: '#quotationSubmissionDate', time: '#quotationSubmissionTime', name: 'Quotation Submission' },
+            { date: '#costApprovalDate', time: '#costApprovalTime', name: 'Cost Approval' },
+            { date: '#workCompletionDate', time: '#workCompletionTime', name: 'Work Completion' }
+        ];
+
+        // Check actual dates >= Request Date
+        timelineFields.forEach(field => {
+            const fieldDate = getDateTimeValue(field.date, field.time);
+            if (fieldDate && requestDate > fieldDate) {
+                errors.push(`${field.name} should be later than Request Date`);
+            }
+        });
+
+        // Check target dates >= Request Date
+        const targetTypes = [
+            { type: 'helpdesk', name: 'Helpdesk Response Target' },
+            { type: 'initialFollowUp', name: 'Initial Follow Up Target' },
+            { type: 'quotation', name: 'Quotation Submission Target' },
+            { type: 'costApproval', name: 'Cost Approval Target' },
+            { type: 'workCompletion', name: 'Work Completion Target' }
+        ];
+
+        targetTypes.forEach(target => {
+            const targetDate = getEffectiveTargetDate(target.type);
+            if (targetDate && requestDate > targetDate) {
+                errors.push(`${target.name} should be later than Request Date`);
+            }
+        });
+
+        // After Work Follow Up must be >= Work Completion
+        const workCompletion = getDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletion) {
+            const afterWorkFollowUp = getDateTimeValue('#afterWorkFollowUpDate', '#afterWorkFollowUpTime');
+            if (afterWorkFollowUp && workCompletion > afterWorkFollowUp) {
+                errors.push('After Work Follow Up should be later than Work Completion');
+            }
+
+            const afterWorkTarget = getEffectiveTargetDate('afterWork');
+            if (afterWorkTarget && workCompletion > afterWorkTarget) {
+                errors.push('After Work Follow Up Target should be later than Work Completion');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate target overrides - remark required when target manually changed
+     * @returns {string[]} - Array of error messages
+     */
+    function validateTargetOverrides() {
+        const errors = [];
+
+        const targetNames = {
+            helpdesk: 'Helpdesk Response',
+            initialFollowUp: 'Initial Follow Up',
+            quotation: 'Quotation Submission',
+            costApproval: 'Cost Approval',
+            workCompletion: 'Work Completion',
+            afterWork: 'After Work Follow Up'
+        };
+
+        Object.keys(state.targetOverrides).forEach(targetType => {
+            const override = state.targetOverrides[targetType];
+            const targetName = targetNames[targetType] || targetType;
+
+            if (override?.newTarget) {
+                // If target is manually set, remark is required
+                if (!override.remark || override.remark.trim() === '') {
+                    errors.push(`Write the reason of changing target in ${targetName} New Target`);
+                }
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Validate cost estimation - must be positive number if filled
+     * @returns {string[]} - Array of error messages
+     */
+    function validateCostEstimation() {
+        const errors = [];
+        const costValue = $('#costEstimation').val();
+
+        if (costValue && costValue.trim() !== '') {
+            const numValue = parseFloat(costValue);
+            if (isNaN(numValue)) {
+                errors.push('Enter a valid financial amount in Cost Estimation');
+            } else if (numValue < 0) {
+                errors.push('Cost Estimation value should be a positive amount');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate status-related business rules
+     * @returns {string[]} - Array of error messages
+     */
+    function validateStatusRules() {
+        const errors = [];
+        const statusText = getSelectedStatusText();
+
+        // 1. Work Completion filled + Status != Completed
+        const workCompletionFilled = hasDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletionFilled && statusText !== 'Completed') {
+            errors.push('If Work Completion is already filled, the Status should be Completed');
+        }
+
+        // 2. Workers assigned + Status == New
+        if (state.workers.length > 0 && statusText === 'New') {
+            errors.push('If Worker is already filled, its Status could not be "New"');
+        }
+
+        // 3. Status = Completed: Work Category cannot be empty/-1
+        if (statusText === 'Completed') {
+            const workCategoryVal = $('#workCategorySelect').val();
+            if (!workCategoryVal || workCategoryVal === '' || workCategoryVal === '-1') {
+                errors.push('If Status is "Completed", Work Category is mandatory and cannot be "Not Specified"');
+            }
+
+            // 4. Status = Completed: Service Provider cannot be empty/-1
+            const serviceProviderVal = $('#serviceProviderSelect').val();
+            if (!serviceProviderVal || serviceProviderVal === '' || serviceProviderVal === '-1') {
+                errors.push('If Status is "Completed", Service Provider is mandatory and cannot be "Not Specified"');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate priority-level mandatory fields when Status = Completed
+     * @returns {string[]} - Array of error messages
+     */
+    function validatePriorityMandatoryFields() {
+        const errors = [];
+        const statusText = getSelectedStatusText();
+
+        if (statusText !== 'Completed') return errors;
+
+        const priorityDetails = getSelectedPriorityDetails();
+        if (!priorityDetails) return errors;
+
+        // Define mandatory field mappings
+        const mandatoryChecks = [
+            {
+                flag: 'HelpdeskResponseTargetRequiredToFill',
+                actualDate: '#helpdeskResponseDate',
+                actualTime: '#helpdeskResponseTime',
+                targetType: 'helpdesk',
+                name: 'Helpdesk Response'
+            },
+            {
+                flag: 'InitialFollowUpTargetRequiredToFill',
+                actualDate: '#initialFollowUpDate',
+                actualTime: '#initialFollowUpTime',
+                targetType: 'initialFollowUp',
+                name: 'Initial Follow Up'
+            },
+            {
+                flag: 'QuotationSubmissionTargetRequiredToFill',
+                actualDate: '#quotationSubmissionDate',
+                actualTime: '#quotationSubmissionTime',
+                targetType: 'quotation',
+                name: 'Quotation Submission'
+            },
+            {
+                flag: 'CostApprovalTargetRequiredToFill',
+                actualDate: '#costApprovalDate',
+                actualTime: '#costApprovalTime',
+                targetType: 'costApproval',
+                name: 'Cost Approval'
+            },
+            {
+                flag: 'WorkCompletionTargetRequiredToFill',
+                actualDate: '#workCompletionDate',
+                actualTime: '#workCompletionTime',
+                targetType: 'workCompletion',
+                name: 'Work Completion'
+            },
+            {
+                flag: 'AfterWorkFollowUpTargetRequiredToFill',
+                actualDate: '#afterWorkFollowUpDate',
+                actualTime: '#afterWorkFollowUpTime',
+                targetType: 'afterWork',
+                name: 'After Work Follow Up'
+            }
+        ];
+
+        mandatoryChecks.forEach(check => {
+            const isRequired = getPriorityProperty(priorityDetails, check.flag);
+            if (isRequired) {
+                // Check actual date
+                const actualDate = getDateTimeValue(check.actualDate, check.actualTime);
+                if (!actualDate) {
+                    errors.push(`If Status is "Completed", ${check.name} is mandatory`);
+                }
+
+                // Check target date
+                const targetDate = getEffectiveTargetDate(check.targetType);
+                if (!targetDate) {
+                    errors.push(`If Status is "Completed", ${check.name} Target is mandatory`);
+                }
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Main validation orchestrator - runs all validations
+     * @returns {string[]} - Array of all error messages
+     */
+    function validateWorkRequestForm() {
+        let errors = [];
+
+        // 1. Required fields validation (uses existing logic but returns errors array)
+        const requiredErrors = validateRequiredFieldsAsArray();
+        errors = errors.concat(requiredErrors);
+
+        // 2. DateTime validations
+        errors = errors.concat(validateDateTimeFields());
+
+        // 3. Date relationships
+        errors = errors.concat(validateDateRelationships());
+
+        // 4. Target overrides
+        errors = errors.concat(validateTargetOverrides());
+
+        // 5. Cost estimation
+        errors = errors.concat(validateCostEstimation());
+
+        // 6. Status rules
+        errors = errors.concat(validateStatusRules());
+
+        // 7. Priority mandatory fields
+        errors = errors.concat(validatePriorityMandatoryFields());
+
+        return errors;
+    }
+
+    /**
+     * Display validation errors via toastr
+     * @param {string[]} errors - Array of error messages
+     */
+    function displayValidationErrors(errors) {
+        if (errors.length === 0) return;
+
+        if (errors.length === 1) {
+            showNotification(errors[0], 'error');
+        } else {
+            // Show first error with count
+            showNotification(
+                `Validation failed (${errors.length} issues). ${errors[0]}`,
+                'error'
+            );
+        }
+    }
+
+    /**
+     * Validate required form fields - returns array of errors (for orchestrator)
+     * @returns {string[]} - Array of missing field names
+     */
+    function validateRequiredFieldsAsArray() {
+        const requiredFields = [
+            { selector: '#locationSelect', name: 'Location' },
+            { selector: '#floorSelect', name: 'Floor' },
+            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#requestorId', name: 'Requestor', isHidden: true },
+            { selector: '#workTitle', name: 'Work Title' },
+            { selector: '#requestDetail', name: 'Request Detail' },
+            { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
+            { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
+            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#personInChargeSelect', name: 'Person in Charge' },
+            { selector: '#priorityLevelSelect', name: 'Priority Level' },
+            { selector: '#requestDate', name: 'Request Date' },
+            { selector: '#requestTime', name: 'Request Time' }
+        ];
+
+        const missingFields = [];
+
+        requiredFields.forEach(field => {
+            const $element = $(field.selector);
+            if (field.isRadio) {
+                if ($element.length === 0) {
+                    missingFields.push(field.name);
+                }
+            } else if (field.isHidden) {
+                if (!$element.val()) {
+                    missingFields.push(field.name);
+                }
+            } else {
+                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                    missingFields.push(field.name);
+                }
+            }
+        });
+
+        if (missingFields.length > 0) {
+            return [`Please fill in required fields: ${missingFields.join(', ')}`];
+        }
+
+        return [];
+    }
+
+    /**
+     * Validate required form fields before submission (legacy - for backward compatibility)
      */
     function validateRequiredFields() {
         const requiredFields = [
@@ -2414,7 +2897,7 @@
             // Summary and Feedback
             followUpDetail: $('#followUpSummary').val() || null,
             feedbackType_Enum_idEnum: parseInt($('#feedbackStatus').val()) || null,
-            FeedbackSummary: $('#feedbackSummary').val() || null,
+            feedbackSummary: $('#feedbackSummary').val() || null,
 
             // Collections - will be populated by extended.js
             ImportantChecklist: importantChecklist,

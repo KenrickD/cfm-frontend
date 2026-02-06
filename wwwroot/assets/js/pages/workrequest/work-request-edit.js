@@ -1,15 +1,43 @@
-/**
- * Work Request Edit Page JavaScript
- * Handles target date calculations and form interactions for editing work requests
+﻿/**
+ * Work Request Edit Page - JavaScript Module
+ * Handles all interactive functionality for the Work Request Edit form
+ * Includes data population from existing work request
+ * Dependencies: jQuery, Select2, DatePicker
  */
 
-(function () {
+(function ($) {
     'use strict';
 
     // Configuration
     const CONFIG = {
+        debounceDelay: 300,
+        minSearchLength: 1,
         apiEndpoints: {
+            // Location cascade
+            locations: MvcEndpoints.Helpdesk.Location.GetByClient,
+            floors: MvcEndpoints.Helpdesk.Location.GetFloorsByLocation,
+            rooms: MvcEndpoints.Helpdesk.Location.GetRoomsByFloor,
+
+            // Dropdowns
+            workCategories: MvcEndpoints.Helpdesk.WorkRequest.GetWorkCategoriesByTypes,
+            otherCategories: MvcEndpoints.Helpdesk.WorkRequest.GetOtherCategoriesByTypes,
+            importantChecklist: MvcEndpoints.Helpdesk.WorkRequest.GetImportantChecklistByTypes,
+            serviceProviders: MvcEndpoints.Helpdesk.WorkRequest.GetServiceProvidersByClient,
             priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
+            feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypesByEnums,
+            getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
+
+            // Radio buttons
+            requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethodsByEnums,
+            statuses: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestStatusesByEnums,
+
+            // Search/autocomplete
+            searchRequestors: MvcEndpoints.Helpdesk.Search.Requestors,
+            searchWorkersByCompany: MvcEndpoints.Helpdesk.Search.WorkersByCompany,
+            searchWorkersByServiceProvider: MvcEndpoints.Helpdesk.Search.WorkersByServiceProvider,
+            personsInCharge: MvcEndpoints.Helpdesk.WorkRequest.GetPersonsInChargeByFilters,
+
+            // Business day calculation
             officeHours: MvcEndpoints.Helpdesk.Extended.GetOfficeHours,
             publicHolidays: MvcEndpoints.Helpdesk.Extended.GetPublicHolidays
         }
@@ -17,453 +45,3393 @@
 
     // State management
     const state = {
-        priorityLevelsCache: {},
-        targetCalculator: null
+        selectedLocation: null,
+        selectedFloor: null,
+        selectedRoom: null,
+        selectedRequestor: null,
+        selectedWorker: null,
+        laborMaterialItems: [],
+        targetOverrides: {},
+        workers: [],
+        importantChecklistData: [],
+        priorityLevelsCache: {}, // Cache full priority level data by ID
+        isLoadingEditData: false // Flag to prevent auto-calculation during edit mode data load
     };
 
-    // Initialize page
-    $(document).ready(function () {
-        initializePage();
-    });
+    // ========================================
+    // Client Context (Multi-Tab Session Safety)
+    // ========================================
 
-    async function initializePage() {
+    /**
+     * Client context captured at page load.
+     * This prevents issues when user switches clients in another tab.
+     */
+    const clientContext = {
+        get idClient() {
+            return window.WorkRequestContext?.idClient || null;
+        },
+        get idCompany() {
+            return window.WorkRequestContext?.idCompany || null;
+        },
+        get pageLoadTime() {
+            return window.WorkRequestContext?.pageLoadTime || null;
+        }
+    };
+
+    /**
+     * Get client parameters to include in AJAX data.
+     * These are captured at page load, not from current session.
+     * @returns {Object} Object with idClient and/or idCompany
+     */
+    function getClientParams() {
+        const params = {};
+        if (clientContext.idClient) {
+            params.idClient = clientContext.idClient;
+        }
+        if (clientContext.idCompany) {
+            params.idCompany = clientContext.idCompany;
+        }
+        return params;
+    }
+
+    /**
+     * Merge client params with existing data object.
+     * @param {Object} data - Existing data object
+     * @returns {Object} Merged object with client params
+     */
+    function withClientParams(data) {
+        return { ...getClientParams(), ...data };
+    }
+
+    // Expose globally for extended module
+    window.getClientParams = getClientParams;
+    window.withClientParams = withClientParams;
+
+    // ========================================
+    // Tab Focus Detection (Multi-Tab Session Safety)
+    // ========================================
+
+    /**
+     * Client session monitor instance
+     * Monitors for client changes across tabs using the ClientSessionMonitor helper
+     */
+    let sessionMonitor = null;
+
+    // ========================================
+    // Loading State Helper Functions
+    // ========================================
+
+    /**
+     * Show loading state on a searchable dropdown
+     * @param {string} selectId - The ID of the select element (without #)
+     */
+    function showDropdownLoading(selectId) {
+        const selectElement = document.getElementById(selectId);
+        if (selectElement && selectElement._searchableDropdown) {
+            selectElement._searchableDropdown.wrapper.classList.add('loading');
+        }
+    }
+
+    /**
+     * Hide loading state on a searchable dropdown
+     * @param {string} selectId - The ID of the select element (without #)
+     */
+    function hideDropdownLoading(selectId) {
+        const selectElement = document.getElementById(selectId);
+        if (selectElement && selectElement._searchableDropdown) {
+            selectElement._searchableDropdown.wrapper.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Show loading state on a text input's parent container
+     * @param {jQuery|string} input - The input element or selector
+     */
+    function showInputLoading(input) {
+        const $input = typeof input === 'string' ? $(input) : input;
+        $input.parent().addClass('input-loading');
+    }
+
+    /**
+     * Hide loading state on a text input's parent container
+     * @param {jQuery|string} input - The input element or selector
+     */
+    function hideInputLoading(input) {
+        const $input = typeof input === 'string' ? $(input) : input;
+        $input.parent().removeClass('input-loading');
+    }
+
+    /**
+     * Show loading message in a typeahead dropdown
+     * @param {jQuery} $dropdown - The dropdown element
+     */
+    function showTypeaheadLoading($dropdown) {
+        $dropdown.empty().append(
+            $('<div></div>')
+                .addClass('typeahead-loading')
+                .html('<i class="ti ti-loader me-1"></i>Searching...')
+        ).addClass('show');
+    }
+
+    /**
+     * Initialize the module
+     */
+    function init() {
+        initializeDateTimePickers();
+
+        // Check if data is pre-loaded server-side
+        const hasServerData = $('#locationSelect option').length > 2; // More than just empty + "Not Specified"
+
+        if (!hasServerData) {
+            // Fallback: Load client-side if server-side loading failed
+            console.warn('Server-side data not loaded, falling back to client-side loading');
+            loadLocations();
+            loadWorkCategories();
+            loadOtherCategories();
+            loadServiceProviders();
+            loadPriorityLevels();
+            loadFeedbackTypes();
+            loadCurrencies();
+            loadRequestMethods();
+            loadStatuses();
+            loadImportantChecklist();
+        } else {
+            // Data already loaded server-side, just cache priority levels from DOM
+            console.log('Server-side data detected, caching priority level details');
+            cachePriorityLevelsFromDOM();
+        }
+
+        // Initialize interactive features (these always run)
+        initializeLocationSearch();
+        initializeLocationCascade();
+        initializeRequestorSearch();
+        initializeWorkerSearch();
+        initializePersonInCharge();
+        initializeServiceProviderChange();
+        initializePriorityLevel();
+        initializeTargetOverrides();
+        initializeLaborMaterial();
+        initializeWorkers();
+        initializeFormSubmission();
+        setCurrentDateTime();
+
+        // Edit mode - populate form with existing data
+        if (window.WorkRequestContext?.workRequestData) {
+            console.log('Edit mode: Populating form with work request data');
+            // Wait for all components to initialize, then populate
+            setTimeout(function () {
+                populateEditModeData(window.WorkRequestContext.workRequestData);
+            }, 500);
+        } else {
+            console.error('Edit mode: No work request data found in WorkRequestContext');
+        }
+
+        // Initialize client session monitoring for multi-tab session safety
+        if (typeof ClientSessionMonitor !== 'undefined') {
+            sessionMonitor = new ClientSessionMonitor({
+                pageLoadClientId: clientContext.idClient,
+                pageLoadCompanyId: clientContext.idCompany,
+                checkEndpoint: '/Helpdesk/CheckSessionClient',
+                enableBanner: true
+            });
+            sessionMonitor.start();
+        } else {
+            console.warn('ClientSessionMonitor not loaded - tab session monitoring disabled');
+        }
+
+        console.log('Work Request Edit page initialized');
+    }
+
+    /**
+     * Cache priority level data from server-rendered DOM
+     */
+    function cachePriorityLevelsFromDOM() {
         try {
-            await loadPriorityLevels();
-            setupEventListeners();
-            setupDateTimePickers();
-        } catch (error) {
-            console.error('Error initializing page:', error);
-            showNotification('Failed to initialize page', 'error', 'Error');
-        }
-    }
+            $('#priorityLevelSelect option[value!=""]').each(function () {
+                const $option = $(this);
+                const priorityId = $option.val();
+                const priorityDetailsJson = $option.attr('data-priority-details');
 
-    /**
-     * Setup event listeners for real-time target date calculation
-     */
-    function setupEventListeners() {
-        // Real-time calculation triggers
-        $('#requestDate, #requestTime').on('change', function () {
-            triggerTargetDateCalculation();
-        });
+                console.log('Processing priority option:', priorityId, 'Has data-priority-details:', !!priorityDetailsJson);
 
-        $('#priorityLevelSelect').on('change', function () {
-            triggerTargetDateCalculation();
-        });
-
-        // Target override buttons
-        setupTargetOverrideListeners();
-    }
-
-    /**
-     * Setup date and time pickers
-     */
-    function setupDateTimePickers() {
-        // Set current date/time as default for request date if empty
-        const now = new Date();
-        const dateInput = $('#requestDate');
-        const timeInput = $('#requestTime');
-
-        if (!dateInput.val()) {
-            dateInput.val(formatDateForInput(now));
-        }
-
-        if (!timeInput.val()) {
-            timeInput.val(formatTimeForInput(now));
-        }
-
-        // Trigger initial calculation if priority is selected
-        if ($('#priorityLevelSelect').val()) {
-            triggerTargetDateCalculation();
-        }
-    }
-
-    /**
-     * Load priority levels from API and cache full details
-     */
-    async function loadPriorityLevels() {
-        try {
-            // Fetch priority levels list
-            const listResponse = await fetch(CONFIG.apiEndpoints.priorityLevels);
-            if (!listResponse.ok) {
-                throw new Error(`HTTP error! status: ${listResponse.status}`);
-            }
-
-            const listData = await listResponse.json();
-            if (!listData.success || !listData.data) {
-                throw new Error('Failed to load priority levels');
-            }
-
-            // Fetch detailed data for each priority level in parallel
-            const detailPromises = listData.data.map(async (priority) => {
-                try {
-                    const priorityId = priority.value || priority.id;
-                    const detailResponse = await fetch(`/Helpdesk/GetPriorityLevelById?id=${priorityId}`);
-
-                    if (!detailResponse.ok) {
-                        console.error(`Failed to load details for priority ${priorityId}`);
-                        return null;
+                if (priorityDetailsJson) {
+                    try {
+                        const priorityData = JSON.parse(priorityDetailsJson);
+                        state.priorityLevelsCache[priorityId] = priorityData;
+                        console.log('Cached priority data for ID', priorityId, ':', priorityData);
+                    } catch (e) {
+                        console.error('Error parsing priority level data for ID:', priorityId, e);
+                        console.error('Raw JSON:', priorityDetailsJson);
                     }
-
-                    const detailData = await detailResponse.json();
-                    if (detailData.success && detailData.data) {
-                        // Cache the full priority data
-                        state.priorityLevelsCache[priorityId] = detailData.data;
-
-                        // Add to dropdown
-                        const option = new Option(
-                            priority.text || priority.label,
-                            priorityId,
-                            false,
-                            false
-                        );
-                        $('#priorityLevelSelect').append(option);
-
-                        return detailData.data;
-                    }
-
-                    return null;
-                } catch (error) {
-                    console.error(`Error loading priority ${priority.value}:`, error);
-                    return null;
                 }
             });
 
+            console.log('Priority levels cached from DOM:', Object.keys(state.priorityLevelsCache).length);
+            console.log('Cache contents:', state.priorityLevelsCache);
+        } catch (error) {
+            console.error('Error caching priority levels from DOM:', error);
+        }
+    }
+
+    /**
+     * Initialize date and time pickers
+     */
+    function initializeDateTimePickers() {
+        // Set min date to today for all date inputs
+        const today = new Date().toISOString().split('T')[0];
+        $('input[type="date"]').attr('min', today);
+
+        // Setup real-time calculation triggers
+        $('#requestDate').on('change', triggerTargetDateCalculation);
+        $('#requestTime').on('change', triggerTargetDateCalculation);
+        $('#priorityLevelSelect').on('change', triggerTargetDateCalculation);
+    }
+
+    /**
+     * Set current date and time in request date/time fields
+     * Only called in Add mode, skipped in Edit mode
+     */
+    function setCurrentDateTime() {
+        // Skip in edit mode - dates will be populated from existing data
+        if (window.WorkRequestContext?.isEditMode) {
+            return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+
+        $('#requestDate').val(dateStr);
+        $('#requestTime').val(timeStr);
+    }
+
+    /**
+     * Auto-select first priority level on page load and trigger calculation
+     */
+    function autoSelectFirstPriorityLevel() {
+        const $prioritySelect = $('#priorityLevelSelect');
+        const $firstOption = $prioritySelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $prioritySelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('priorityLevelSelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            // Trigger the target date calculation
+            triggerTargetDateCalculation();
+
+            console.log('Auto-selected first priority level:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first location on page load and trigger cascade to floors/rooms
+     */
+    function autoSelectFirstLocation() {
+        const $locationSelect = $('#locationSelect');
+        const $firstValidOption = $locationSelect.find('option[value!=""][value!="-1"]').first();
+
+        if ($firstValidOption.length > 0) {
+            const firstValue = $firstValidOption.val();
+            $locationSelect.val(firstValue);
+            state.selectedLocation = firstValue;
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('locationSelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstValidOption.text(), true);
+            }
+
+            // Trigger change to cascade to floors (which will cascade to rooms)
+            $locationSelect.trigger('change');
+
+            console.log('Auto-selected first location:', firstValue, $firstValidOption.text());
+        }
+    }
+
+    /**
+     * Load locations from API (replaces server-side rendering)
+     */
+    function loadLocations() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.locations,
+            method: 'GET',
+            data: getClientParams(),
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#locationSelect');
+                    $select.empty()
+                        .append('<option value="">Select Location</option>')
+                        .append('<option value="-1">Not Specified</option>');
+                    $.each(response.data, function (index, location) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(location.idProperty)
+                                .text(location.propertyName)
+                                .attr('data-property-group', location.idPropertyType || '')
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading locations:', error);
+                showNotification('Error loading locations', 'error');
+            }
+        });
+    }
+
+    /**
+     * Load work categories from API
+     */
+    function loadWorkCategories() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.workCategories,
+            method: 'GET',
+            data: getClientParams(),
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#workCategorySelect');
+                    $select.empty().append('<option value="">Select Work Category</option>');
+                    $.each(response.data, function (index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.idType)
+                                .text(category.typeName)
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading work categories:', error);
+            }
+        });
+    }
+
+    /**
+     * Load other categories from API
+     */
+    function loadOtherCategories() {
+        // Load Other Category 1
+        $.ajax({
+            url: CONFIG.apiEndpoints.otherCategories,
+            method: 'GET',
+            data: withClientParams({ categoryType: 'workRequestCustomCategory' }),
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#otherCategorySelect');
+                    $select.empty().append('<option value="">Select Other Category</option>');
+                    $.each(response.data, function (index, category) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(category.idType)
+                                .text(category.typeName)
+                        );
+                    });
+                }
+            }
+        });
+
+        // Load Other Category 2
+        $.ajax({
+            url: CONFIG.apiEndpoints.otherCategories,
+            method: 'GET',
+            data: withClientParams({ categoryType: 'workRequestCustomCategory2' }),
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $container = $('#otherCategory2Container');
+
+                    if (response.data.length === 0) {
+                        // Hide container if no data
+                        $container.hide();
+                    } else {
+                        $container.show();
+                        const $select = $('#otherCategory2Select');
+                        $select.empty().append('<option value="">Select Other Category 2</option>');
+                        $.each(response.data, function (index, category) {
+                            $select.append(
+                                $('<option></option>')
+                                    .val(category.idType)
+                                    .text(category.typeName)
+                            );
+                        });
+                    }
+                } else {
+                    // Hide if API fails
+                    $('#otherCategory2Container').hide();
+                }
+            },
+            error: function () {
+                // Hide on error
+                $('#otherCategory2Container').hide();
+            }
+        });
+    }
+
+    /**
+     * Load service providers from API
+     */
+    function loadServiceProviders() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.serviceProviders,
+            method: 'GET',
+            data: getClientParams(),
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#serviceProviderSelect');
+                    $select.empty()
+                        .append('<option value="-1">Not Specified</option>')
+                        .append('<option value="-2">Self-Performed</option>');
+                    $.each(response.data, function (index, provider) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(provider.idServiceProvider)
+                                .text(provider.aliasCompanyName)
+                                .attr('data-id-company', provider.idCompany)
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading service providers:', error);
+            }
+        });
+    }
+
+    /**
+     * Load priority levels from API with full details
+     * Caches the full priority level data for target date calculations
+     */
+    async function loadPriorityLevels() {
+        try {
+            // Fetch the list of priority levels first (for dropdown)
+            const clientParams = new URLSearchParams(getClientParams());
+            const listResponse = await fetch(`${CONFIG.apiEndpoints.priorityLevels}?${clientParams}`);
+            const listData = await listResponse.json();
+
+            if (!listData.success || !listData.data) {
+                throw new Error('Failed to load priority levels list');
+            }
+
+            // Populate the dropdown
+            const $select = $('#priorityLevelSelect');
+            $select.empty().append('<option value="">Select Priority Level</option>');
+
+            // Fetch full details for each priority level and cache
+            const detailPromises = listData.data.map(async (priority) => {
+                const priorityId = priority.value || priority.id;
+
+                // Fetch full priority level details
+                const detailParams = { id: priorityId, ...getClientParams() };
+                const detailResponse = await fetch(MvcEndpoints.Helpers.buildUrl(MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevelById, detailParams));
+                const detailData = await detailResponse.json();
+
+                if (detailData.success && detailData.data) {
+                    // Cache the full priority level data
+                    state.priorityLevelsCache[priorityId] = detailData.data;
+
+                    // Add to dropdown
+                    $select.append(
+                        $('<option></option>')
+                            .val(priorityId)
+                            .text(priority.label || priority.name)
+                            .attr('data-description', priority.description || '')
+                    );
+                }
+            });
+
+            // Wait for all detail fetches to complete
             await Promise.all(detailPromises);
+
             console.log('Priority levels loaded and cached:', Object.keys(state.priorityLevelsCache).length);
 
         } catch (error) {
             console.error('Error loading priority levels:', error);
-            showNotification('Failed to load priority levels', 'error', 'Error');
+            showNotification('Error loading priority levels', 'error');
         }
     }
 
     /**
-     * Trigger target date calculation
-     * Fetches office hours and public holidays, then calculates all target dates
+     * Load feedback types from API
+     */
+    function loadFeedbackTypes() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.feedbackTypes,
+            method: 'GET',
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#feedbackStatus');
+                    $select.empty().append('<option value="">No Feedback</option>');
+                    $.each(response.data, function (index, type) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(type.idEnum)
+                                .text(type.enumName)
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading feedback types:', error);
+            }
+        });
+    }
+
+    /**
+     * Load currencies from API
+     */
+    function loadCurrencies() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.getCurrencies,
+            method: 'GET',
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $select = $('#costEstimationCurrencySelect');
+                    $select.empty().append('<option value="">Select Currency</option>');
+                    $.each(response.data, function (index, currency) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(currency.id || currency.value)
+                                .text(currency.code || currency.name)
+                        );
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading currencies:', error);
+            }
+        });
+    }
+
+    /**
+     * Load request methods from API (replaces hardcoded radio buttons)
+     */
+    function loadRequestMethods() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.requestMethods,
+            method: 'GET',
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $container = $('.col-md-6 .form-label:contains("Request Method")').siblings('.mt-2');
+                    $container.empty();
+                    $.each(response.data, function (index, method) {
+                        const radioId = 'method' + method.idEnum;
+                        const isFirst = index === 0;
+                        $container.append(`
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio"
+                                       name="RequestMethod"
+                                       id="${radioId}"
+                                       value="${method.idEnum}"
+                                       ${isFirst ? 'required' : ''}>
+                                <label class="form-check-label" for="${radioId}">
+                                    ${method.enumName}
+                                </label>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading request methods:', error);
+            }
+        });
+    }
+
+    /**
+     * Load statuses from API (replaces hardcoded radio buttons)
+     */
+    function loadStatuses() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.statuses,
+            method: 'GET',
+            success: function (response) {
+                if (response.success && response.data) {
+                    const $container = $('.col-md-6 .form-label:contains("Status")').siblings('.mt-2');
+                    $container.empty();
+                    $.each(response.data, function (index, status) {
+                        const radioId = 'status' + status.idEnum;
+                        const isNew = status.enumName === 'New';
+                        $container.append(`
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio"
+                                       name="Status"
+                                       id="${radioId}"
+                                       value="${status.idEnum}"
+                                       ${isNew ? 'checked' : ''}
+                                       ${index === 0 ? 'required' : ''}>
+                                <label class="form-check-label" for="${radioId}">
+                                    ${status.enumName}
+                                </label>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading statuses:', error);
+            }
+        });
+    }
+
+    /**
+     * Load important checklist from API
+     */
+    function loadImportantChecklist() {
+        $.ajax({
+            url: CONFIG.apiEndpoints.importantChecklist,
+            method: 'GET',
+            data: getClientParams(),
+            success: function (response) {
+                if (response.success && response.data) {
+                    state.importantChecklistData = response.data;
+                    const $container = $('#importantChecklistContainer');
+                    $container.empty();
+
+                    $.each(response.data, function (index, item) {
+                        $container.append(`
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input important-checklist-item"
+                                           type="checkbox"
+                                           id="checklist${item.idType}"
+                                           data-type-id="${item.idType}"
+                                           value="false">
+                                    <label class="form-check-label" for="checklist${item.idType}">
+                                        ${item.typeName}
+                                    </label>
+                                </div>
+                            </div>
+                        `);
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading important checklist:', error);
+            }
+        });
+    }
+
+    /**
+     * Initialize location search functionality
+     */
+    function initializeLocationSearch() {
+        const $locationSearch = $('#locationSearch');
+        const $locationSelect = $('#locationSelect');
+
+        // Store original options
+        const originalOptions = $locationSelect.find('option').clone();
+
+        $locationSearch.on('keyup', debounce(function () {
+            const searchTerm = $(this).val().toLowerCase().trim();
+
+            if (searchTerm === '') {
+                // Restore all options
+                $locationSelect.empty().append(originalOptions.clone());
+                $locationSelect.val('').trigger('change');
+            } else {
+                // Filter options
+                $locationSelect.find('option').each(function () {
+                    const optionText = $(this).text().toLowerCase();
+                    const optionValue = $(this).val();
+
+                    if (optionValue === '' || optionText.indexOf(searchTerm) > -1) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            }
+        }, CONFIG.debounceDelay));
+
+        // Clear search when location is selected
+        $locationSelect.on('change', function () {
+            if ($(this).val()) {
+                $locationSearch.val('');
+            }
+        });
+    }
+
+    /**
+     * Initialize location cascade (location -> floor -> room)
+     */
+    function initializeLocationCascade() {
+        const $locationSelect = $('#locationSelect');
+        const $floorSelect = $('#floorSelect');
+        const $roomSelect = $('#roomSelect');
+
+        // When location changes, load floors
+        $locationSelect.on('change', function () {
+            // Skip automatic cascade during edit mode data loading
+            if (state.isLoadingEditData) {
+                return;
+            }
+
+            const locationId = $(this).val();
+            state.selectedLocation = locationId;
+
+            // Reset floor and room dropdowns
+            $floorSelect.prop('disabled', true).empty().append('<option value="">Loading floors...</option>');
+            $roomSelect.prop('disabled', true).empty().append('<option value="">Select Room/Area/Zone</option>');
+            state.selectedFloor = null;
+            state.selectedRoom = null;
+
+            // Reset searchable dropdown components
+            const floorElement = document.getElementById('floorSelect');
+            if (floorElement && floorElement._searchableDropdown) {
+                floorElement._searchableDropdown.clear();
+                floorElement._searchableDropdown.loadFromSelect();
+                floorElement._searchableDropdown.disable();
+            }
+            const roomElement = document.getElementById('roomSelect');
+            if (roomElement && roomElement._searchableDropdown) {
+                roomElement._searchableDropdown.clear();
+                roomElement._searchableDropdown.loadFromSelect();
+                roomElement._searchableDropdown.disable();
+            }
+
+            if (locationId) {
+                loadFloors(locationId);
+            } else {
+                $floorSelect.empty().append('<option value="">Select Floor</option>');
+            }
+        });
+
+        // When floor changes, load rooms
+        $floorSelect.on('change', function () {
+            // Skip automatic cascade during edit mode data loading
+            if (state.isLoadingEditData) {
+                return;
+            }
+
+            const floorId = $(this).val();
+            state.selectedFloor = floorId;
+
+            // Reset room dropdown
+            $roomSelect.prop('disabled', true).empty().append('<option value="">Loading rooms...</option>');
+            state.selectedRoom = null;
+
+            // Reset searchable dropdown component
+            const roomElement = document.getElementById('roomSelect');
+            if (roomElement && roomElement._searchableDropdown) {
+                roomElement._searchableDropdown.clear();
+                roomElement._searchableDropdown.loadFromSelect();
+                roomElement._searchableDropdown.disable();
+            }
+
+            if (floorId && state.selectedLocation) {
+                loadRooms(state.selectedLocation, floorId);
+            } else {
+                $roomSelect.empty().append('<option value="">Select Room/Area/Zone</option>');
+            }
+        });
+
+        // When room changes, update state
+        $roomSelect.on('change', function () {
+            state.selectedRoom = $(this).val();
+        });
+    }
+
+    /**
+     * Load floors for selected property
+     * Returns a promise if returnPromise is true (for edit mode cascade)
+     */
+    function loadFloors(propertyId, returnPromise = false) {
+        const $floorSelect = $('#floorSelect');
+
+        // Show loading state
+        showDropdownLoading('floorSelect');
+
+        const ajaxPromise = $.ajax({
+            url: CONFIG.apiEndpoints.floors,
+            method: 'GET',
+            data: withClientParams({ locationId: propertyId }),
+            success: function (response) {
+                $floorSelect.empty()
+                    .append('<option value="">Select Floor</option>')
+                    .append('<option value="-1">Not Specified</option>');
+
+                if (response.success && response.data && response.data.length > 0) {
+                    $.each(response.data, function (index, floor) {
+                        $floorSelect.append(
+                            $('<option></option>')
+                                .val(floor.idPropertyFloor)
+                                .text(floor.floorUnitName)
+                        );
+                    });
+                    $floorSelect.prop('disabled', false);
+
+                    // Refresh and enable the searchable dropdown component
+                    const selectElement = document.getElementById('floorSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                    }
+
+                    // Auto-select first valid floor only in Add mode (skip in Edit mode)
+                    if (!state.isLoadingEditData) {
+                        const $firstValidFloor = $floorSelect.find('option[value!=""][value!="-1"]').first();
+                        if ($firstValidFloor.length > 0) {
+                            const firstValue = $firstValidFloor.val();
+                            $floorSelect.val(firstValue);
+                            state.selectedFloor = firstValue;
+
+                            if (selectElement && selectElement._searchableDropdown) {
+                                selectElement._searchableDropdown.setValue(firstValue, $firstValidFloor.text(), true);
+                            }
+
+                            // Trigger change to cascade to rooms
+                            $floorSelect.trigger('change');
+                        }
+                    }
+                } else {
+                    $floorSelect.append('<option value="">No floors available</option>');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading floors:', error);
+                $floorSelect.empty().append('<option value="">Error loading floors</option>');
+                showNotification('Error loading floors. Please try again.', 'error');
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('floorSelect');
+            }
+        });
+
+        // Return promise if requested (for edit mode cascade)
+        if (returnPromise) {
+            return ajaxPromise;
+        }
+    }
+
+    /**
+     * Load room zones for selected property and floor
+     * Returns a promise if returnPromise is true (for edit mode cascade)
+     */
+    function loadRooms(propertyId, floorId, returnPromise = false) {
+        const $roomSelect = $('#roomSelect');
+
+        // Show loading state
+        showDropdownLoading('roomSelect');
+
+        const ajaxPromise = $.ajax({
+            url: CONFIG.apiEndpoints.rooms,
+            method: 'GET',
+            data: withClientParams({ propertyId: propertyId, floorId: floorId }),
+            success: function (response) {
+                $roomSelect.empty()
+                    .append('<option value="">Select Room/Area/Zone</option>')
+                    .append('<option value="-1">Not Specified</option>');
+
+                if (response.success && response.data && response.data.length > 0) {
+                    $.each(response.data, function (index, room) {
+                        $roomSelect.append(
+                            $('<option></option>')
+                                .val(room.idRoomZone)
+                                .text(room.roomZoneName)
+                        );
+                    });
+                    $roomSelect.prop('disabled', false);
+
+                    // Refresh and enable the searchable dropdown component
+                    const selectElement = document.getElementById('roomSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                    }
+
+                    // Auto-select first valid room only in Add mode (skip in Edit mode)
+                    if (!state.isLoadingEditData) {
+                        const $firstValidRoom = $roomSelect.find('option[value!=""][value!="-1"]').first();
+                        if ($firstValidRoom.length > 0) {
+                            const firstValue = $firstValidRoom.val();
+                            $roomSelect.val(firstValue);
+                            state.selectedRoom = firstValue;
+
+                            if (selectElement && selectElement._searchableDropdown) {
+                                selectElement._searchableDropdown.setValue(firstValue, $firstValidRoom.text(), true);
+                            }
+                        }
+                    }
+                } else {
+                    $roomSelect.append('<option value="">No room zones available</option>');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading rooms:', error);
+                $roomSelect.empty().append('<option value="">Error loading rooms</option>');
+                showNotification('Error loading rooms. Please try again.', 'error');
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('roomSelect');
+            }
+        });
+
+        // Return promise if requested (for edit mode cascade)
+        if (returnPromise) {
+            return ajaxPromise;
+        }
+    }
+
+    /**
+     * Initialize requestor search with typeahead and card display
+     */
+    function initializeRequestorSearch() {
+        const $requestorSearch = $('#requestorSearch');
+        const $requestorDropdown = $('#requestorDropdown');
+        const $requestorId = $('#requestorId');
+
+        let searchTimeout;
+
+        $requestorSearch.on('keyup', function () {
+            clearTimeout(searchTimeout);
+            const term = $(this).val().trim();
+
+            if (term.length < CONFIG.minSearchLength) {
+                $requestorDropdown.removeClass('show').empty();
+                return;
+            }
+
+            searchTimeout = setTimeout(function () {
+                // Show loading state
+                showInputLoading($requestorSearch);
+                showTypeaheadLoading($requestorDropdown);
+
+                searchEmployees(term, $requestorDropdown, function (employee) {
+                    // Show card instead of just updating text
+                    showRequestorCard(employee);
+                    $requestorDropdown.removeClass('show').empty();
+                    hideInputLoading($requestorSearch);
+                });
+            }, CONFIG.debounceDelay);
+        });
+
+        // Close dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#requestorSearch, #requestorDropdown').length) {
+                $requestorDropdown.removeClass('show').empty();
+            }
+        });
+
+        // Delete button click handler
+        $('#deleteRequestorBtn').on('click', function () {
+            resetRequestorSelection();
+        });
+    }
+
+    /**
+     * Initialize worker search with typeahead
+     */
+    function initializeWorkerSearch() {
+        const $workerSearch = $('#workerSearch');
+        const $workerDropdown = $('#workerDropdown');
+        const $workerId = $('#workerId');
+        const $serviceProviderSelect = $('#serviceProviderSelect');
+
+        let searchTimeout;
+
+        $workerSearch.on('keyup', function () {
+            clearTimeout(searchTimeout);
+            const term = $(this).val().trim();
+
+            if (term.length < CONFIG.minSearchLength) {
+                $workerDropdown.removeClass('show').empty();
+                return;
+            }
+
+            searchTimeout = setTimeout(function () {
+                const serviceProviderId = $serviceProviderSelect.val();
+                searchWorkers(term, serviceProviderId, $workerDropdown, function (worker) {
+                    $workerSearch.val(worker.name);
+                    $workerId.val(worker.id);
+                    state.selectedWorker = worker;
+                    $workerDropdown.removeClass('show').empty();
+                });
+            }, CONFIG.debounceDelay);
+        });
+
+        // Close dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#workerSearch, #workerDropdown').length) {
+                $workerDropdown.removeClass('show').empty();
+            }
+        });
+    }
+
+    /**
+     * Search requestors via API (updated for new backend structure)
+     * Response model: RequestorFormDetailResponse
+     * Fields: IdEmployee, FullName, DepartmentName, Title, EmailAddress, PhoneNumber
+     */
+    function searchEmployees(term, $dropdown, onSelectCallback) {
+        $.ajax({
+            url: CONFIG.apiEndpoints.searchRequestors,
+            method: 'GET',
+            data: withClientParams({ term: term }),
+            success: function (response) {
+                $dropdown.empty();
+
+                if (response.success && response.data && response.data.length > 0) {
+                    $.each(response.data, function (index, employee) {
+                        const name = employee.fullName || employee.FullName;
+                        const title = employee.title || employee.Title || '';
+                        const department = employee.departmentName || employee.DepartmentName || '';
+
+                        const $item = $('<div></div>')
+                            .addClass('typeahead-item')
+                            .html(`
+                                <strong>${name}</strong>
+                                <small class="text-muted">
+                                    ${title ? title + '<br>' : ''}${department}
+                                </small>
+                            `)
+                            .on('click', function () {
+                                onSelectCallback({
+                                    id: employee.idEmployee || employee.IdEmployee,
+                                    fullName: name,
+                                    departmentName: department,
+                                    title: title,
+                                    emailAddress: employee.emailAddress || employee.EmailAddress || '',
+                                    phoneNumber: employee.phoneNumber || employee.PhoneNumber || ''
+                                });
+                            });
+                        $dropdown.append($item);
+                    });
+                    $dropdown.addClass('show');
+                } else {
+                    $dropdown.append(
+                        $('<div></div>')
+                            .addClass('typeahead-item text-muted')
+                            .text('No requestors found')
+                    );
+                    $dropdown.addClass('show');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error searching requestors:', error);
+                showNotification('Error searching requestors. Please try again.', 'error');
+                $dropdown.removeClass('show').empty();
+            },
+            complete: function () {
+                // Hide input loading state
+                hideInputLoading('#requestorSearch');
+            }
+        });
+    }
+
+    /**
+     * Show requestor card with employee information
+     * Displays card with avatar, name, title, department, email, phone
+     * Model: RequestorFormDetailResponse
+     */
+    function showRequestorCard(requestor) {
+        // Store selected requestor in state
+        state.selectedRequestor = requestor;
+
+        // Update hidden ID field
+        $('#requestorId').val(requestor.id);
+
+        // Generate avatar with initials
+        const initials = generateInitials(requestor.fullName);
+        const avatarColor = generateAvatarColor(requestor.fullName);
+
+        // Update card content
+        $('#requestorInitials').text(initials);
+        $('#requestorAvatar').css('background-color', avatarColor);
+        $('#requestorCardName').text(requestor.fullName);
+
+        // Build details HTML
+        let detailsHtml = '';
+        if (requestor.title) {
+            detailsHtml += `<div><i class="ti ti-briefcase me-1"></i>${requestor.title}</div>`;
+        }
+        if (requestor.departmentName) {
+            detailsHtml += `<div><i class="ti ti-building me-1"></i>${requestor.departmentName}</div>`;
+        }
+        if (requestor.emailAddress) {
+            detailsHtml += `<div><i class="ti ti-mail me-1"></i>${requestor.emailAddress}</div>`;
+        }
+        if (requestor.phoneNumber) {
+            detailsHtml += `<div><i class="ti ti-phone me-1"></i>${requestor.phoneNumber}</div>`;
+        }
+
+        $('#requestorCardDetails').html(detailsHtml || '<div class="text-muted fst-italic">No details available</div>');
+
+        // Toggle visibility: hide search, show card
+        $('#requestorSearchContainer').hide();
+        $('#requestorCard').fadeIn(300);
+
+        // Mark the hidden input as having a value (for form validation)
+        $('#requestorSearch').removeAttr('required');
+    }
+
+    /**
+     * Reset requestor selection
+     * Hides card and shows search box again
+     */
+    function resetRequestorSelection() {
+        // Clear state
+        state.selectedRequestor = null;
+
+        // Clear hidden ID field
+        $('#requestorId').val('');
+
+        // Clear search input
+        $('#requestorSearch').val('').attr('required', 'required');
+
+        // Clear card content
+        $('#requestorCardName').text('');
+        $('#requestorCardDetails').empty();
+
+        // Toggle visibility: show search, hide card
+        $('#requestorCard').hide();
+        $('#requestorSearchContainer').fadeIn(300);
+
+        // Focus back on search input
+        setTimeout(function() {
+            $('#requestorSearch').focus();
+        }, 350);
+
+        showNotification('Requestor selection cleared', 'info');
+    }
+
+    /**
+     * Generate initials from full name (first letter of first and last name)
+     * Examples: "Adi Hidayat" -> "AH", "John Doe Smith" -> "JS"
+     */
+    function generateInitials(fullName) {
+        if (!fullName) return '??';
+
+        const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+
+        if (nameParts.length === 0) return '??';
+        if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase();
+
+        // First letter of first name + first letter of last name
+        const firstInitial = nameParts[0].charAt(0);
+        const lastInitial = nameParts[nameParts.length - 1].charAt(0);
+
+        return (firstInitial + lastInitial).toUpperCase();
+    }
+
+    /**
+     * Generate consistent avatar color based on name
+     * Uses a predefined color palette for professional appearance
+     */
+    function generateAvatarColor(fullName) {
+        const colors = [
+            '#3498db', // Blue
+            '#e74c3c', // Red
+            '#2ecc71', // Green
+            '#f39c12', // Orange
+            '#9b59b6', // Purple
+            '#1abc9c', // Turquoise
+            '#e67e22', // Dark Orange
+            '#34495e', // Dark Blue Gray
+            '#16a085', // Dark Turquoise
+            '#c0392b'  // Dark Red
+        ];
+
+        if (!fullName) return colors[0];
+
+        // Generate consistent index based on name hash
+        let hash = 0;
+        for (let i = 0; i < fullName.length; i++) {
+            hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        const index = Math.abs(hash) % colors.length;
+        return colors[index];
+    }
+
+    /**
+     * Search workers from company via API
+     * Uses backend endpoint: /api/v1/employee/worker
+     * Response includes: IdEmployee, FullName, DepartmentName, Title
+     */
+    function searchWorkers(term, serviceProviderId, $dropdown, onSelectCallback) {
+        const idLocation = state.selectedLocation;
+
+        if (!idLocation) {
+            showNotification('Please select a location first', 'warning');
+            return;
+        }
+
+        $.ajax({
+            url: CONFIG.apiEndpoints.searchWorkersByCompany,
+            method: 'GET',
+            data: withClientParams({
+                term: term,
+                idLocation: idLocation
+            }),
+            success: function (response) {
+                $dropdown.empty();
+
+                if (response.success && response.data && response.data.length > 0) {
+                    $.each(response.data, function (index, worker) {
+                        const $item = $('<div></div>')
+                            .addClass('typeahead-item')
+                            .html(`
+                                <strong>${worker.fullName || worker.FullName}</strong>
+                                <small class="text-muted">
+                                    ${worker.title || worker.Title || ''}<br>
+                                    ${worker.departmentName || worker.DepartmentName || ''}
+                                </small>
+                            `)
+                            .on('click', function () {
+                                onSelectCallback({
+                                    id: worker.idEmployee || worker.IdEmployee,
+                                    name: worker.fullName || worker.FullName
+                                });
+                            });
+                        $dropdown.append($item);
+                    });
+                    $dropdown.addClass('show');
+                } else {
+                    $dropdown.append(
+                        $('<div></div>')
+                            .addClass('typeahead-item text-muted')
+                            .text('No workers found')
+                    );
+                    $dropdown.addClass('show');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error searching workers:', error);
+                showNotification('Error searching workers. Please try again.', 'error');
+            }
+        });
+    }
+
+    /**
+     * Initialize Person in Charge dropdown with dynamic loading
+     */
+    function initializePersonInCharge() {
+        // Load PIC when work category or location changes
+        $('#workCategorySelect, #locationSelect').on('change', function () {
+            const idWorkCategory = $('#workCategorySelect').val();
+            const idLocation = $('#locationSelect').val();
+
+            if (idWorkCategory || idLocation) {
+                loadPersonsInCharge(idWorkCategory, idLocation);
+            }
+        });
+    }
+
+    /**
+     * Load persons in charge with filters
+     */
+    function loadPersonsInCharge(idWorkCategory, idLocation) {
+        const $select = $('#personInChargeSelect');
+
+        const params = {};
+        if (idWorkCategory) params.idWorkCategory = idWorkCategory;
+        if (idLocation) params.idLocation = idLocation;
+
+        // Show loading state
+        showDropdownLoading('personInChargeSelect');
+
+        $.ajax({
+            url: CONFIG.apiEndpoints.personsInCharge,
+            method: 'GET',
+            data: withClientParams(params),
+            success: function (response) {
+                $select.empty().append('<option value="">Select Person in Charge</option>');
+                if (response.success && response.data && response.data.length > 0) {
+                    $.each(response.data, function (index, person) {
+                        $select.append(
+                            $('<option></option>')
+                                .val(person.employee_idEmployee)
+                                .text(person.fullName)
+                        );
+                    });
+
+                    // Auto-select first valid PIC
+                    const $firstValidPIC = $select.find('option[value!=""]').first();
+                    if ($firstValidPIC.length > 0) {
+                        const firstValue = $firstValidPIC.val();
+                        $select.val(firstValue);
+
+                        // Update searchable dropdown if available
+                        const selectElement = document.getElementById('personInChargeSelect');
+                        if (selectElement && selectElement._searchableDropdown) {
+                            selectElement._searchableDropdown.loadFromSelect();
+                            selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
+                        }
+                    }
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading persons in charge:', error);
+            },
+            complete: function () {
+                // Hide loading state
+                hideDropdownLoading('personInChargeSelect');
+            }
+        });
+    }
+
+    /**
+     * Initialize service provider change to show/hide worker from service provider
+     */
+    function initializeServiceProviderChange() {
+        $('#serviceProviderSelect').on('change', function () {
+            const value = $(this).val();
+            const idLocation = state.selectedLocation;
+
+            // Show worker from service provider if not "Not Specified" or "Self-Performed"
+            if (value && value !== '-1' && value !== '-2') {
+                showWorkerFromServiceProvider(value, idLocation);
+                // Show Service Provider Worker option in Add Worker modal
+                updateWorkerSourceOptions(true);
+            } else {
+                hideWorkerFromServiceProvider();
+                // Hide Service Provider Worker option in Add Worker modal
+                updateWorkerSourceOptions(false);
+            }
+        });
+    }
+
+    /**
+     * Update worker source options visibility in Add Worker modal
+     * @param {boolean} showServiceProvider - Whether to show Service Provider Worker option
+     */
+    function updateWorkerSourceOptions(showServiceProvider) {
+        const $serviceProviderOption = $('#serviceProviderSourceOption');
+
+        if (showServiceProvider) {
+            $serviceProviderOption.show();
+        } else {
+            $serviceProviderOption.hide();
+            // If Service Provider was selected, switch back to Company
+            if ($('#sourceServiceProvider').is(':checked')) {
+                $('#sourceCompany').prop('checked', true).trigger('change');
+            }
+        }
+    }
+
+    /**
+     * Show worker from service provider searchbox
+     */
+    function showWorkerFromServiceProvider(idServiceProvider, idLocation) {
+        if ($('#workerServiceProviderSearch').length === 0) {
+            const html = `
+                <div class="col-md-12 mb-3" id="workerServiceProviderContainer">
+                    <label class="form-label fw-semibold">Worker from Service Provider</label>
+                    <input type="text" class="form-control form-control-sm"
+                           id="workerServiceProviderSearch"
+                           placeholder="Type to search worker from service provider..."
+                           autocomplete="off">
+                    <div id="workerServiceProviderDropdown" class="typeahead-dropdown"></div>
+                    <input type="hidden" id="workerServiceProviderId" name="IdWorkerServiceProvider">
+                </div>
+            `;
+            $('#workerSearch').closest('.col-md-12').after(html);
+
+            // Setup autocomplete
+            let timeout;
+            $('#workerServiceProviderSearch').on('keyup', function () {
+                clearTimeout(timeout);
+                const term = $(this).val().trim();
+
+                if (term.length < CONFIG.minSearchLength) {
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                    return;
+                }
+
+                if (!idLocation) {
+                    showNotification('Please select a location first', 'warning');
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                    return;
+                }
+
+                timeout = setTimeout(function () {
+                    $.ajax({
+                        url: CONFIG.apiEndpoints.searchWorkersByServiceProvider,
+                        method: 'GET',
+                        data: withClientParams({
+                            term: term,
+                            idLocation: idLocation,
+                            idServiceProvider: idServiceProvider,
+                            idCompany: clientContext.idClient
+                        }),
+                        success: function (response) {
+                            const $dropdown = $('#workerServiceProviderDropdown');
+                            $dropdown.empty();
+
+                            if (response.success && response.data && response.data.length > 0) {
+                                $.each(response.data, function (index, worker) {
+                                    const $item = $('<div></div>')
+                                        .addClass('typeahead-item')
+                                        .html(`
+                                            <strong>${worker.fullName || worker.name}</strong>
+                                            ${worker.position ? `<br><small class="text-muted">${worker.position}</small>` : ''}
+                                        `)
+                                        .on('click', function () {
+                                            $('#workerServiceProviderSearch').val(worker.fullName || worker.name);
+                                            $('#workerServiceProviderId').val(worker.id);
+                                            $dropdown.removeClass('show').empty();
+                                        });
+                                    $dropdown.append($item);
+                                });
+                                $dropdown.addClass('show');
+                            } else {
+                                $dropdown.append(
+                                    $('<div></div>')
+                                        .addClass('typeahead-item text-muted')
+                                        .text('No workers found')
+                                );
+                                $dropdown.addClass('show');
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error searching workers from service provider:', error);
+                            showNotification('Error searching workers. Please try again.', 'error');
+                        }
+                    });
+                }, CONFIG.debounceDelay);
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#workerServiceProviderSearch, #workerServiceProviderDropdown').length) {
+                    $('#workerServiceProviderDropdown').removeClass('show').empty();
+                }
+            });
+        }
+    }
+
+    /**
+     * Hide worker from service provider searchbox
+     */
+    function hideWorkerFromServiceProvider() {
+        $('#workerServiceProviderContainer').remove();
+    }
+
+    /**
+     * Initialize priority level dropdown (legacy compatibility)
+     */
+    function initializePriorityLevel() {
+        // Priority level change is now handled by triggerTargetDateCalculation
+        // This function kept for backward compatibility
+    }
+
+    /**
+     * Trigger target date calculation (real-time on change)
+     * Uses cached priority data and fetches fresh office hours/holidays
      */
     async function triggerTargetDateCalculation() {
+        // Skip auto-calculation if we're loading edit mode data
+        if (state.isLoadingEditData) {
+            return;
+        }
+
         const requestDate = $('#requestDate').val();
         const requestTime = $('#requestTime').val();
         const priorityId = $('#priorityLevelSelect').val();
 
-        // Validate inputs
+        // Only calculate if all required fields are filled
         if (!requestDate || !requestTime || !priorityId) {
-            clearAllTargets();
+            clearAllTargetDates();
             return;
         }
 
+        // Check if priority level is cached
+        if (!state.priorityLevelsCache[priorityId]) {
+            console.error('Priority level not found in cache:', priorityId);
+            hideAllTargetDates();
+            showNotification('Priority level data not loaded. Please refresh the page.', 'error', 'Error');
+            return;
+        }
+
+        // Show loading state
+        showTargetDatesLoading();
+
         try {
-            // Show loading state
-            showCalculationLoading();
-
-            // Fetch office hours and public holidays in parallel
+            // Fetch fresh office hours and public holidays (per user requirement)
+            const businessDayParams = new URLSearchParams(getClientParams());
             const [officeHoursResponse, publicHolidaysResponse] = await Promise.all([
-                fetch(CONFIG.apiEndpoints.officeHours),
-                fetch(CONFIG.apiEndpoints.publicHolidays)
+                fetch(`${CONFIG.apiEndpoints.officeHours}?${businessDayParams}`),
+                fetch(`${CONFIG.apiEndpoints.publicHolidays}?${businessDayParams}`)
             ]);
-
-            if (!officeHoursResponse.ok || !publicHolidaysResponse.ok) {
-                throw new Error('Failed to fetch calculation data');
-            }
 
             const officeHoursData = await officeHoursResponse.json();
             const publicHolidaysData = await publicHolidaysResponse.json();
 
+            // Check if data loaded successfully
             if (!officeHoursData.success || !publicHolidaysData.success) {
-                throw new Error('Invalid calculation data received');
+                hideAllTargetDates();
+                showNotification('Failed to load business day configuration. Cannot calculate target dates.', 'error', 'Error');
+                return;
             }
 
-            // Get cached priority data
-            const priorityData = state.priorityLevelsCache[priorityId];
-            if (!priorityData) {
-                throw new Error('Priority level data not found in cache');
-            }
-
-            // Initialize calculator
-            state.targetCalculator = new BusinessDateCalculator(
+            // Initialize calculator with fresh data
+            const calculator = new BusinessDateCalculator(
                 officeHoursData.data,
                 publicHolidaysData.data
             );
 
-            // Calculate all target dates
-            calculateAndDisplayTargets(requestDate, requestTime, priorityData);
+            // Get cached priority level data
+            const priorityData = state.priorityLevelsCache[priorityId];
+
+            // Perform calculations
+            calculateAndDisplayTargets(priorityData, calculator, requestDate, requestTime);
 
         } catch (error) {
             console.error('Error calculating target dates:', error);
-            clearAllTargets();
-            showNotification('Failed to calculate target dates. Please try again.', 'error', 'Calculation Error');
+            hideAllTargetDates();
+            showNotification('Error calculating target dates. Please try again.', 'error', 'Error');
         }
     }
 
     /**
-     * Calculate all target dates and display them
+     * Show loading state for target dates
      */
-    function calculateAndDisplayTargets(requestDate, requestTime, priorityData) {
-        try {
-            const startDateTime = new Date(`${requestDate}T${requestTime}`);
-
-            // Define target types with their priority level configurations
-            const targets = [
-                {
-                    type: 'helpdesk',
-                    elementId: 'helpdeskTarget',
-                    days: priorityData.helpdeskResponseDay,
-                    hours: priorityData.helpdeskResponseHour,
-                    minutes: priorityData.helpdeskResponseMinute,
-                    withinOfficeHours: priorityData.helpdeskResponseWithinOfficeHour
-                },
-                {
-                    type: 'initialFollowUp',
-                    elementId: 'initialFollowUpTarget',
-                    days: priorityData.initialFollowUpDay,
-                    hours: priorityData.initialFollowUpHour,
-                    minutes: priorityData.initialFollowUpMinute,
-                    withinOfficeHours: priorityData.initialFollowUpWithinOfficeHour
-                },
-                {
-                    type: 'quotation',
-                    elementId: 'quotationTarget',
-                    days: priorityData.quotationSubmissionDay,
-                    hours: priorityData.quotationSubmissionHour,
-                    minutes: priorityData.quotationSubmissionMinute,
-                    withinOfficeHours: priorityData.quotationSubmissionWithinOfficeHour
-                },
-                {
-                    type: 'costApproval',
-                    elementId: 'costApprovalTarget',
-                    days: priorityData.costApprovalDay,
-                    hours: priorityData.costApprovalHour,
-                    minutes: priorityData.costApprovalMinute,
-                    withinOfficeHours: priorityData.costApprovalWithinOfficeHour
-                },
-                {
-                    type: 'workCompletion',
-                    elementId: 'workCompletionTarget',
-                    days: priorityData.workCompletionDay,
-                    hours: priorityData.workCompletionHour,
-                    minutes: priorityData.workCompletionMinute,
-                    withinOfficeHours: priorityData.workCompletionWithinOfficeHour
-                },
-                {
-                    type: 'afterWork',
-                    elementId: 'afterWorkTarget',
-                    days: priorityData.afterWorkFollowUpDay,
-                    hours: priorityData.afterWorkFollowUpHour,
-                    minutes: priorityData.afterWorkFollowUpMinute,
-                    withinOfficeHours: priorityData.afterWorkFollowUpWithinOfficeHour
-                }
-            ];
-
-            // Calculate and display each target
-            targets.forEach(target => {
-                if (target.days > 0 || target.hours > 0 || target.minutes > 0) {
-                    const targetDate = state.targetCalculator.calculateTargetDate(
-                        new Date(startDateTime),
-                        target.days,
-                        target.hours,
-                        target.minutes,
-                        target.withinOfficeHours
-                    );
-
-                    const tooltipText = buildTooltipText(
-                        target.days,
-                        target.hours,
-                        target.minutes,
-                        target.withinOfficeHours
-                    );
-
-                    updateTargetDateDisplay(target.elementId, targetDate, tooltipText);
-                } else {
-                    updateTargetDateDisplay(target.elementId, null, 'No target configured');
-                }
-            });
-
-        } catch (error) {
-            console.error('Error in calculateAndDisplayTargets:', error);
-            throw error;
-        }
+    function showTargetDatesLoading() {
+        $('.target-time-display .target-date').text('Calculating...');
     }
 
     /**
-     * Build tooltip text for target date (matching legacy format)
+     * Hide all target dates
      */
-    function buildTooltipText(days, hours, minutes, withinOfficeHours) {
-        const parts = [];
+    function hideAllTargetDates() {
+        $('.target-time-display').hide();
+        $('.target-time-display .target-date').text('-');
+    }
 
-        if (days > 0) {
-            parts.push(`${days} day${days > 1 ? 's' : ''}`);
+    /**
+     * Clear all target dates
+     */
+    function clearAllTargetDates() {
+        $('.target-time-display .target-date').text('-');
+    }
+
+    /**
+     * Helper function to get property value supporting both PascalCase and camelCase
+     * C# serializes with PascalCase, but API may return camelCase
+     */
+    function getPriorityProperty(priorityLevel, pascalName) {
+        // Try PascalCase first (from C# JsonSerializer.Serialize in Razor)
+        if (priorityLevel[pascalName] !== undefined) {
+            return priorityLevel[pascalName];
         }
-        if (hours > 0) {
-            parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+        // Try camelCase (from API responses)
+        const camelName = pascalName.charAt(0).toLowerCase() + pascalName.slice(1);
+        if (priorityLevel[camelName] !== undefined) {
+            return priorityLevel[camelName];
         }
-        if (minutes > 0) {
-            parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+        return null;
+    }
+
+    /**
+     * Reference enum mapping - maps enum IDs to their meaning
+     * These values come from the backend enum for target calculation references
+     * Note: Each target type has its own set of enum values
+     */
+    // Reference text values from backend API (matching *TargetCalculationText fields)
+    const REFERENCE_TEXT = {
+        AFTER_REQUEST_DATE: 'After Request Date',
+        AFTER_HELPDESK_RESPONSE_TARGET: 'After Helpdesk Response Target',
+        AFTER_INITIAL_FOLLOWUP_TARGET: 'After Initial Follow Up Target',
+        AFTER_INITIAL_FOLLOWUP: 'After Initial Follow Up',
+        AFTER_QUOTATION_SUBMISSION_TARGET: 'After Quotation Submission Target',
+        AFTER_QUOTATION_SUBMISSION: 'After Quotation Submission',
+        AFTER_COST_APPROVAL_TARGET: 'After Cost Approval Target',
+        AFTER_COST_APPROVAL: 'After Cost Approval',
+        AFTER_WORK_COMPLETION_TARGET: 'After Work Completion Target',
+        AFTER_WORK_COMPLETION: 'After Work Completion'
+    };
+
+    /**
+     * Calculate and display all 6 target dates
+     * Targets are calculated in sequence because some targets depend on the result of previous targets
+     */
+    function calculateAndDisplayTargets(priorityLevel, calculator, requestDate, requestTime) {
+        const requestDateTime = new Date(`${requestDate}T${requestTime}`);
+
+        // Store calculated target dates for chaining
+        const calculatedTargets = {
+            helpdesk: null,
+            initialFollowUp: null,
+            quotation: null,
+            costApproval: null,
+            workCompletion: null,
+            afterWork: null
+        };
+
+        // Define all 6 target types with their priority level field mappings
+        const targets = [
+            {
+                type: 'helpdesk',
+                label: 'Helpdesk Response',
+                days: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'HelpdeskResponseTargetReference'),
+                // Helpdesk Response always starts from Request Date
+                getBaseDate: () => requestDateTime
+            },
+            {
+                type: 'initialFollowUp',
+                label: 'Initial Follow Up',
+                days: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'InitialFollowUpTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Helpdesk Response Target
+                    if (ref === REFERENCE_TEXT.AFTER_HELPDESK_RESPONSE_TARGET) {
+                        return calculatedTargets.helpdesk || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
+            },
+            {
+                type: 'quotation',
+                label: 'Quotation Submission',
+                days: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'QuotationSubmissionTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Initial Follow Up Target or After Initial Follow Up
+                    if (ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP) {
+                        return calculatedTargets.initialFollowUp || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
+            },
+            {
+                type: 'costApproval',
+                label: 'Cost Approval',
+                days: getPriorityProperty(priorityLevel, 'CostApprovalTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'CostApprovalTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'CostApprovalTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'CostApprovalTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'CostApprovalTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Quotation Submission Target or After Quotation Submission
+                    if (ref === REFERENCE_TEXT.AFTER_QUOTATION_SUBMISSION_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_QUOTATION_SUBMISSION) {
+                        return calculatedTargets.quotation || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
+            },
+            {
+                type: 'workCompletion',
+                label: 'Work Completion',
+                days: getPriorityProperty(priorityLevel, 'WorkCompletionTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'WorkCompletionTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'WorkCompletionTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'WorkCompletionTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'WorkCompletionTargetReference'),
+                getBaseDate: (ref) => {
+                    // After Initial Follow Up Target or After Initial Follow Up
+                    if (ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_INITIAL_FOLLOWUP) {
+                        return calculatedTargets.initialFollowUp || requestDateTime;
+                    }
+                    // After Cost Approval Target or After Cost Approval
+                    if (ref === REFERENCE_TEXT.AFTER_COST_APPROVAL_TARGET ||
+                        ref === REFERENCE_TEXT.AFTER_COST_APPROVAL) {
+                        return calculatedTargets.costApproval || requestDateTime;
+                    }
+                    // Default: After Request Date
+                    return requestDateTime;
+                }
+            },
+            {
+                type: 'afterWork',
+                label: 'After Work Follow Up',
+                days: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetDays'),
+                hours: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetHours'),
+                minutes: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetMinutes'),
+                withinOfficeHours: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetWithinOfficeHours'),
+                reference: getPriorityProperty(priorityLevel, 'AfterWorkFollowUpTargetReference'),
+                // After Work Follow Up always starts from Work Completion Target (legacy behavior)
+                getBaseDate: () => {
+                    return calculatedTargets.workCompletion || requestDateTime;
+                }
+            }
+        ];
+
+        // Calculate and display each target in sequence (order matters for chaining)
+        targets.forEach(target => {
+            // If there's a manual override, restore its display and store in calculatedTargets for chaining
+            if (state.targetOverrides[target.type]) {
+                const override = state.targetOverrides[target.type];
+                const targetDate = new Date(override.newTarget);
+                const formattedDate = formatDateTime(targetDate);
+                $(`#${target.type}Target .target-date`).text(formattedDate);
+                $(`#${target.type}Target`).attr('title', 'Target manually overridden. Click to change.');
+                $(`#${target.type}Target`).show();
+                // Store in calculatedTargets for chaining (subsequent targets may depend on this value)
+                calculatedTargets[target.type] = targetDate;
+                return;
+            }
+
+            const days = target.days ?? 0;
+            const hours = target.hours ?? 0;
+            const minutes = target.minutes ?? 0;
+            const hasDuration = days > 0 || hours > 0 || minutes > 0;
+
+            if (hasDuration) {
+                // Get the base date for this target (may depend on previous calculated targets)
+                const baseDate = target.getBaseDate(target.reference);
+
+                // Calculate target date using BusinessDateCalculator
+                const targetDate = calculator.calculateTargetDate(
+                    baseDate,
+                    days,
+                    hours,
+                    minutes,
+                    target.withinOfficeHours || false
+                );
+
+                // Store the calculated target for use by subsequent targets
+                calculatedTargets[target.type] = targetDate;
+
+                // Build tooltip text
+                const tooltip = buildTooltipText(target, target.reference);
+
+                // Update display
+                updateTargetDateDisplay(target.type, targetDate, tooltip);
+                $(`#${target.type}Target`).show();
+            } else {
+                // No target defined - show "No Target"
+                $(`#${target.type}Target .target-date`).text('No Target');
+                $(`#${target.type}Target`).attr('title', '');
+                $(`#${target.type}Target`).show();
+            }
+        });
+    }
+
+    /**
+     * Get human-readable reference description based on reference text
+     * The reference is now a text string from the backend (e.g., "After Request Date")
+     */
+    function getReferenceDescription(reference, targetType) {
+        // Special case for After Work Follow Up - always uses Work Completion
+        if (targetType === 'afterWork') {
+            return 'after Work Completion Target';
         }
 
-        let tooltip = parts.join(', ');
-
-        if (withinOfficeHours) {
-            tooltip += ' (within office hours)';
-        } else {
-            tooltip += ' (24/7)';
+        // The reference text from backend is already human-readable, just lowercase the first letter
+        if (reference && typeof reference === 'string' && reference.length > 0) {
+            return reference.charAt(0).toLowerCase() + reference.slice(1);
         }
+
+        return 'after Request Date';
+    }
+
+    /**
+     * Build tooltip text for target date
+     */
+    function buildTooltipText(target, reference) {
+        let tooltip = 'Max ';
+
+        if (target.days > 0) {
+            tooltip += `${target.days} ${target.days === 1 ? 'day' : 'days'} `;
+        }
+        if (target.hours > 0) {
+            tooltip += `${target.hours} ${target.hours === 1 ? 'hour' : 'hours'} `;
+        }
+        if (target.minutes > 0) {
+            tooltip += `${target.minutes} ${target.minutes === 1 ? 'minute' : 'minutes'} `;
+        }
+
+        tooltip += getReferenceDescription(reference, target.type);
+
+        if (target.withinOfficeHours) {
+            tooltip += ' (within office hours only)';
+        }
+
+        tooltip += '. Click to change this target';
 
         return tooltip;
     }
 
     /**
-     * Update target date display
+     * Update target date display element
      */
-    function updateTargetDateDisplay(elementId, targetDate, tooltip) {
-        const element = $(`#${elementId}`);
-        const dateSpan = element.find('.target-date');
+    function updateTargetDateDisplay(type, targetDate, tooltip) {
+        const $targetElement = $(`#${type}Target`);
+        const formattedDate = formatDisplayDate(targetDate);
 
-        if (targetDate) {
-            dateSpan.text(formatDisplayDate(targetDate));
-            element.attr('title', tooltip);
-            element.removeClass('text-muted');
-        } else {
-            dateSpan.text(tooltip || '-');
-            element.attr('title', '');
-            element.addClass('text-muted');
-        }
+        $targetElement.find('.target-date').text(formattedDate);
+        $targetElement.attr('title', tooltip);
+        $targetElement.data('calculated-target', targetDate.toISOString());
     }
 
     /**
-     * Format date for display: "dd MMM yyyy hh:mm tt"
-     * Example: "05 Jan 2026 02:30 PM"
+     * Format date for display (dd MMM yyyy hh:mm tt)
      */
     function formatDisplayDate(date) {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const options = {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
 
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = months[date.getMonth()];
-        const year = date.getFullYear();
-
-        let hours = date.getHours();
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12 || 12;
-
-        return `${day} ${month} ${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+        return date.toLocaleString('en-US', options);
     }
 
     /**
-     * Clear all target displays
+     * Initialize target override functionality
      */
-    function clearAllTargets() {
-        const targets = [
-            'helpdeskTarget',
-            'initialFollowUpTarget',
-            'quotationTarget',
-            'costApprovalTarget',
-            'workCompletionTarget',
-            'afterWorkTarget'
-        ];
-
-        targets.forEach(targetId => {
-            updateTargetDateDisplay(targetId, null, '-');
-        });
-    }
-
-    /**
-     * Show loading state during calculation
-     */
-    function showCalculationLoading() {
-        const targets = [
-            'helpdeskTarget',
-            'initialFollowUpTarget',
-            'quotationTarget',
-            'costApprovalTarget',
-            'workCompletionTarget',
-            'afterWorkTarget'
-        ];
-
-        targets.forEach(targetId => {
-            updateTargetDateDisplay(targetId, null, 'Calculating...');
-        });
-    }
-
-    /**
-     * Setup target override listeners (edit mode)
-     */
-    function setupTargetOverrideListeners() {
-        // Click on target to show edit form
+    function initializeTargetOverrides() {
+        // Click on target display to show override form
         $('.target-time-display').on('click', function () {
             const targetType = $(this).data('target-type');
-            showTargetEditForm(targetType);
+            const currentTarget = $(this).data('calculated-target');
+
+            // Hide all other forms
+            $('.target-change-form').slideUp();
+
+            // Set current target value
+            if (currentTarget) {
+                const targetDateTime = new Date(currentTarget);
+                const dateTimeLocal = targetDateTime.toISOString().slice(0, 16);
+                $(`#${targetType}NewTarget`).val(dateTimeLocal);
+            }
+
+            // Show this form
+            $(`#${targetType}TargetForm`).slideDown();
+        });
+
+        // Make save and cancel functions global
+        window.saveTarget = function (targetType) {
+            const newTarget = $(`#${targetType}NewTarget`).val();
+            const remark = $(`#${targetType}Remark`).val();
+
+            if (!newTarget) {
+                showNotification('Please select a new target date and time', 'error');
+                return;
+            }
+
+            if (!remark) {
+                showNotification('Please provide a remark for changing the target', 'error');
+                return;
+            }
+
+            // Update display
+            const targetDate = new Date(newTarget);
+            const formattedDate = formatDateTime(targetDate);
+            $(`#${targetType}Target .target-date`).text(formattedDate);
+            $(`#${targetType}RemarkDisplay`).val(remark);
+
+            // Store override
+            state.targetOverrides[targetType] = {
+                newTarget: newTarget,
+                remark: remark
+            };
+
+            // Hide form
+            $(`#${targetType}TargetForm`).slideUp();
+
+            showNotification('Target date updated successfully', 'success');
+        };
+
+        window.cancelTarget = function (targetType) {
+            // Clear form
+            $(`#${targetType}NewTarget`).val('');
+            $(`#${targetType}Remark`).val('');
+
+            // Hide form
+            $(`#${targetType}TargetForm`).slideUp();
+        };
+    }
+
+    /**
+     * Initialize labor/material management
+     * Note: The actual labor/material functionality is handled by work-request-add-extended.js
+     * This function is kept for backward compatibility but delegates to the extended module
+     */
+    function initializeLaborMaterial() {
+        // Labor/Material modal and table management is handled by work-request-add-extended.js
+        // This function is intentionally empty - the extended module handles all functionality
+    }
+
+    /**
+     * Initialize workers management
+     */
+    function initializeWorkers() {
+        $('#addWorkerBtn').on('click', function () {
+            resetWorkerModal();
+            $('#addWorkerModal').modal('show');
+        });
+
+        $('input[name="workerSource"]').on('change', function () {
+            $('#workerSearchModal').val('').removeData('selectedWorker');
+            $('#selectedWorkerId').val('');
+            $('#selectedWorkerSide').val('');
+        });
+
+        let workerSearchTimeout;
+        $('#workerSearchModal').on('keyup', function () {
+            clearTimeout(workerSearchTimeout);
+            const term = $(this).val().trim();
+            const source = $('input[name="workerSource"]:checked').val();
+
+            // Clear selected worker data if user is typing new search
+            $(this).removeData('selectedWorker');
+            $('#selectedWorkerId').val('');
+
+            if (term.length < CONFIG.minSearchLength) {
+                $('#workerSearchDropdownModal').removeClass('show').empty();
+                return;
+            }
+
+            workerSearchTimeout = setTimeout(function () {
+                // Show loading state
+                showInputLoading('#workerSearchModal');
+                showTypeaheadLoading($('#workerSearchDropdownModal'));
+                searchWorkersForModal(term, source);
+            }, CONFIG.debounceDelay);
+        });
+
+        $('#saveWorkerBtn').on('click', saveWorker);
+
+        // Close dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#workerSearchModal, #workerSearchDropdownModal').length) {
+                $('#workerSearchDropdownModal').removeClass('show').empty();
+            }
         });
     }
 
-    /**
-     * Show target edit form
-     */
-    function showTargetEditForm(targetType) {
-        $(`#${targetType}Target`).hide();
-        $(`#${targetType}TargetForm`).show();
-    }
-
-    /**
-     * Save target override
-     */
-    window.saveTarget = function (targetType) {
-        const newTarget = $(`#${targetType}NewTarget`).val();
-        const remark = $(`#${targetType}Remark`).val();
-
-        if (!newTarget) {
-            showNotification('Please select a new target date', 'warning', 'Validation');
+    function searchWorkersForModal(term, source) {
+        const idLocation = state.selectedLocation;
+        if (!idLocation) {
+            showNotification('Please select a location first', 'warning');
             return;
         }
 
-        // Update display
-        const targetDate = new Date(newTarget);
-        updateTargetDateDisplay(`${targetType}Target`, targetDate, remark || 'Manual override');
+        const endpoint = source === 'company'
+            ? CONFIG.apiEndpoints.searchWorkersByCompany
+            : CONFIG.apiEndpoints.searchWorkersByServiceProvider;
 
-        // Store remark in hidden field
-        $(`#${targetType}RemarkDisplay`).val(remark);
+        const params = { term, idLocation };
+        if (source === 'serviceProvider') {
+            const $selectedOption = $('#serviceProviderSelect option:selected');
+            const idServiceProvider = $selectedOption.val();
+            const idCompany = $selectedOption.attr('data-id-company');
 
-        // Hide form
-        hideTargetEditForm(targetType);
+            // Only validate that it's not the special "Not Specified" value
+            if (!idServiceProvider || idServiceProvider === '-1') {
+                showNotification('Please select a service provider first', 'warning');
+                return;
+            }
 
-        showNotification('Target date updated', 'success', 'Success');
+            params.idServiceProvider = idServiceProvider;
+            if (idCompany) {
+                params.idCompany = idCompany;
+            }
+        }
+
+        $.ajax({
+            url: endpoint,
+            method: 'GET',
+            data: withClientParams(params),
+            success: function (response) {
+                const $dropdown = $('#workerSearchDropdownModal');
+                $dropdown.empty();
+
+                if (response.success && response.data?.length > 0) {
+                    $.each(response.data, function (index, worker) {
+                        // Build display text with title and department
+                        const name = worker.fullName || worker.FullName || worker.name;
+                        const title = worker.title || worker.Title || '';
+                        const department = worker.departmentName || worker.DepartmentName || '';
+                        const hasAccess = worker.hasAccess || worker.HasAccess || false;
+
+                        let detailsHtml = '';
+                        if (title || department) {
+                            detailsHtml = '<small class="text-muted">';
+                            if (title) detailsHtml += title;
+                            if (title && department) detailsHtml += '<br>';
+                            if (department) detailsHtml += department;
+                            detailsHtml += '</small>';
+                        }
+
+                        // Add access badge
+                        const accessBadge = hasAccess
+                            ? '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">Has Access</span>'
+                            : '<span class="badge bg-secondary ms-2" style="font-size: 0.65rem;">No Access</span>';
+
+                        $dropdown.append(
+                            $('<div></div>')
+                                .addClass('typeahead-item')
+                                .html(`<strong>${name}</strong>${accessBadge}${detailsHtml ? '<br>' + detailsHtml : ''}`)
+                                .on('click', () => selectWorkerForModal(worker, source))
+                        );
+                    });
+                    $dropdown.addClass('show');
+                } else {
+                    $dropdown.append($('<div></div>').addClass('typeahead-item text-muted').text('No workers found'));
+                    $dropdown.addClass('show');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error searching workers:', error);
+                showNotification('Failed to search workers', 'error');
+                $('#workerSearchDropdownModal').removeClass('show').empty();
+            },
+            complete: function () {
+                // Hide loading state
+                hideInputLoading('#workerSearchModal');
+            }
+        });
+    }
+
+    function selectWorkerForModal(worker, source) {
+        const workerName = worker.fullName || worker.FullName || worker.name;
+        const workerId = worker.idEmployee || worker.IdEmployee || worker.id || worker.Employee_idEmployee;
+        const department = worker.departmentName || worker.DepartmentName || '';
+        const title = worker.title || worker.Title || '';
+        const email = worker.emailAddress || worker.EmailAddress || '';
+        const phone = worker.phoneNumber || worker.PhoneNumber || '';
+        const hasAccess = worker.hasAccess || worker.HasAccess || false;
+
+        $('#workerSearchModal').val(workerName);
+        $('#selectedWorkerId').val(workerId);
+        $('#selectedWorkerSide').val(worker.side_Enum_idEnum || (source === 'company' ? 272 : 273));
+        $('#workerSearchDropdownModal').removeClass('show').empty();
+
+        // Store full worker data for later use
+        $('#workerSearchModal').data('selectedWorker', {
+            id: workerId,
+            fullName: workerName,
+            departmentName: department,
+            title: title,
+            emailAddress: email,
+            phoneNumber: phone,
+            hasAccess: hasAccess
+        });
+
+        console.log('Worker selected:', { id: workerId, name: workerName, source: source, hasAccess: hasAccess });
+    }
+
+    function resetWorkerModal() {
+        $('#sourceCompany').prop('checked', true);
+        $('#workerSearchModal').val('').removeData('selectedWorker');
+        $('#selectedWorkerId').val('');
+        $('#selectedWorkerSide').val('');
+        $('#joinChatRoomCheck').prop('checked', false);
+        $('#workerSearchDropdownModal').removeClass('show').empty();
+
+        // Update Service Provider Worker option visibility based on current selection
+        const serviceProviderValue = $('#serviceProviderSelect').val();
+        const showServiceProvider = serviceProviderValue && serviceProviderValue !== '-1' && serviceProviderValue !== '-2';
+        updateWorkerSourceOptions(showServiceProvider);
+    }
+
+    function saveWorker() {
+        const workerId = $('#selectedWorkerId').val();
+        const workerSide = $('#selectedWorkerSide').val();
+        const joinChatRoom = $('#joinChatRoomCheck').is(':checked');
+        const source = $('input[name="workerSource"]:checked').val();
+
+        // Get full worker data stored during selection
+        const selectedWorkerData = $('#workerSearchModal').data('selectedWorker');
+
+        if (!workerId || !selectedWorkerData) {
+            showNotification('Please select a worker from the search results', 'error');
+            return;
+        }
+
+        // Check for duplicate worker
+        const isDuplicate = state.workers.some(w => w.Employee_idEmployee === parseInt(workerId));
+        if (isDuplicate) {
+            showNotification('This worker has already been added', 'warning');
+            return;
+        }
+
+        const worker = {
+            Employee_idEmployee: parseInt(workerId),
+            fullName: selectedWorkerData.fullName,
+            departmentName: selectedWorkerData.departmentName,
+            title: selectedWorkerData.title,
+            emailAddress: selectedWorkerData.emailAddress,
+            phoneNumber: selectedWorkerData.phoneNumber,
+            hasAccess: selectedWorkerData.hasAccess || false,
+            side_Enum_idEnum: parseInt(workerSide),
+            source: source === 'company' ? 'Company' : 'Service Provider',
+            isJoinToExternalChatRoom: joinChatRoom
+        };
+
+        state.workers.push(worker);
+        addWorkerCard(worker, state.workers.length - 1);
+
+        $('#addWorkerModal').modal('hide');
+        showNotification('Worker added successfully', 'success');
+    }
+
+    /**
+     * Add worker card to the workers container
+     */
+    function addWorkerCard(worker, index) {
+        // Hide empty state, show card list
+        $('#workersEmptyState').hide();
+        $('#workersCardList').show();
+
+        const isCompany = worker.source === 'Company';
+        const initials = generateInitials(worker.fullName);
+        const avatarColor = generateAvatarColor(worker.fullName);
+
+        // Build details lines
+        let detailsHtml = '';
+        if (worker.title) {
+            detailsHtml += `<div><i class="ti ti-briefcase me-1"></i>${worker.title}</div>`;
+        }
+        if (worker.departmentName) {
+            detailsHtml += `<div><i class="ti ti-building me-1"></i>${worker.departmentName}</div>`;
+        }
+        if (worker.emailAddress) {
+            detailsHtml += `<div><i class="ti ti-mail me-1"></i>${worker.emailAddress}</div>`;
+        }
+        if (worker.phoneNumber) {
+            detailsHtml += `<div><i class="ti ti-phone me-1"></i>${worker.phoneNumber}</div>`;
+        }
+
+        const cardHtml = `
+            <div class="col-md-6 col-lg-4" data-worker-index="${index}">
+                <div class="worker-card ${isCompany ? 'worker-company' : 'worker-provider'}">
+                    <div class="d-flex align-items-start">
+                        <div class="worker-avatar me-2" style="background-color: ${avatarColor};">
+                            ${initials}
+                        </div>
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="worker-name text-truncate">${worker.fullName}</div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-worker"
+                                        onclick="removeWorkerCard(${index})" title="Remove worker">
+                                    <i class="ti ti-x"></i>
+                                </button>
+                            </div>
+                            <div class="worker-details mb-2">
+                                ${detailsHtml || '<div class="text-muted fst-italic">No details available</div>'}
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="worker-source-badge ${isCompany ? 'badge-company' : 'badge-provider'}">
+                                    <i class="ti ${isCompany ? 'ti-building-community' : 'ti-truck-delivery'} me-1"></i>
+                                    ${worker.source}
+                                </span>
+                                ${worker.hasAccess ? `
+                                    <span class="badge bg-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                                        <i class="ti ti-check me-1"></i>Has Access
+                                    </span>
+                                ` : `
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                                        <i class="ti ti-lock me-1"></i>No Access
+                                    </span>
+                                `}
+                                ${worker.isJoinToExternalChatRoom ? `
+                                    <span class="worker-chat-badge">
+                                        <i class="ti ti-message-circle me-1"></i>Chat
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $('#workersCardList').append(cardHtml);
+    }
+
+    /**
+     * Remove worker card
+     */
+    window.removeWorkerCard = function (index) {
+        // Remove from state
+        state.workers.splice(index, 1);
+
+        // Rebuild cards
+        rebuildWorkerCards();
+
+        showNotification('Worker removed', 'info');
     };
 
     /**
-     * Cancel target override
+     * Rebuild all worker cards (after removal)
      */
-    window.cancelTarget = function (targetType) {
-        hideTargetEditForm(targetType);
-    };
+    function rebuildWorkerCards() {
+        const $cardList = $('#workersCardList');
+        $cardList.empty();
 
-    /**
-     * Hide target edit form
-     */
-    function hideTargetEditForm(targetType) {
-        $(`#${targetType}TargetForm`).hide();
-        $(`#${targetType}Target`).show();
-
-        // Clear inputs
-        $(`#${targetType}NewTarget`).val('');
-        $(`#${targetType}Remark`).val('');
+        if (state.workers.length === 0) {
+            $cardList.hide();
+            $('#workersEmptyState').show();
+        } else {
+            state.workers.forEach((worker, index) => {
+                addWorkerCard(worker, index);
+            });
+        }
     }
 
     /**
-     * Format date for input (YYYY-MM-DD)
+     * Initialize form submission handling
+     * Uses AJAX to submit form data with proper field mapping to API structure
      */
-    function formatDateForInput(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    function initializeFormSubmission() {
+        const $form = $('#workRequestForm');
+
+        // Form submit event - intercept and use AJAX
+        $form.on('submit', function (e) {
+            e.preventDefault();
+
+            // Run comprehensive validation
+            const errors = validateWorkRequestForm();
+            if (errors.length > 0) {
+                displayValidationErrors(errors);
+                return false;
+            }
+
+            // Show loading indicator
+            showLoadingOverlay();
+
+            // Build the payload matching API structure
+            // Use window.buildWorkRequestPayload to allow extended.js to override
+            const payload = window.buildWorkRequestPayload();
+
+            // Submit via AJAX
+            // Use window.submitWorkRequest to allow extended.js to override
+            window.submitWorkRequest(payload);
+        });
+    }
+
+    // ========================================
+    // Form Validation Module
+    // ========================================
+
+    /**
+     * Helper: Get combined Date object from date and time input fields
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {Date|null} - Date object or null if date is empty
+     */
+    function getDateTimeValue(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        if (!dateVal) return null;
+
+        const timeToUse = timeVal || '00:00';
+        return new Date(`${dateVal}T${timeToUse}`);
     }
 
     /**
-     * Format time for input (HH:MM)
+     * Helper: Get selected status text (e.g., "New", "Completed")
+     * @returns {string} - The text of the selected status radio button
      */
-    function formatTimeForInput(date) {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
+    function getSelectedStatusText() {
+        const $checked = $('input[name="Status"]:checked');
+        if ($checked.length === 0) return '';
+        return $checked.closest('.form-check').find('label').text().trim();
     }
 
-})();
+    /**
+     * Helper: Check if datetime field pair has partial entry (date without time or vice versa)
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {boolean} - True if partially filled
+     */
+    function isPartialDateTime(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        // Both empty or both filled = not partial
+        if ((!dateVal && !timeVal) || (dateVal && timeVal)) return false;
+
+        // One filled, other empty = partial
+        return true;
+    }
+
+    /**
+     * Helper: Check if datetime field pair has any value
+     * @param {string} dateSelector - jQuery selector for date input
+     * @param {string} timeSelector - jQuery selector for time input
+     * @returns {boolean} - True if either date or time has a value
+     */
+    function hasDateTimeValue(dateSelector, timeSelector) {
+        return !!$(dateSelector).val() || !!$(timeSelector).val();
+    }
+
+    /**
+     * Helper: Get effective target date value (from override or calculated)
+     * @param {string} targetType - Target type key (helpdesk, initialFollowUp, etc.)
+     * @returns {Date|null} - Date object or null
+     */
+    function getEffectiveTargetDate(targetType) {
+        // Check for manual override first
+        if (state.targetOverrides[targetType]?.newTarget) {
+            return new Date(state.targetOverrides[targetType].newTarget);
+        }
+        // Fall back to auto-calculated target from DOM
+        const calculatedTarget = $(`#${targetType}Target`).data('calculated-target');
+        if (calculatedTarget) {
+            return new Date(calculatedTarget);
+        }
+        return null;
+    }
+
+    /**
+     * Helper: Get selected priority level details from cache
+     * @returns {Object|null} - Priority level object or null
+     */
+    function getSelectedPriorityDetails() {
+        const priorityId = $('#priorityLevelSelect').val();
+        if (!priorityId) return null;
+        return state.priorityLevelsCache[priorityId] || null;
+    }
+
+    /**
+     * Validate DateTime fields - future dates, partial entries
+     * @returns {string[]} - Array of error messages
+     */
+    function validateDateTimeFields() {
+        const errors = [];
+        const now = new Date();
+
+        // 1. Request Date cannot be in the future
+        const requestDate = getDateTimeValue('#requestDate', '#requestTime');
+        if (requestDate && requestDate > now) {
+            errors.push('Request Date cannot be in the future');
+        }
+
+        // 2. Work Completion cannot be later than today
+        const workCompletion = getDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletion && workCompletion > now) {
+            errors.push('Work Completion cannot be later than today');
+        }
+
+        // 3. Check for partial datetime entries (date filled but no time, or vice versa)
+        const timelineFields = [
+            { date: '#helpdeskResponseDate', time: '#helpdeskResponseTime', name: 'Helpdesk Response' },
+            { date: '#initialFollowUpDate', time: '#initialFollowUpTime', name: 'Initial Follow Up' },
+            { date: '#quotationSubmissionDate', time: '#quotationSubmissionTime', name: 'Quotation Submission' },
+            { date: '#costApprovalDate', time: '#costApprovalTime', name: 'Cost Approval' },
+            { date: '#workCompletionDate', time: '#workCompletionTime', name: 'Work Completion' },
+            { date: '#afterWorkFollowUpDate', time: '#afterWorkFollowUpTime', name: 'After Work Follow Up' }
+        ];
+
+        timelineFields.forEach(field => {
+            if (isPartialDateTime(field.date, field.time)) {
+                errors.push(`${field.name} requires both date and time`);
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Validate date relationships - all dates must be >= Request Date
+     * @returns {string[]} - Array of error messages
+     */
+    function validateDateRelationships() {
+        const errors = [];
+        const requestDate = getDateTimeValue('#requestDate', '#requestTime');
+
+        if (!requestDate) return errors; // Can't validate relationships without request date
+
+        // Define all timeline fields that must be >= Request Date
+        const timelineFields = [
+            { date: '#helpdeskResponseDate', time: '#helpdeskResponseTime', name: 'Helpdesk Response' },
+            { date: '#initialFollowUpDate', time: '#initialFollowUpTime', name: 'Initial Follow Up' },
+            { date: '#quotationSubmissionDate', time: '#quotationSubmissionTime', name: 'Quotation Submission' },
+            { date: '#costApprovalDate', time: '#costApprovalTime', name: 'Cost Approval' },
+            { date: '#workCompletionDate', time: '#workCompletionTime', name: 'Work Completion' }
+        ];
+
+        // Check actual dates >= Request Date
+        timelineFields.forEach(field => {
+            const fieldDate = getDateTimeValue(field.date, field.time);
+            if (fieldDate && requestDate > fieldDate) {
+                errors.push(`${field.name} should be later than Request Date`);
+            }
+        });
+
+        // Check target dates >= Request Date
+        const targetTypes = [
+            { type: 'helpdesk', name: 'Helpdesk Response Target' },
+            { type: 'initialFollowUp', name: 'Initial Follow Up Target' },
+            { type: 'quotation', name: 'Quotation Submission Target' },
+            { type: 'costApproval', name: 'Cost Approval Target' },
+            { type: 'workCompletion', name: 'Work Completion Target' }
+        ];
+
+        targetTypes.forEach(target => {
+            const targetDate = getEffectiveTargetDate(target.type);
+            if (targetDate && requestDate > targetDate) {
+                errors.push(`${target.name} should be later than Request Date`);
+            }
+        });
+
+        // After Work Follow Up must be >= Work Completion
+        const workCompletion = getDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletion) {
+            const afterWorkFollowUp = getDateTimeValue('#afterWorkFollowUpDate', '#afterWorkFollowUpTime');
+            if (afterWorkFollowUp && workCompletion > afterWorkFollowUp) {
+                errors.push('After Work Follow Up should be later than Work Completion');
+            }
+
+            const afterWorkTarget = getEffectiveTargetDate('afterWork');
+            if (afterWorkTarget && workCompletion > afterWorkTarget) {
+                errors.push('After Work Follow Up Target should be later than Work Completion');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate target overrides - remark required when target manually changed
+     * @returns {string[]} - Array of error messages
+     */
+    function validateTargetOverrides() {
+        const errors = [];
+
+        const targetNames = {
+            helpdesk: 'Helpdesk Response',
+            initialFollowUp: 'Initial Follow Up',
+            quotation: 'Quotation Submission',
+            costApproval: 'Cost Approval',
+            workCompletion: 'Work Completion',
+            afterWork: 'After Work Follow Up'
+        };
+
+        Object.keys(state.targetOverrides).forEach(targetType => {
+            const override = state.targetOverrides[targetType];
+            const targetName = targetNames[targetType] || targetType;
+
+            if (override?.newTarget) {
+                // If target is manually set, remark is required
+                if (!override.remark || override.remark.trim() === '') {
+                    errors.push(`Write the reason of changing target in ${targetName} New Target`);
+                }
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Validate cost estimation - must be positive number if filled
+     * @returns {string[]} - Array of error messages
+     */
+    function validateCostEstimation() {
+        const errors = [];
+        const costValue = $('#costEstimation').val();
+
+        if (costValue && costValue.trim() !== '') {
+            const numValue = parseFloat(costValue);
+            if (isNaN(numValue)) {
+                errors.push('Enter a valid financial amount in Cost Estimation');
+            } else if (numValue < 0) {
+                errors.push('Cost Estimation value should be a positive amount');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate status-related business rules
+     * @returns {string[]} - Array of error messages
+     */
+    function validateStatusRules() {
+        const errors = [];
+        const statusText = getSelectedStatusText();
+
+        // 1. Work Completion filled + Status != Completed
+        const workCompletionFilled = hasDateTimeValue('#workCompletionDate', '#workCompletionTime');
+        if (workCompletionFilled && statusText !== 'Completed') {
+            errors.push('If Work Completion is already filled, the Status should be Completed');
+        }
+
+        // 2. Workers assigned + Status == New
+        if (state.workers.length > 0 && statusText === 'New') {
+            errors.push('If Worker is already filled, its Status could not be "New"');
+        }
+
+        // 3. Status = Completed: Work Category cannot be empty/-1
+        if (statusText === 'Completed') {
+            const workCategoryVal = $('#workCategorySelect').val();
+            if (!workCategoryVal || workCategoryVal === '' || workCategoryVal === '-1') {
+                errors.push('If Status is "Completed", Work Category is mandatory and cannot be "Not Specified"');
+            }
+
+            // 4. Status = Completed: Service Provider cannot be empty/-1
+            const serviceProviderVal = $('#serviceProviderSelect').val();
+            if (!serviceProviderVal || serviceProviderVal === '' || serviceProviderVal === '-1') {
+                errors.push('If Status is "Completed", Service Provider is mandatory and cannot be "Not Specified"');
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validate priority-level mandatory fields when Status = Completed
+     * @returns {string[]} - Array of error messages
+     */
+    function validatePriorityMandatoryFields() {
+        const errors = [];
+        const statusText = getSelectedStatusText();
+
+        if (statusText !== 'Completed') return errors;
+
+        const priorityDetails = getSelectedPriorityDetails();
+        if (!priorityDetails) return errors;
+
+        // Define mandatory field mappings
+        const mandatoryChecks = [
+            {
+                flag: 'HelpdeskResponseTargetRequiredToFill',
+                actualDate: '#helpdeskResponseDate',
+                actualTime: '#helpdeskResponseTime',
+                targetType: 'helpdesk',
+                name: 'Helpdesk Response'
+            },
+            {
+                flag: 'InitialFollowUpTargetRequiredToFill',
+                actualDate: '#initialFollowUpDate',
+                actualTime: '#initialFollowUpTime',
+                targetType: 'initialFollowUp',
+                name: 'Initial Follow Up'
+            },
+            {
+                flag: 'QuotationSubmissionTargetRequiredToFill',
+                actualDate: '#quotationSubmissionDate',
+                actualTime: '#quotationSubmissionTime',
+                targetType: 'quotation',
+                name: 'Quotation Submission'
+            },
+            {
+                flag: 'CostApprovalTargetRequiredToFill',
+                actualDate: '#costApprovalDate',
+                actualTime: '#costApprovalTime',
+                targetType: 'costApproval',
+                name: 'Cost Approval'
+            },
+            {
+                flag: 'WorkCompletionTargetRequiredToFill',
+                actualDate: '#workCompletionDate',
+                actualTime: '#workCompletionTime',
+                targetType: 'workCompletion',
+                name: 'Work Completion'
+            },
+            {
+                flag: 'AfterWorkFollowUpTargetRequiredToFill',
+                actualDate: '#afterWorkFollowUpDate',
+                actualTime: '#afterWorkFollowUpTime',
+                targetType: 'afterWork',
+                name: 'After Work Follow Up'
+            }
+        ];
+
+        mandatoryChecks.forEach(check => {
+            const isRequired = getPriorityProperty(priorityDetails, check.flag);
+            if (isRequired) {
+                // Check actual date
+                const actualDate = getDateTimeValue(check.actualDate, check.actualTime);
+                if (!actualDate) {
+                    errors.push(`If Status is "Completed", ${check.name} is mandatory`);
+                }
+
+                // Check target date
+                const targetDate = getEffectiveTargetDate(check.targetType);
+                if (!targetDate) {
+                    errors.push(`If Status is "Completed", ${check.name} Target is mandatory`);
+                }
+            }
+        });
+
+        return errors;
+    }
+
+    /**
+     * Main validation orchestrator - runs all validations
+     * @returns {string[]} - Array of all error messages
+     */
+    function validateWorkRequestForm() {
+        let errors = [];
+
+        // 1. Required fields validation (uses existing logic but returns errors array)
+        const requiredErrors = validateRequiredFieldsAsArray();
+        errors = errors.concat(requiredErrors);
+
+        // 2. DateTime validations
+        errors = errors.concat(validateDateTimeFields());
+
+        // 3. Date relationships
+        errors = errors.concat(validateDateRelationships());
+
+        // 4. Target overrides
+        errors = errors.concat(validateTargetOverrides());
+
+        // 5. Cost estimation
+        errors = errors.concat(validateCostEstimation());
+
+        // 6. Status rules
+        errors = errors.concat(validateStatusRules());
+
+        // 7. Priority mandatory fields
+        errors = errors.concat(validatePriorityMandatoryFields());
+
+        return errors;
+    }
+
+    /**
+     * Display validation errors via toastr
+     * @param {string[]} errors - Array of error messages
+     */
+    function displayValidationErrors(errors) {
+        if (errors.length === 0) return;
+
+        if (errors.length === 1) {
+            showNotification(errors[0], 'error');
+        } else {
+            // Show first error with count
+            showNotification(
+                `Validation failed (${errors.length} issues). ${errors[0]}`,
+                'error'
+            );
+        }
+    }
+
+    /**
+     * Validate required form fields - returns array of errors (for orchestrator)
+     * @returns {string[]} - Array of missing field names
+     */
+    function validateRequiredFieldsAsArray() {
+        const requiredFields = [
+            { selector: '#locationSelect', name: 'Location' },
+            { selector: '#floorSelect', name: 'Floor' },
+            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#requestorId', name: 'Requestor', isHidden: true },
+            { selector: '#workTitle', name: 'Work Title' },
+            { selector: '#requestDetail', name: 'Request Detail' },
+            { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
+            { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
+            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#personInChargeSelect', name: 'Person in Charge' },
+            { selector: '#priorityLevelSelect', name: 'Priority Level' },
+            { selector: '#requestDate', name: 'Request Date' },
+            { selector: '#requestTime', name: 'Request Time' }
+        ];
+
+        const missingFields = [];
+
+        requiredFields.forEach(field => {
+            const $element = $(field.selector);
+            if (field.isRadio) {
+                if ($element.length === 0) {
+                    missingFields.push(field.name);
+                }
+            } else if (field.isHidden) {
+                if (!$element.val()) {
+                    missingFields.push(field.name);
+                }
+            } else {
+                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                    missingFields.push(field.name);
+                }
+            }
+        });
+
+        if (missingFields.length > 0) {
+            return [`Please fill in required fields: ${missingFields.join(', ')}`];
+        }
+
+        return [];
+    }
+
+    /**
+     * Validate required form fields before submission (legacy - for backward compatibility)
+     */
+    function validateRequiredFields() {
+        const requiredFields = [
+            { selector: '#locationSelect', name: 'Location' },
+            { selector: '#floorSelect', name: 'Floor' },
+            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#requestorId', name: 'Requestor', isHidden: true },
+            { selector: '#workTitle', name: 'Work Title' },
+            { selector: '#requestDetail', name: 'Request Detail' },
+            { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
+            { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
+            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#personInChargeSelect', name: 'Person in Charge' },
+            { selector: '#priorityLevelSelect', name: 'Priority Level' },
+            { selector: '#requestDate', name: 'Request Date' },
+            { selector: '#requestTime', name: 'Request Time' }
+        ];
+
+        const missingFields = [];
+
+        requiredFields.forEach(field => {
+            const $element = $(field.selector);
+            if (field.isRadio) {
+                if ($element.length === 0) {
+                    missingFields.push(field.name);
+                }
+            } else if (field.isHidden) {
+                if (!$element.val()) {
+                    missingFields.push(field.name);
+                }
+            } else {
+                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                    missingFields.push(field.name);
+                }
+            }
+        });
+
+        if (missingFields.length > 0) {
+            showNotification(`Please fill in required fields: ${missingFields.join(', ')}`, 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Combine date and time inputs into ISO datetime string
+     */
+    function combineDateTimeToISO(dateSelector, timeSelector) {
+        const dateVal = $(dateSelector).val();
+        const timeVal = $(timeSelector).val();
+
+        if (!dateVal) return null;
+
+        const timeToUse = timeVal || '00:00';
+        return new Date(`${dateVal}T${timeToUse}`).toISOString();
+    }
+
+    /**
+     * Get target date value - prioritizes manual override, falls back to calculated
+     * @param {string} targetType - The target type (helpdesk, initialFollowUp, quotation, costApproval, workCompletion, afterWork)
+     * @returns {string|null} - ISO date string or null
+     */
+    function getTargetDateValue(targetType) {
+        // Check for manual override first
+        if (state.targetOverrides[targetType]?.newTarget) {
+            return new Date(state.targetOverrides[targetType].newTarget).toISOString();
+        }
+        // Fall back to auto-calculated target from DOM
+        const calculatedTarget = $(`#${targetType}Target`).data('calculated-target');
+        if (calculatedTarget) {
+            return calculatedTarget; // Already an ISO string
+        }
+        return null;
+    }
+
+    /**
+     * Build the work request payload matching API structure
+     */
+    function buildWorkRequestPayload() {
+        // Combine request date and time
+        const requestDateTime = combineDateTimeToISO('#requestDate', '#requestTime');
+
+        // Build important checklist array
+        const importantChecklist = [];
+        $('.important-checklist-item').each(function () {
+            importantChecklist.push({
+                Type_idType: parseInt($(this).data('type-id')),
+                value: $(this).is(':checked')
+            });
+        });
+
+        // Build workers array with correct property names
+        const workers = state.workers.map(worker => ({
+            Employee_idEmployee: worker.Employee_idEmployee,
+            side_Enum_idEnum: worker.side_Enum_idEnum,
+            isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false
+        }));
+
+        // Build the payload
+        const payload = {
+            // Location Details
+            Property_idProperty: parseInt($('#locationSelect').val()) || 0,
+            PropertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
+            RoomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
+
+            // Requestor and Work Details
+            requestor_Employee_idEmployee: parseInt($('#requestorId').val()) || 0,
+            workTitle: $('#workTitle').val(),
+            requestDetail: $('#requestDetail').val(),
+            solutionDetail: $('#solution').val() || null,
+
+            // Request Method and Status
+            requestMethod_Enum_idEnum: parseInt($('input[name="RequestMethod"]:checked').val()) || 0,
+            status_Enum_idEnum: parseInt($('input[name="Status"]:checked').val()) || 0,
+
+            // Work Categories
+            workCategory_Type_idType: parseInt($('#workCategorySelect').val()) || null,
+            customCategory_Type_idType: parseInt($('#otherCategorySelect').val()) || null,
+            customCategory2_Type_idType: parseInt($('#otherCategory2Select').val()) || null,
+
+            // PM Finding
+            IsPMFinding: $('#pmFindingCheck').is(':checked'),
+
+            // Person in Charge and Service Provider
+            pic_Employee_idEmployee: parseInt($('#personInChargeSelect').val()) || 0,
+            ServiceProvider_idServiceProvider: parseInt($('#serviceProviderSelect').val()) || null,
+
+            // Cost Estimation
+            costEstimationCurrency_Enum_idEnum: parseInt($('#costEstimationCurrencySelect').val()) || null,
+            costEstimation: parseFloat($('#costEstimation').val()) || null,
+
+            // Priority and Timeline
+            PriorityLevel_idPriorityLevel: parseInt($('#priorityLevelSelect').val()) || 0,
+            requestDate: requestDateTime,
+
+            // Timeline dates - Helpdesk Response
+            helpdeskResponse: combineDateTimeToISO('#helpdeskResponseDate', '#helpdeskResponseTime'),
+            helpdeskResponseTarget: getTargetDateValue('helpdesk'),
+            helpdeskResponseTargetChangeNote: state.targetOverrides.helpdesk?.remark || null,
+
+            // Initial Follow Up (onsite response)
+            onsiteResponse: combineDateTimeToISO('#initialFollowUpDate', '#initialFollowUpTime'),
+            onsiteResponseTarget: getTargetDateValue('initialFollowUp'),
+            onsiteResponseTargetChangeNote: state.targetOverrides.initialFollowUp?.remark || null,
+
+            // Quotation Submission
+            quotationSubmission: combineDateTimeToISO('#quotationSubmissionDate', '#quotationSubmissionTime'),
+            quotationSubmissionTarget: getTargetDateValue('quotation'),
+            quotationSubmissionTargetChangeNote: state.targetOverrides.quotation?.remark || null,
+
+            // Cost Approval
+            costApproval: combineDateTimeToISO('#costApprovalDate', '#costApprovalTime'),
+            costApprovalTarget: getTargetDateValue('costApproval'),
+            costApprovalTargetChangeNote: state.targetOverrides.costApproval?.remark || null,
+
+            // Work Completion
+            workCompletion: combineDateTimeToISO('#workCompletionDate', '#workCompletionTime'),
+            workCompletionTarget: getTargetDateValue('workCompletion'),
+            workCompletionTargetChangeNote: state.targetOverrides.workCompletion?.remark || null,
+
+            // Follow Up (after work)
+            followUp: combineDateTimeToISO('#afterWorkFollowUpDate', '#afterWorkFollowUpTime'),
+            followUpTarget: getTargetDateValue('afterWork'),
+            followUpTargetChangeNote: state.targetOverrides.afterWork?.remark || null,
+
+            // Summary and Feedback
+            followUpDetail: $('#followUpSummary').val() || null,
+            feedbackType_Enum_idEnum: parseInt($('#feedbackStatus').val()) || null,
+            feedbackSummary: $('#feedbackSummary').val() || null,
+
+            // Collections - will be populated by extended.js
+            ImportantChecklist: importantChecklist,
+            Workers: workers,
+            Material_Jobcode: [],
+            Material_Adhoc: [],
+            Assets: [],
+            RelatedDocuments: [],
+
+            // Client context captured at page load (for multi-tab session safety validation)
+            Client_idClient: clientContext.idClient
+        };
+
+        return payload;
+    }
+
+    /**
+     * Submit work request via AJAX
+     */
+    function submitWorkRequest(payload) {
+        // Get CSRF token
+        const token = $('input[name="__RequestVerificationToken"]').val();
+
+        $.ajax({
+            url: '/Helpdesk/WorkRequestAdd',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'RequestVerificationToken': token
+            },
+            data: JSON.stringify(payload),
+            success: function (response) {
+                hideLoadingOverlay();
+
+                if (response.success) {
+                    showNotification(response.message || 'Work Request created successfully!', 'success');
+                    // Redirect after brief delay
+                    setTimeout(function () {
+                        window.location.href = response.redirectUrl || '/Helpdesk/Index';
+                    }, 1500);
+                } else {
+                    showNotification(response.message || 'Failed to create work request', 'error');
+                }
+            },
+            error: function (xhr, status, error) {
+                hideLoadingOverlay();
+                console.error('Error submitting work request:', error);
+                showNotification('An error occurred while creating the work request. Please try again.', 'error');
+            }
+        });
+    }
+
+    /**
+     * Hide loading overlay
+     */
+    function hideLoadingOverlay() {
+        $('#loading-overlay').remove();
+    }
+
+    /**
+     * Make payload builder available globally for extended.js to enhance
+     */
+    window.buildWorkRequestPayload = buildWorkRequestPayload;
+    window.submitWorkRequest = submitWorkRequest;
+
+    /**
+     * Utility: Debounce function
+     */
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    /**
+     * Utility: Format date time for display
+     */
+    function formatDateTime(date) {
+        const options = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return date.toLocaleDateString('en-US', options);
+    }
+
+    /**
+     * Utility: Show notification
+     */
+    function showNotification(message, type = 'info') {
+        // Check if notification area exists
+        let $notificationArea = $('#notification-area');
+        if ($notificationArea.length === 0) {
+            $notificationArea = $('<div id="notification-area" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>');
+            $('body').append($notificationArea);
+        }
+
+        const alertClass = type === 'success' ? 'alert-success' :
+            type === 'error' ? 'alert-danger' :
+                type === 'warning' ? 'alert-warning' :
+                    'alert-info';
+
+        const icon = type === 'success' ? 'ti-check' :
+            type === 'error' ? 'ti-x' :
+                type === 'warning' ? 'ti-alert-triangle' :
+                    'ti-info-circle';
+
+        const $notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert" style="min-width: 300px;">
+                <i class="ti ${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `);
+
+        $notificationArea.append($notification);
+
+        // Auto dismiss after 5 seconds
+        setTimeout(function () {
+            $notification.fadeOut(function () {
+                $(this).remove();
+            });
+        }, 5000);
+    }
+
+    /**
+     * Utility: Show loading overlay
+     */
+    function showLoadingOverlay() {
+        const $overlay = $(`
+            <div id="loading-overlay" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            ">
+                <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+
+        $('body').append($overlay);
+    }
+
+    // ========================================
+    // Edit Mode Data Population
+    // ========================================
+
+    /**
+     * Populate form with existing work request data for edit mode
+     * @param {Object} data - WorkRequestFormDetailDto from server
+     */
+    async function populateEditModeData(data) {
+        console.log('Populating edit mode data:', data);
+
+        // Set flag to prevent automatic target date calculation during data load
+        state.isLoadingEditData = true;
+
+        try {
+            // 1. CASCADING DROPDOWNS (must be done sequentially)
+            await populateLocationCascade(data.location);
+
+            // 2. SIMPLE DROPDOWNS (can be done in parallel)
+            setDropdownValue('workCategorySelect', data.workCategory?.idType);
+            setDropdownValue('otherCategorySelect', data.otherCategory?.idType);
+            setDropdownValue('otherCategory2Select', data.otherCategory2?.idType);
+            setDropdownValue('serviceProviderSelect', data.serviceProvider?.idServiceProvider);
+            setDropdownValue('priorityLevelSelect', data.priorityLevel?.idPrioriryLevel);
+            setDropdownValue('feedbackStatus', data.feedback?.idEnum);
+            setDropdownValue('costEstimationCurrencySelect', data.costEstimationCurrency_idEnum);
+
+            // 3. TEXT FIELDS
+            $('#workTitle').val(data.workTitle || '');
+            $('#requestDetail').val(data.requestDetail || '');
+            $('#solution').val(data.solution || '');
+            $('#costEstimation').val(data.costEstimation || '');
+            $('#followUpSummary').val(data.afterWorkFollowUp?.summary || '');
+            $('#feedbackSummary').val(data.feedbackSummary || '');
+
+            // 4. RADIO BUTTONS
+            if (data.requestMethod?.idEnum) {
+                $(`input[name="RequestMethod"][value="${data.requestMethod.idEnum}"]`).prop('checked', true);
+            }
+            if (data.status?.idEnum) {
+                $(`input[name="Status"][value="${data.status.idEnum}"]`).prop('checked', true);
+            }
+
+            // 5. CHECKBOX - PM Finding
+            if (data.referenceToPPM != null) {
+                $('#pmFindingCheck').prop('checked', true);
+            }
+
+            // 6. REQUESTOR CARD
+            if (data.requestor) {
+                showRequestorCard({
+                    id: data.requestor.idEmployee,
+                    fullName: data.requestor.fullName,
+                    departmentName: data.requestor.departmentName,
+                    title: data.requestor.title,
+                    emailAddress: data.requestor.emailAddress,
+                    phoneNumber: data.requestor.phoneNumber
+                });
+            }
+
+            // 7. PERSON IN CHARGE (after location and work category are set)
+            if (data.pic?.employee_idEmployee) {
+                await loadAndSetPersonInCharge(data.pic.employee_idEmployee, data.pic.fullName);
+            }
+
+            // 8. DATE/TIME FIELDS
+            populateDateTimeFields(data);
+
+            // 9. IMPORTANT CHECKLIST
+            populateImportantChecklist(data.importantChecklists);
+
+            // 10. WORKERS
+            populateWorkers(data.workerFromCompany, data.workerFromServiceProvider);
+
+            // 11. LABOR/MATERIALS (from extended file)
+            if (window.populateLaborMaterialsFromData) {
+                window.populateLaborMaterialsFromData(data.laborMaterials);
+            }
+
+            // 12. RELATED ASSETS (from extended file)
+            if (window.populateRelatedAssetsFromData) {
+                window.populateRelatedAssetsFromData(data.relatesAssets);
+            }
+
+            console.log('Edit mode data population complete');
+        } catch (error) {
+            console.error('Error populating edit mode data:', error);
+            showNotification('Error loading work request data', 'error', 'Error');
+        } finally {
+            // Re-enable automatic target date calculation after data is loaded
+            state.isLoadingEditData = false;
+        }
+    }
+
+    /**
+     * Populate location cascade dropdowns (Location -> Floor -> Room)
+     * Must wait for each level to load before selecting next
+     */
+    async function populateLocationCascade(locationData) {
+        if (!locationData?.property) return;
+
+        const propertyId = locationData.property.idProperty;
+        const floorId = locationData.floorDetail?.idPropertyFloor;
+        const floorName = locationData.floorDetail?.floorUnitName;
+        const roomId = locationData.roomZone?.idRoomZone;
+        const roomName = locationData.roomZone?.roomZoneName;
+
+        // Step 1: Set Location
+        setDropdownValue('locationSelect', propertyId);
+        state.selectedLocation = propertyId;
+
+        // Step 2: Load floors and wait for completion, then set Floor
+        if (floorId || floorName) {
+            await loadFloors(propertyId, true);
+
+            // Small delay to ensure searchable dropdown is fully updated
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Try to set floor by ID first
+            const $floorSelect = $('#floorSelect');
+            let matchedFloorId = floorId;
+
+            // Check if the floor ID exists in the dropdown
+            const floorExists = $floorSelect.find(`option[value="${floorId}"]`).length > 0;
+
+            if (!floorExists && floorName) {
+                // Try to find floor by name (case-insensitive)
+                const $matchedOption = $floorSelect.find('option').filter(function() {
+                    return $(this).text().trim().toLowerCase() === floorName.toLowerCase();
+                });
+
+                if ($matchedOption.length > 0) {
+                    matchedFloorId = $matchedOption.val();
+                } else {
+                    console.warn('Could not find floor by ID or name:', floorId, floorName);
+                }
+            }
+
+            if (matchedFloorId) {
+                setDropdownValue('floorSelect', matchedFloorId);
+                state.selectedFloor = matchedFloorId;
+            }
+
+            // Step 3: Load rooms and wait for completion, then set Room
+            if (roomId || roomName) {
+                await loadRooms(propertyId, matchedFloorId, true);
+
+                // Small delay to ensure searchable dropdown is fully updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Try to set room by ID first
+                const $roomSelect = $('#roomSelect');
+                let matchedRoomId = roomId;
+
+                // Check if the room ID exists in the dropdown
+                const roomExists = $roomSelect.find(`option[value="${roomId}"]`).length > 0;
+
+                if (!roomExists && roomName) {
+                    // Try to find room by name (case-insensitive)
+                    const $matchedRoomOption = $roomSelect.find('option').filter(function() {
+                        return $(this).text().trim().toLowerCase() === roomName.toLowerCase();
+                    });
+
+                    if ($matchedRoomOption.length > 0) {
+                        matchedRoomId = $matchedRoomOption.val();
+                    } else {
+                        console.warn('Could not find room by ID or name:', roomId, roomName);
+                    }
+                }
+
+                if (matchedRoomId) {
+                    setDropdownValue('roomSelect', matchedRoomId);
+                    state.selectedRoom = matchedRoomId;
+                }
+            }
+        }
+    }
+
+    /**
+     * Set dropdown value and update searchable dropdown component
+     */
+    function setDropdownValue(selectId, value) {
+        if (!value) return;
+
+        const $select = $(`#${selectId}`);
+        $select.val(value);
+
+        // Update searchable dropdown if available
+        const selectElement = document.getElementById(selectId);
+        if (selectElement && selectElement._searchableDropdown) {
+            const $selectedOption = $select.find('option:selected');
+            selectElement._searchableDropdown.setValue(value, $selectedOption.text(), true);
+        }
+    }
+
+    /**
+     * Load Person in Charge options and select the specified value
+     */
+    async function loadAndSetPersonInCharge(picId, picName) {
+        // Load PIC options (this should populate the dropdown based on location/work category)
+        const $picSelect = $('#personInChargeSelect');
+
+        // Wait a bit for the PIC dropdown to be populated by other events
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Check if the PIC is already in the dropdown
+        let $option = $picSelect.find(`option[value="${picId}"]`);
+
+        // If not found, add it manually
+        if ($option.length === 0 && picName) {
+            $picSelect.append(`<option value="${picId}">${picName}</option>`);
+        }
+
+        // Set the value
+        setDropdownValue('personInChargeSelect', picId);
+    }
+
+    /**
+     * Populate date and time fields from work request data
+     * Includes both actual dates and target dates
+     */
+    function populateDateTimeFields(data) {
+        // Request Date
+        if (data.requestDate) {
+            const dt = new Date(data.requestDate);
+            $('#requestDate').val(dt.toISOString().split('T')[0]);
+            $('#requestTime').val(dt.toTimeString().substring(0, 5));
+        }
+
+        // Timeline fields - Actual dates and Target dates
+        const timelineMapping = [
+            { data: data.helpdeskResponse, dateId: 'helpdeskResponseDate', timeId: 'helpdeskResponseTime', targetType: 'helpdesk' },
+            { data: data.initialFollowUp, dateId: 'initialFollowUpDate', timeId: 'initialFollowUpTime', targetType: 'initialFollowUp' },
+            { data: data.quotationSubmission, dateId: 'quotationSubmissionDate', timeId: 'quotationSubmissionTime', targetType: 'quotation' },
+            { data: data.costApproval, dateId: 'costApprovalDate', timeId: 'costApprovalTime', targetType: 'costApproval' },
+            { data: data.workCompletion, dateId: 'workCompletionDate', timeId: 'workCompletionTime', targetType: 'workCompletion' },
+            { data: data.afterWorkFollowUp, dateId: 'afterWorkFollowUpDate', timeId: 'afterWorkFollowUpTime', targetType: 'afterWork' }
+        ];
+
+        timelineMapping.forEach(item => {
+            // Populate actual dates
+            if (item.data?.actualDate) {
+                const dt = new Date(item.data.actualDate);
+                $(`#${item.dateId}`).val(dt.toISOString().split('T')[0]);
+                $(`#${item.timeId}`).val(dt.toTimeString().substring(0, 5));
+            }
+
+            // Populate target dates
+            if (item.data?.targetDate) {
+                const targetDt = new Date(item.data.targetDate);
+                const formattedDate = formatDateTime(targetDt);
+                $(`#${item.targetType}Target .target-date`).text(formattedDate);
+                $(`#${item.targetType}Target`).show();
+
+                // If there's a target change note, add it to the title
+                if (item.data.targetChangeNote) {
+                    $(`#${item.targetType}Target`).attr('title', `Target manually changed: ${item.data.targetChangeNote}`);
+                }
+            } else {
+                // No target date saved
+                $(`#${item.targetType}Target .target-date`).text('No Target');
+                $(`#${item.targetType}Target`).show();
+            }
+        });
+    }
+
+    /**
+     * Populate important checklist checkboxes
+     */
+    function populateImportantChecklist(checklists) {
+        if (!checklists || !Array.isArray(checklists)) return;
+
+        checklists.forEach(item => {
+            if (item.isChecked) {
+                $(`#checklist${item.idType}`).prop('checked', true);
+            }
+        });
+    }
+
+    /**
+     * Populate workers from both company and service provider
+     */
+    function populateWorkers(companyWorkers, providerWorkers) {
+        // Clear existing workers
+        state.workers = [];
+        $('#workersCardList').empty();
+
+        // Add company workers
+        if (companyWorkers && companyWorkers.length > 0) {
+            companyWorkers.forEach(worker => {
+                const workerObj = {
+                    Employee_idEmployee: worker.idEmployee,
+                    fullName: worker.fullName,
+                    departmentName: worker.departmentName,
+                    title: worker.title,
+                    emailAddress: worker.emailAddress,
+                    phoneNumber: worker.phoneNumber,
+                    side_Enum_idEnum: worker.side_idEnum || 272, // Company side
+                    source: 'Company',
+                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom
+                };
+                state.workers.push(workerObj);
+                addWorkerCard(workerObj, state.workers.length - 1);
+            });
+        }
+
+        // Add service provider workers
+        if (providerWorkers && providerWorkers.length > 0) {
+            providerWorkers.forEach(worker => {
+                const workerObj = {
+                    Employee_idEmployee: worker.idEmployee,
+                    fullName: worker.fullName,
+                    departmentName: worker.departmentName,
+                    title: worker.title,
+                    emailAddress: worker.emailAddress,
+                    phoneNumber: worker.phoneNumber,
+                    side_Enum_idEnum: worker.side_idEnum || 273, // Provider side
+                    source: 'Service Provider',
+                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom
+                };
+                state.workers.push(workerObj);
+                addWorkerCard(workerObj, state.workers.length - 1);
+            });
+        }
+
+        // Update UI visibility
+        if (state.workers.length > 0) {
+            $('#workersEmptyState').hide();
+            $('#workersCardList').show();
+        }
+    }
+
+    // Initialize when document is ready
+    $(document).ready(function () {
+        init();
+    });
+
+})(jQuery);

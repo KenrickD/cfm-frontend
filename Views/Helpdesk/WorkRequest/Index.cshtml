@@ -289,7 +289,9 @@
                                             <div class="grid gap-0 column-gap-2 d-flex flex-row">
                                                 @if (Context.Session.CanEdit("Helpdesk", "Work Request Management"))
                                                 {
-                                                    <a class="btn btn-light btn-sm" href="#" role="button" data-bs-container="body"
+                                                    <a class="btn btn-light btn-sm"
+                                                       href="@Url.Action("WorkRequestEdit", "Helpdesk", new { id = workRequest.idWorkRequest })"
+                                                       role="button" data-bs-container="body"
                                                        data-bs-toggle="popover" data-bs-placement="top"
                                                        data-bs-content="Edit this Work Request" data-bs-trigger="hover">
                                                         <i class="ti ti-edit-circle"></i>

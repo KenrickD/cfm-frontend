@@ -9,9 +9,17 @@
 
   <ItemGroup>
     <Compile Remove="BackendModels\**" />
+    <Compile Remove="SignIn and SignUp\**" />
     <Content Remove="BackendModels\**" />
+    <Content Remove="SignIn and SignUp\**" />
     <EmbeddedResource Remove="BackendModels\**" />
+    <EmbeddedResource Remove="SignIn and SignUp\**" />
     <None Remove="BackendModels\**" />
+    <None Remove="SignIn and SignUp\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="OldSave.cs" />
   </ItemGroup>
 
   <ItemGroup>

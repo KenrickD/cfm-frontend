@@ -1,425 +1,469 @@
-// Person in Charge Management
+// Person in Charge Management (Settings)
 (function ($) {
     'use strict';
 
     // Configuration
     const CONFIG = {
+        debounceDelay: 300,
+        minSearchLength: 1,
         apiEndpoints: {
             list: MvcEndpoints.Helpdesk.Settings.PersonInCharge.List,
-            getById: MvcEndpoints.Helpdesk.Settings.PersonInCharge.GetById,
+            getDetails: MvcEndpoints.Helpdesk.Settings.PersonInCharge.GetDetails,
             create: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Create,
             update: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Update,
             delete: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Delete,
-            getProperties: MvcEndpoints.Helpdesk.Settings.GetProperties,
-            searchEmployees: MvcEndpoints.Helpdesk.Search.Employees
+            searchEmployees: MvcEndpoints.Helpdesk.Search.Requestors
         }
     };
 
+    // Client context for multi-tab session safety
+    const clientContext = {
+        get idClient() { return window.PageContext?.idClient || 0; },
+        get idCompany() { return window.PageContext?.idCompany || 0; }
+    };
+
+    function getClientParams() {
+        const params = {};
+        if (clientContext.idClient) params.idClient = clientContext.idClient;
+        if (clientContext.idCompany) params.idCompany = clientContext.idCompany;
+        return params;
+    }
+
+    function withClientParams(data) {
+        return { ...getClientParams(), ...data };
+    }
+
     // State management
-    let picList = [];
-    let allProperties = [];
-    let selectedEmployee = null;
-    let editingPICId = null;
-    let employeeSearchTimeout = null;
+    const state = {
+        selectedEmployee: null,
+        editingEmployeeId: null,
+        deleteEmployeeId: null,
+        deleteEmployeeName: '',
+        isExistingPic: false
+    };
 
     // Offcanvas instances
-    let addOffcanvas;
-    let editOffcanvas;
+    let addOffcanvas, editOffcanvas;
+    let employeeSearchTimeout = null;
 
     // Initialize on document ready
     $(document).ready(function () {
         initializeOffcanvas();
-        loadPICList();
-        loadProperties();
         attachEventListeners();
+        initializeClientSessionMonitor();
     });
 
     // Initialize Bootstrap Offcanvas instances
     function initializeOffcanvas() {
-        const addOffcanvasElement = document.getElementById('addPICOffcanvas');
-        const editOffcanvasElement = document.getElementById('editPICOffcanvas');
+        const addEl = document.getElementById('addPICOffcanvas');
+        const editEl = document.getElementById('editPICOffcanvas');
 
-        if (addOffcanvasElement) {
-            addOffcanvas = new bootstrap.Offcanvas(addOffcanvasElement);
-            addOffcanvasElement.addEventListener('hidden.bs.offcanvas', resetAddForm);
+        if (addEl) {
+            addOffcanvas = new bootstrap.Offcanvas(addEl);
+            addEl.addEventListener('hidden.bs.offcanvas', resetAddForm);
         }
 
-        if (editOffcanvasElement) {
-            editOffcanvas = new bootstrap.Offcanvas(editOffcanvasElement);
-            editOffcanvasElement.addEventListener('hidden.bs.offcanvas', resetEditForm);
+        if (editEl) {
+            editOffcanvas = new bootstrap.Offcanvas(editEl);
+            editEl.addEventListener('hidden.bs.offcanvas', resetEditForm);
+        }
+    }
+
+    // Initialize ClientSessionMonitor
+    function initializeClientSessionMonitor() {
+        if (typeof ClientSessionMonitor !== 'undefined') {
+            var monitor = new ClientSessionMonitor({
+                pageLoadClientId: clientContext.idClient,
+                pageLoadCompanyId: clientContext.idCompany
+            });
+            monitor.start();
         }
     }
 
     // Attach all event listeners
     function attachEventListeners() {
         // Show Add Drawer
-        $('#showAddDrawerBtn').on('click', showAddDrawer);
+        $('#showAddDrawerBtn').on('click', function () {
+            resetAddForm();
+            addOffcanvas.show();
+        });
 
-        // Employee Search
-        $('#employeeSearchInput').on('input', handleEmployeeSearch);
-        $(document).on('click', handleClickOutside);
+        // Employee Search (Add mode)
+        $('#employeeSearchInput').on('keyup', handleEmployeeSearch);
+        $('#clearEmployeeBtn').on('click', clearEmployeeSelection);
+
+        // Close search dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#employeeSearchInput, #employeeSearchResults').length) {
+                $('#employeeSearchResults').removeClass('show').empty();
+            }
+        });
 
         // Dual Listbox Controls - Add Mode
-        $('#addPropertiesBtn').on('click', () => transferProperties('available', 'assigned'));
-        $('#addAllPropertiesBtn').on('click', () => transferAllProperties('available', 'assigned'));
-        $('#removePropertiesBtn').on('click', () => transferProperties('assigned', 'available'));
-        $('#removeAllPropertiesBtn').on('click', () => transferAllProperties('assigned', 'available'));
+        $('#addPropertiesBtn').on('click', function () { transferProperties('availablePropertiesListbox', 'assignedPropertiesListbox'); });
+        $('#addAllPropertiesBtn').on('click', function () { transferAllProperties('availablePropertiesListbox', 'assignedPropertiesListbox'); });
+        $('#removePropertiesBtn').on('click', function () { transferProperties('assignedPropertiesListbox', 'availablePropertiesListbox'); });
+        $('#removeAllPropertiesBtn').on('click', function () { transferAllProperties('assignedPropertiesListbox', 'availablePropertiesListbox'); });
 
         // Dual Listbox Controls - Edit Mode
-        $('#editAddPropertiesBtn').on('click', () => transferProperties('editAvailable', 'editAssigned'));
-        $('#editAddAllPropertiesBtn').on('click', () => transferAllProperties('editAvailable', 'editAssigned'));
-        $('#editRemovePropertiesBtn').on('click', () => transferProperties('editAssigned', 'editAvailable'));
-        $('#editRemoveAllPropertiesBtn').on('click', () => transferAllProperties('editAssigned', 'editAvailable'));
+        $('#editAddPropertiesBtn').on('click', function () { transferProperties('editAvailablePropertiesListbox', 'editAssignedPropertiesListbox'); });
+        $('#editAddAllPropertiesBtn').on('click', function () { transferAllProperties('editAvailablePropertiesListbox', 'editAssignedPropertiesListbox'); });
+        $('#editRemovePropertiesBtn').on('click', function () { transferProperties('editAssignedPropertiesListbox', 'editAvailablePropertiesListbox'); });
+        $('#editRemoveAllPropertiesBtn').on('click', function () { transferAllProperties('editAssignedPropertiesListbox', 'editAvailablePropertiesListbox'); });
 
         // Listbox Search
-        $('#availablePropertiesSearch').on('input', () => filterListbox('availablePropertiesListbox', $('#availablePropertiesSearch').val()));
-        $('#assignedPropertiesSearch').on('input', () => filterListbox('assignedPropertiesListbox', $('#assignedPropertiesSearch').val()));
-        $('#editAvailablePropertiesSearch').on('input', () => filterListbox('editAvailablePropertiesListbox', $('#editAvailablePropertiesSearch').val()));
-        $('#editAssignedPropertiesSearch').on('input', () => filterListbox('editAssignedPropertiesListbox', $('#editAssignedPropertiesSearch').val()));
+        $('#availablePropertiesSearch').on('input', function () { filterListbox('availablePropertiesListbox', $(this).val()); });
+        $('#assignedPropertiesSearch').on('input', function () { filterListbox('assignedPropertiesListbox', $(this).val()); });
+        $('#editAvailablePropertiesSearch').on('input', function () { filterListbox('editAvailablePropertiesListbox', $(this).val()); });
+        $('#editAssignedPropertiesSearch').on('input', function () { filterListbox('editAssignedPropertiesListbox', $(this).val()); });
 
         // Save and Update buttons
         $('#savePICBtn').on('click', savePIC);
         $('#updatePICBtn').on('click', updatePIC);
 
-        // Delete confirmation
+        // Delete - event delegation for server-rendered list
+        $(document).on('click', '.btn-edit-pic', function () {
+            var employeeId = parseInt($(this).data('employee-id'));
+            editPIC(employeeId);
+        });
+
+        $(document).on('click', '.btn-delete-pic', function () {
+            state.deleteEmployeeId = parseInt($(this).data('employee-id'));
+            state.deleteEmployeeName = $(this).data('employee-name');
+            $('#deleteItemName').text(state.deleteEmployeeName);
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            deleteModal.show();
+        });
+
         $('#confirmDeleteBtn').on('click', confirmDelete);
 
-        // Search PIC list
-        $('#searchInput').on('input', filterPICList);
-    }
-
-    // Load PIC list
-    function loadPICList() {
-        $.ajax({
-            url: CONFIG.apiEndpoints.list,
-            type: 'GET',
-            success: function (response) {
-                if (response.success) {
-                    picList = response.data;
-                    renderPICList(picList);
-                    updateTotalCount(picList.length);
-                } else {
-                    showToast('Error loading persons in charge', 'error');
-                }
-            },
-            error: function () {
-                showToast('Failed to load persons in charge', 'error');
+        // Search button and Enter key
+        $('#searchBtn').on('click', performSearch);
+        $('#searchInput').on('keyup', function (e) {
+            if (e.key === 'Enter') {
+                performSearch();
             }
+        });
+
+        // Clear search
+        $('#clearSearchBtn').on('click', function () {
+            window.location.href = buildPageUrl(1, '');
         });
     }
 
-    // Load properties list
-    function loadProperties() {
-        $.ajax({
-            url: CONFIG.apiEndpoints.getProperties,
-            type: 'GET',
-            success: function (response) {
-                if (response.success) {
-                    allProperties = response.data;
-                } else {
-                    showToast('Error loading properties', 'error');
-                }
-            },
-            error: function () {
-                showToast('Failed to load properties', 'error');
-            }
-        });
+    // -- Search / Navigation --
+
+    function performSearch() {
+        var keyword = $('#searchInput').val().trim();
+        window.location.href = buildPageUrl(1, keyword);
     }
 
-    // Render PIC list
-    function renderPICList(list) {
-        const tbody = $('#picTableBody');
-        const emptyState = $('#emptyState');
-
-        if (!list || list.length === 0) {
-            tbody.html(emptyState);
-            return;
+    function buildPageUrl(page, keyword) {
+        var search = (keyword !== undefined) ? keyword : (window.searchKeyword || '');
+        var url = '/Helpdesk/PersonInCharge?page=' + page;
+        if (search) {
+            url += '&search=' + encodeURIComponent(search);
         }
-
-        emptyState.hide();
-        tbody.empty();
-
-        list.forEach(pic => {
-            const propertyCount = pic.properties ? pic.properties.length : 0;
-            const row = `
-                <div class="pic-list-item">
-                    <div class="pic-info">
-                        <div class="pic-name">${escapeHtml(pic.employeeName)}</div>
-                        <div class="pic-property-count">
-                            <i class="ti ti-building me-1"></i>
-                            <span class="badge">${propertyCount}</span> ${propertyCount === 1 ? 'property' : 'properties'}
-                        </div>
-                    </div>
-                    <div class="pic-actions">
-                        <button type="button" class="btn btn-edit btn-action btn-sm" onclick="editPIC(${pic.id})">
-                            <i class="ti ti-edit me-1"></i>
-                            Edit
-                        </button>
-                        <button type="button" class="btn btn-delete btn-action btn-sm" onclick="deletePIC(${pic.id}, '${escapeHtml(pic.employeeName)}')">
-                            <i class="ti ti-trash me-1"></i>
-                            Delete
-                        </button>
-                    </div>
-                </div>
-            `;
-            tbody.append(row);
-        });
+        return url;
     }
 
-    // Filter PIC list
-    function filterPICList() {
-        const searchTerm = $('#searchInput').val().toLowerCase();
-        const filtered = picList.filter(pic =>
-            pic.employeeName.toLowerCase().includes(searchTerm)
-        );
-        renderPICList(filtered);
-        updateTotalCount(filtered.length);
-    }
+    // -- Employee Search (Add mode) --
 
-    // Update total count
-    function updateTotalCount(count) {
-        $('#totalCount').text(count);
-    }
-
-    // Show Add Drawer
-    function showAddDrawer() {
-        resetAddForm();
-        addOffcanvas.show();
-    }
-
-    // Reset Add Form
-    function resetAddForm() {
-        selectedEmployee = null;
-        $('#employeeSearchInput').val('');
-        $('#employeeSearchResults').removeClass('show').empty();
-        $('#selectedEmployeeDisplay').empty();
-        $('#availablePropertiesSearch').val('');
-        $('#assignedPropertiesSearch').val('');
-        populateListbox('availablePropertiesListbox', allProperties);
-        populateListbox('assignedPropertiesListbox', []);
-    }
-
-    // Handle Employee Search
     function handleEmployeeSearch() {
-        const searchTerm = $(this).val().trim();
-
+        var term = $(this).val().trim();
         clearTimeout(employeeSearchTimeout);
 
-        if (searchTerm.length < 2) {
-            $('#employeeSearchResults').removeClass('show').empty();
+        var $results = $('#employeeSearchResults');
+
+        if (term.length < CONFIG.minSearchLength) {
+            $results.removeClass('show').empty();
             return;
         }
 
-        employeeSearchTimeout = setTimeout(() => {
+        // Show loading spinner
+        $results.empty().html(
+            '<div class="employee-search-item text-center">' +
+            '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+            'Searching...' +
+            '</div>'
+        ).addClass('show');
+
+        employeeSearchTimeout = setTimeout(function () {
             $.ajax({
                 url: CONFIG.apiEndpoints.searchEmployees,
-                type: 'GET',
-                data: { searchTerm: searchTerm },
+                method: 'GET',
+                data: withClientParams({ term: term }),
                 success: function (response) {
-                    if (response.success && response.data) {
-                        renderEmployeeSearchResults(response.data);
+                    $results.empty();
+
+                    if (response.success && response.data && response.data.length > 0) {
+                        $.each(response.data, function (index, employee) {
+                            var name = employee.fullName || employee.FullName || '';
+                            var title = employee.title || employee.Title || '';
+                            var department = employee.departmentName || employee.DepartmentName || '';
+
+                            var $item = $('<div></div>')
+                                .addClass('employee-search-item')
+                                .html(
+                                    '<strong>' + escapeHtml(name) + '</strong>' +
+                                    '<small class="text-muted">' +
+                                    (title ? escapeHtml(title) + '<br>' : '') +
+                                    escapeHtml(department) +
+                                    '</small>'
+                                )
+                                .on('click', function () {
+                                    onEmployeeSelected({
+                                        id: employee.idEmployee || employee.IdEmployee,
+                                        fullName: name,
+                                        title: title,
+                                        departmentName: department,
+                                        emailAddress: employee.emailAddress || employee.EmailAddress || '',
+                                        phoneNumber: employee.phoneNumber || employee.PhoneNumber || ''
+                                    });
+                                });
+                            $results.append($item);
+                        });
+                        $results.addClass('show');
+                    } else {
+                        $results.append(
+                            $('<div></div>')
+                                .addClass('employee-search-item text-muted')
+                                .text('No employees found')
+                        );
+                        $results.addClass('show');
                     }
                 },
                 error: function () {
-                    showToast('Failed to search employees', 'error');
+                    showNotification('Error searching employees', 'error');
+                    $('#employeeSearchResults').removeClass('show').empty();
                 }
             });
-        }, 300);
+        }, CONFIG.debounceDelay);
     }
 
-    // Render employee search results
-    function renderEmployeeSearchResults(employees) {
-        const resultsContainer = $('#employeeSearchResults');
-        resultsContainer.empty();
-
-        if (employees.length === 0) {
-            resultsContainer.html('<div class="employee-search-item">No employees found</div>');
-        } else {
-            employees.forEach(emp => {
-                const item = `
-                    <div class="employee-search-item" data-employee-id="${emp.id}" data-employee-name="${escapeHtml(emp.name)}">
-                        <div class="employee-name">${escapeHtml(emp.name)}</div>
-                        <div class="employee-details">${escapeHtml(emp.email || '')} ${emp.department ? '• ' + escapeHtml(emp.department) : ''}</div>
-                    </div>
-                `;
-                resultsContainer.append(item);
-            });
-
-            // Attach click handlers
-            resultsContainer.find('.employee-search-item').on('click', function () {
-                const employeeId = $(this).data('employee-id');
-                const employeeName = $(this).data('employee-name');
-                selectEmployee(employeeId, employeeName);
-            });
-        }
-
-        resultsContainer.addClass('show');
-    }
-
-    // Select employee
-    function selectEmployee(id, name) {
-        selectedEmployee = { id, name };
-        $('#employeeSearchInput').val(name);
+    function onEmployeeSelected(employee) {
+        // Close search dropdown
         $('#employeeSearchResults').removeClass('show').empty();
 
-        const display = `
-            <div class="selected-employee">
-                <i class="ti ti-user-check me-2"></i>
-                ${escapeHtml(name)}
-                <i class="ti ti-x" onclick="clearSelectedEmployee()"></i>
-            </div>
-        `;
-        $('#selectedEmployeeDisplay').html(display);
+        // Show employee card
+        showEmployeeCard(employee);
+
+        // Load PIC details to get property assignments
+        loadPicDetailsForEmployee(employee.id);
     }
 
-    // Clear selected employee (exposed globally)
-    window.clearSelectedEmployee = function () {
-        selectedEmployee = null;
-        $('#employeeSearchInput').val('');
-        $('#selectedEmployeeDisplay').empty();
-    };
+    function showEmployeeCard(employee) {
+        state.selectedEmployee = employee;
+        $('#selectedEmployeeId').val(employee.id);
 
-    // Handle click outside to close search results
-    function handleClickOutside(e) {
-        if (!$(e.target).closest('.employee-search-container').length) {
-            $('#employeeSearchResults').removeClass('show');
+        var initials = generateInitials(employee.fullName);
+        var avatarColor = generateAvatarColor(employee.fullName);
+
+        $('#employeeInitials').text(initials);
+        $('#employeeAvatar').css('background-color', avatarColor);
+        $('#employeeCardName').text(employee.fullName);
+
+        var detailsHtml = '';
+        if (employee.title) {
+            detailsHtml += '<div><i class="ti ti-briefcase me-1"></i>' + escapeHtml(employee.title) + '</div>';
         }
+        if (employee.departmentName) {
+            detailsHtml += '<div><i class="ti ti-building me-1"></i>' + escapeHtml(employee.departmentName) + '</div>';
+        }
+        if (employee.emailAddress) {
+            detailsHtml += '<div><i class="ti ti-mail me-1"></i>' + escapeHtml(employee.emailAddress) + '</div>';
+        }
+        if (employee.phoneNumber) {
+            detailsHtml += '<div><i class="ti ti-phone me-1"></i>' + escapeHtml(employee.phoneNumber) + '</div>';
+        }
+
+        $('#employeeCardDetails').html(detailsHtml || '<div class="text-muted fst-italic">No details available</div>');
+
+        // Toggle visibility
+        $('#employeeSearchContainer').hide();
+        $('#employeeCard').fadeIn(300);
     }
 
-    // Populate listbox
+    function clearEmployeeSelection() {
+        state.selectedEmployee = null;
+        state.isExistingPic = false;
+        $('#selectedEmployeeId').val('');
+        $('#employeeSearchInput').val('');
+        $('#employeeCardName').text('');
+        $('#employeeCardDetails').empty();
+
+        // Hide card, show search
+        $('#employeeCard').hide();
+        $('#employeeSearchContainer').fadeIn(300);
+
+        // Hide property section
+        $('#addPropertySection').addClass('property-section-hidden');
+
+        // Clear listboxes
+        populateListbox('availablePropertiesListbox', []);
+        populateListbox('assignedPropertiesListbox', []);
+
+        setTimeout(function () {
+            $('#employeeSearchInput').focus();
+        }, 350);
+    }
+
+    // -- Load PIC Details --
+
+    function loadPicDetailsForEmployee(employeeId) {
+        $.ajax({
+            url: CONFIG.apiEndpoints.getDetails,
+            method: 'GET',
+            data: withClientParams({ employeeId: employeeId }),
+            success: function (response) {
+                if (response.success && response.data) {
+                    var details = response.data;
+                    var hasAssigned = details.assignedProperties && details.assignedProperties.length > 0;
+
+                    if (hasAssigned) {
+                        // Employee already has PIC assignments - block creation
+                        state.isExistingPic = true;
+                        showNotification('This employee is already assigned as a Person in Charge. Use the Edit button from the list instead.', 'warning');
+                    } else {
+                        state.isExistingPic = false;
+                    }
+
+                    // Populate listboxes from API response
+                    populateListbox('availablePropertiesListbox', details.availableProperties || []);
+                    populateListbox('assignedPropertiesListbox', details.assignedProperties || []);
+
+                    // Show property section
+                    $('#addPropertySection').removeClass('property-section-hidden');
+                } else {
+                    showNotification('Failed to load property details', 'error');
+                }
+            },
+            error: function () {
+                showNotification('Error loading property details', 'error');
+            }
+        });
+    }
+
+    // -- Dual Listbox --
+
     function populateListbox(listboxId, items) {
-        const listbox = $(`#${listboxId}`);
-        listbox.empty();
+        var $listbox = $('#' + listboxId);
+        $listbox.empty();
 
         if (!items || items.length === 0) {
-            listbox.html('<div class="text-muted text-center p-3">No items</div>');
+            $listbox.html('<div class="text-muted text-center p-3">No items</div>');
             return;
         }
 
-        items.forEach(item => {
-            const div = $('<div>')
+        items.forEach(function (item) {
+            var id = item.idProperty || item.IdProperty;
+            var name = item.propertyName || item.PropertyName || '';
+            var $div = $('<div>')
                 .addClass('listbox-item')
-                .attr('data-id', item.id)
-                .text(item.name)
+                .attr('data-id', id)
+                .text(name)
                 .on('click', function () {
                     $(this).toggleClass('selected');
                 });
-            listbox.append(div);
+            $listbox.append($div);
         });
     }
 
-    // Filter listbox
     function filterListbox(listboxId, searchTerm) {
-        const listbox = $(`#${listboxId}`);
-        const items = listbox.find('.listbox-item');
+        var $listbox = $('#' + listboxId);
+        var $items = $listbox.find('.listbox-item');
+        var lowerTerm = (searchTerm || '').toLowerCase();
 
-        items.each(function () {
-            const text = $(this).text().toLowerCase();
-            const matches = text.includes(searchTerm.toLowerCase());
-            $(this).toggle(matches);
+        $items.each(function () {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.includes(lowerTerm));
         });
     }
 
-    // Transfer properties between listboxes
-    function transferProperties(fromPrefix, toPrefix) {
-        const fromListboxId = fromPrefix === 'available' ? 'availablePropertiesListbox' :
-            fromPrefix === 'assigned' ? 'assignedPropertiesListbox' :
-                fromPrefix === 'editAvailable' ? 'editAvailablePropertiesListbox' :
-                    'editAssignedPropertiesListbox';
+    function transferProperties(fromListboxId, toListboxId) {
+        var $from = $('#' + fromListboxId);
+        var $to = $('#' + toListboxId);
+        var $selected = $from.find('.listbox-item.selected');
 
-        const toListboxId = toPrefix === 'available' ? 'availablePropertiesListbox' :
-            toPrefix === 'assigned' ? 'assignedPropertiesListbox' :
-                toPrefix === 'editAvailable' ? 'editAvailablePropertiesListbox' :
-                    'editAssignedPropertiesListbox';
-
-        const fromListbox = $(`#${fromListboxId}`);
-        const toListbox = $(`#${toListboxId}`);
-
-        const selectedItems = fromListbox.find('.listbox-item.selected');
-
-        if (selectedItems.length === 0) {
-            showToast('Please select items to transfer', 'warning');
+        if ($selected.length === 0) {
+            showNotification('Please select items to transfer', 'warning');
             return;
         }
 
-        selectedItems.each(function () {
-            const item = $(this).clone();
-            item.removeClass('selected');
-            toListbox.append(item);
-            item.on('click', function () {
+        $selected.each(function () {
+            var $item = $(this).clone().removeClass('selected');
+            $item.on('click', function () {
                 $(this).toggleClass('selected');
             });
+            $to.append($item);
             $(this).remove();
         });
 
-        // Remove "No items" message if exists
-        toListbox.find('.text-muted').remove();
-        if (fromListbox.find('.listbox-item').length === 0) {
-            fromListbox.html('<div class="text-muted text-center p-3">No items</div>');
+        // Remove "No items" message if it exists in target
+        $to.find('.text-muted').remove();
+
+        // Add "No items" message if source is now empty
+        if ($from.find('.listbox-item').length === 0) {
+            $from.html('<div class="text-muted text-center p-3">No items</div>');
         }
     }
 
-    // Transfer all properties
-    function transferAllProperties(fromPrefix, toPrefix) {
-        const fromListboxId = fromPrefix === 'available' ? 'availablePropertiesListbox' :
-            fromPrefix === 'assigned' ? 'assignedPropertiesListbox' :
-                fromPrefix === 'editAvailable' ? 'editAvailablePropertiesListbox' :
-                    'editAssignedPropertiesListbox';
+    function transferAllProperties(fromListboxId, toListboxId) {
+        var $from = $('#' + fromListboxId);
+        var $to = $('#' + toListboxId);
+        var $allItems = $from.find('.listbox-item');
 
-        const toListboxId = toPrefix === 'available' ? 'availablePropertiesListbox' :
-            toPrefix === 'assigned' ? 'assignedPropertiesListbox' :
-                toPrefix === 'editAvailable' ? 'editAvailablePropertiesListbox' :
-                    'editAssignedPropertiesListbox';
-
-        const fromListbox = $(`#${fromListboxId}`);
-        const toListbox = $(`#${toListboxId}`);
-
-        const allItems = fromListbox.find('.listbox-item');
-
-        if (allItems.length === 0) {
-            showToast('No items to transfer', 'warning');
+        if ($allItems.length === 0) {
+            showNotification('No items to transfer', 'warning');
             return;
         }
 
-        allItems.each(function () {
-            const item = $(this).clone();
-            item.removeClass('selected');
-            toListbox.append(item);
-            item.on('click', function () {
+        $allItems.each(function () {
+            var $item = $(this).clone().removeClass('selected');
+            $item.on('click', function () {
                 $(this).toggleClass('selected');
             });
+            $to.append($item);
         });
 
-        fromListbox.html('<div class="text-muted text-center p-3">No items</div>');
-        toListbox.find('.text-muted').remove();
+        $from.html('<div class="text-muted text-center p-3">No items</div>');
+        $to.find('.text-muted').remove();
     }
 
-    // Get assigned property IDs from listbox
-    function getAssignedPropertyIds(listboxId) {
-        const ids = [];
-        $(`#${listboxId}`).find('.listbox-item').each(function () {
+    function getListboxItemIds(listboxId) {
+        var ids = [];
+        $('#' + listboxId).find('.listbox-item').each(function () {
             ids.push(parseInt($(this).attr('data-id')));
         });
         return ids;
     }
 
-    // Save PIC
+    // -- CRUD Operations --
+
     function savePIC() {
-        if (!selectedEmployee) {
-            showToast('Please select an employee', 'warning');
+        if (!state.selectedEmployee) {
+            showNotification('Please select an employee', 'warning');
             return;
         }
 
-        const assignedPropertyIds = getAssignedPropertyIds('assignedPropertiesListbox');
-
-        if (assignedPropertyIds.length === 0) {
-            showToast('Please assign at least one property', 'warning');
+        if (state.isExistingPic) {
+            showNotification('This employee is already a Person in Charge. Please use the Edit button from the list.', 'warning');
             return;
         }
 
-        const payload = {
-            idEmployee: selectedEmployee.id,
-            propertyIds: assignedPropertyIds
+        var assignedIds = getListboxItemIds('assignedPropertiesListbox');
+        if (assignedIds.length === 0) {
+            showNotification('Please assign at least one property', 'warning');
+            return;
+        }
+
+        var unassignedIds = getListboxItemIds('availablePropertiesListbox');
+
+        var payload = {
+            idEmployee: state.selectedEmployee.id,
+            idClient: clientContext.idClient,
+            assignedProperties: assignedIds,
+            unassignedProperties: unassignedIds
         };
 
         $.ajax({
@@ -429,42 +473,36 @@
             data: JSON.stringify(payload),
             success: function (response) {
                 if (response.success) {
-                    showToast('Person in charge added successfully', 'success');
+                    showNotification('Person in charge added', 'success');
                     addOffcanvas.hide();
-                    loadPICList();
+                    window.location.href = buildPageUrl(1);
                 } else {
-                    showToast(response.message || 'Failed to add person in charge', 'error');
+                    showNotification(response.message || 'Failed to add person in charge', 'error');
                 }
             },
             error: function () {
-                showToast('An error occurred while adding person in charge', 'error');
+                showNotification('An error occurred while adding person in charge', 'error');
             }
         });
     }
 
-    // Edit PIC (exposed globally)
-    window.editPIC = function (id) {
-        editingPICId = id;
+    function editPIC(employeeId) {
+        state.editingEmployeeId = employeeId;
 
-        // Fetch full PIC details including properties from backend
         $.ajax({
-            url: CONFIG.apiEndpoints.getById,
+            url: CONFIG.apiEndpoints.getDetails,
             type: 'GET',
-            data: { id: id },
+            data: withClientParams({ employeeId: employeeId }),
             success: function (response) {
                 if (response.success && response.data) {
-                    const pic = response.data;
+                    var details = response.data;
 
                     // Set employee name (locked field)
-                    $('#editEmployeeName').val(pic.employeeName);
+                    $('#editEmployeeName').val(details.fullName || details.FullName || '');
 
-                    // Populate listboxes with assigned properties from backend
-                    const assignedPropertyIds = pic.properties ? pic.properties.map(p => p.id) : [];
-                    const availableProperties = allProperties.filter(p => !assignedPropertyIds.includes(p.id));
-                    const assignedProperties = pic.properties || [];
-
-                    populateListbox('editAvailablePropertiesListbox', availableProperties);
-                    populateListbox('editAssignedPropertiesListbox', assignedProperties);
+                    // Populate listboxes from API response
+                    populateListbox('editAvailablePropertiesListbox', details.availableProperties || []);
+                    populateListbox('editAssignedPropertiesListbox', details.assignedProperties || []);
 
                     // Clear search inputs
                     $('#editAvailablePropertiesSearch').val('');
@@ -472,40 +510,34 @@
 
                     editOffcanvas.show();
                 } else {
-                    showToast('Failed to load person in charge details', 'error');
+                    showNotification('Failed to load PIC details', 'error');
                 }
             },
             error: function () {
-                showToast('An error occurred while loading person in charge details', 'error');
+                showNotification('An error occurred while loading PIC details', 'error');
             }
         });
-    };
-
-    // Reset Edit Form
-    function resetEditForm() {
-        editingPICId = null;
-        $('#editEmployeeName').val('');
-        $('#editAvailablePropertiesSearch').val('');
-        $('#editAssignedPropertiesSearch').val('');
     }
 
-    // Update PIC
     function updatePIC() {
-        if (!editingPICId) {
-            showToast('Invalid operation', 'error');
+        if (!state.editingEmployeeId) {
+            showNotification('Invalid operation', 'error');
             return;
         }
 
-        const assignedPropertyIds = getAssignedPropertyIds('editAssignedPropertiesListbox');
-
-        if (assignedPropertyIds.length === 0) {
-            showToast('Please assign at least one property', 'warning');
+        var assignedIds = getListboxItemIds('editAssignedPropertiesListbox');
+        if (assignedIds.length === 0) {
+            showNotification('Please assign at least one property', 'warning');
             return;
         }
 
-        const payload = {
-            id: editingPICId,
-            propertyIds: assignedPropertyIds
+        var unassignedIds = getListboxItemIds('editAvailablePropertiesListbox');
+
+        var payload = {
+            idEmployee: state.editingEmployeeId,
+            idClient: clientContext.idClient,
+            assignedProperties: assignedIds,
+            unassignedProperties: unassignedIds
         };
 
         $.ajax({
@@ -515,84 +547,99 @@
             data: JSON.stringify(payload),
             success: function (response) {
                 if (response.success) {
-                    showToast('Person in charge updated successfully', 'success');
+                    showNotification('Person in charge updated', 'success');
                     editOffcanvas.hide();
-                    loadPICList();
+                    window.location.reload();
                 } else {
-                    showToast(response.message || 'Failed to update person in charge', 'error');
+                    showNotification(response.message || 'Failed to update person in charge', 'error');
                 }
             },
             error: function () {
-                showToast('An error occurred while updating person in charge', 'error');
+                showNotification('An error occurred while updating person in charge', 'error');
             }
         });
     }
 
-    // Delete PIC (exposed globally)
-    window.deletePIC = function (id, name) {
-        $('#deleteItemName').text(name);
-        $('#confirmDeleteBtn').data('id', id);
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        deleteModal.show();
-    };
-
-    // Confirm Delete
     function confirmDelete() {
-        const id = $(this).data('id');
+        var employeeId = state.deleteEmployeeId;
+        if (!employeeId) return;
 
         $.ajax({
             url: CONFIG.apiEndpoints.delete,
             type: 'DELETE',
-            contentType: 'application/json',
-            data: JSON.stringify({ id: id }),
+            data: withClientParams({ employeeId: employeeId }),
             success: function (response) {
                 if (response.success) {
-                    showToast('Person in charge deleted successfully', 'success');
-                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
-                    deleteModal.hide();
-                    loadPICList();
+                    showNotification('Person in charge deleted', 'success');
+                    var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+                    if (deleteModal) deleteModal.hide();
+                    window.location.reload();
                 } else {
-                    showToast(response.message || 'Failed to delete person in charge', 'error');
+                    showNotification(response.message || 'Failed to delete person in charge', 'error');
                 }
             },
             error: function () {
-                showToast('An error occurred while deleting person in charge', 'error');
+                showNotification('An error occurred while deleting person in charge', 'error');
             }
         });
     }
 
-    // Utility: Escape HTML
-    function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
+    // -- Form Reset --
+
+    function resetAddForm() {
+        state.selectedEmployee = null;
+        state.isExistingPic = false;
+        $('#selectedEmployeeId').val('');
+        $('#employeeSearchInput').val('');
+        $('#employeeSearchResults').removeClass('show').empty();
+        $('#employeeCardName').text('');
+        $('#employeeCardDetails').empty();
+        $('#employeeCard').hide();
+        $('#employeeSearchContainer').show();
+        $('#addPropertySection').addClass('property-section-hidden');
+        $('#availablePropertiesSearch').val('');
+        $('#assignedPropertiesSearch').val('');
+        populateListbox('availablePropertiesListbox', []);
+        populateListbox('assignedPropertiesListbox', []);
     }
 
-    // Utility: Show Toast
-    function showToast(message, type = 'info') {
-        // Use your existing toast notification system
-        // This is a placeholder - adjust based on your UI framework
-        const iconMap = {
-            success: 'ti-check',
-            error: 'ti-x',
-            warning: 'ti-alert-triangle',
-            info: 'ti-info-circle'
-        };
+    function resetEditForm() {
+        state.editingEmployeeId = null;
+        $('#editEmployeeName').val('');
+        $('#editAvailablePropertiesSearch').val('');
+        $('#editAssignedPropertiesSearch').val('');
+    }
 
-        const icon = iconMap[type] || iconMap.info;
-        console.log(`[${type.toUpperCase()}] ${message}`);
+    // -- Utility Functions --
 
-        // If you have a toast library like Toastr or Bootstrap Toast, use it here
-        if (typeof toastr !== 'undefined') {
-            toastr[type](message);
-        } else {
-            alert(message);
+    function generateInitials(fullName) {
+        if (!fullName) return '??';
+        var nameParts = fullName.trim().split(' ').filter(function (part) { return part.length > 0; });
+        if (nameParts.length === 0) return '??';
+        if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase();
+        var firstInitial = nameParts[0].charAt(0);
+        var lastInitial = nameParts[nameParts.length - 1].charAt(0);
+        return (firstInitial + lastInitial).toUpperCase();
+    }
+
+    function generateAvatarColor(fullName) {
+        var colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6',
+            '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+        ];
+        if (!fullName) return colors[0];
+        var hash = 0;
+        for (var i = 0; i < fullName.length; i++) {
+            hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
         }
+        var index = Math.abs(hash) % colors.length;
+        return colors[index];
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, function (m) { return map[m]; });
     }
 
 })(jQuery);

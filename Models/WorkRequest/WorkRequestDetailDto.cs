@@ -31,6 +31,8 @@ namespace cfm_frontend.Models.WorkRequest
         public EnumFormDetailResponse? RequestMethod { get; set; }
         public ServiceProviderFormDetailResponse? ServiceProvider { get; set; }
         public EnumFormDetailResponse? Status { get; set; }
+        public EnumFormDetailResponse? Feedback { get; set; }
+        public string? FeedbackSummary { get; set; }
         public TypeFormDetailResponse? WorkCategory { get; set; }
         public TypeFormDetailResponse? OtherCategory { get; set; }
         public TypeFormDetailResponse? OtherCategory2 { get; set; }

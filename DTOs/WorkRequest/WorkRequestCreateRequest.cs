@@ -74,7 +74,7 @@
         // Summary and Feedback
         public string followUpDetail { get; set; }
         public int? feedbackType_Enum_idEnum { get; set; }
-        public string FeedbackSummary { get; set; }
+        public string feedbackSummary { get; set; }
 
         // System fields
         public int Client_idClient { get; set; }
@@ -101,7 +101,7 @@
     public class MaterialJobCodeDto
     {
         public int idJobCode { get; set; }
-        public string jobCode { get; set; }
+        public string JobCode { get; set; }
         public float quantity { get; set; }
         public float unitPrice { get; set; }
     }
@@ -128,6 +128,7 @@
         public int Employee_idEmployee { get; set; }
         public int side_Enum_idEnum { get; set; }
         public bool isJoinToExternalChatRoom { get; set; }
+        public bool HasAccess { get; set; }
     }
 
     public class AdditionalInformationDto

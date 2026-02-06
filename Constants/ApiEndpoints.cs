@@ -653,41 +653,43 @@ namespace cfm_frontend.Constants
 
             /// <summary>
             /// Person in charge settings endpoints
+            /// Base path: /api/v1/work-request/pic
             /// </summary>
             public static class PersonInCharge
             {
-                private const string PersonsBase = Base + "/persons-in-charge";
+                private const string PicBase = ApiBase + "/work-request/pic";
 
                 /// <summary>
-                /// GET: Get all persons in charge
+                /// GET: Get paginated PIC list
+                /// Query params: cid (client id), page, limit, keyword
                 /// </summary>
-                public const string List = PersonsBase;
+                public const string List = PicBase + "/list";
 
                 /// <summary>
-                /// GET: Get person in charge by ID
-                /// Path params: {id}
+                /// GET: Get PIC details with property assignments
+                /// Path params: {employeeId}
+                /// Query params: cid (client id)
                 /// </summary>
-                /// <param name="id">Person in charge ID</param>
-                /// <returns>Get by ID endpoint URL</returns>
-                public static string GetById(int id) => $"{PersonsBase}/{id}";
+                public static string GetDetails(int employeeId) => $"{PicBase}/{employeeId}";
 
                 /// <summary>
-                /// POST: Create person in charge
+                /// POST: Create PIC property assignment
+                /// Body: PicPropertyPayloadDto
                 /// </summary>
-                public const string Create = PersonsBase;
+                public const string Create = PicBase;
 
                 /// <summary>
-                /// PUT: Update person in charge
+                /// PUT: Update PIC property assignment
+                /// Body: PicPropertyPayloadDto
                 /// </summary>
-                public const string Update = PersonsBase;
+                public const string Update = PicBase;
 
                 /// <summary>
-                /// DELETE: Delete person in charge by ID
-                /// Path params: {id}
+                /// DELETE: Remove PIC
+                /// Path params: {employeeId}
+                /// Query params: cid (client id)
                 /// </summary>
-                /// <param name="id">Person in charge ID</param>
-                /// <returns>Delete endpoint URL</returns>
-                public static string Delete(int id) => $"{PersonsBase}/{id}";
+                public static string Delete(int employeeId) => $"{PicBase}/{employeeId}";
             }
 
             /// <summary>

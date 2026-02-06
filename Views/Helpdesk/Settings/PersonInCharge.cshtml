@@ -1,3 +1,5 @@
+@model cfm_frontend.ViewModels.PersonInChargeViewModel
+
 @{
     ViewBag.Title = "Person in Charge List";
     ViewBag.pTitle = "Settings";
@@ -147,7 +149,6 @@
         /* Employee Search Styles */
         .employee-search-container {
             position: relative;
-            margin-bottom: 1.5rem;
         }
 
         .employee-search-results {
@@ -198,39 +199,68 @@
             border-bottom: none;
         }
 
-        .employee-name {
+        .employee-search-item strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .employee-search-item small {
+            display: block;
+            line-height: 1.4;
+        }
+
+        /* Employee Card Styles (matches requestor card pattern) */
+        .employee-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-left: 4px solid #667eea;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        [data-pc-theme="dark"] .employee-card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+            border-left-color: #667eea;
+        }
+
+        .avatar-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .employee-card h6 {
+            font-size: 0.95rem;
             font-weight: 600;
             color: #2c3e50;
         }
 
-        [data-pc-theme="dark"] .employee-name {
+        [data-pc-theme="dark"] .employee-card h6 {
             color: #e5e7eb;
         }
 
-        .employee-details {
-            font-size: 0.875rem;
+        .employee-card-details {
+            font-size: 0.8rem;
             color: #6c757d;
-            margin-top: 0.25rem;
+            line-height: 1.5;
         }
 
-        [data-pc-theme="dark"] .employee-details {
+        [data-pc-theme="dark"] .employee-card-details {
             color: #9ca3af;
         }
 
-        .selected-employee {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 0.375rem;
-            margin-top: 0.5rem;
-            font-weight: 500;
-        }
-
-        .selected-employee i {
-            margin-left: 0.5rem;
-            cursor: pointer;
+        .employee-card-details div {
+            margin-bottom: 0.125rem;
         }
 
         /* Offcanvas Custom Styles */
@@ -265,6 +295,11 @@
             background-color: #f8f9fa;
             cursor: not-allowed;
         }
+
+        /* Property section initially hidden in Add mode until employee is selected */
+        .property-section-hidden {
+            display: none;
+        }
     </style>
 }
 
@@ -287,13 +322,34 @@
         <!-- Stats and Search -->
         <div class="stats-section">
             <div class="total-count">
-                Showing total of <strong><span id="totalCount">0</span></strong> Persons in Charge
+                @if (Model?.Paging != null && Model.Paging.TotalCount > 0)
+                {
+                    var startRecord = (Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1;
+                    var endRecord = Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalCount);
+                    <span>Showing <strong>@startRecord</strong> to <strong>@endRecord</strong> of <strong>@Model.Paging.TotalCount</strong> Persons in Charge</span>
+                }
+                else
+                {
+                    <span>Showing total of <strong>0</strong> Persons in Charge</span>
+                }
             </div>
             <div class="search-box">
-                <input type="text"
-                       class="form-control form-control-sm"
-                       id="searchInput"
-                       placeholder="Search persons in charge...">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           id="searchInput"
+                           placeholder="Search persons in charge..."
+                           value="@Model?.SearchKeyword">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="searchBtn">
+                        <i class="ti ti-search"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model?.SearchKeyword))
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearchBtn">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
 
@@ -309,21 +365,59 @@
         <div class="category-table">
             <div class="category-table-header">
                 <div class="row">
-                    <div class="col-8">
+                    <div class="col-6">
                         <h6 class="mb-0">Name</h6>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         <h6 class="mb-0">Properties</h6>
+                    </div>
+                    <div class="col-3 text-end">
+                        <h6 class="mb-0">Actions</h6>
                     </div>
                 </div>
             </div>
             <div class="category-table-body" id="picTableBody">
-                <div class="empty-state" id="emptyState">
-                    <i class="ti ti-user-off"></i>
-                    <p>No persons in charge found</p>
-                </div>
+                @if (Model?.PersonsInCharge != null && Model.PersonsInCharge.Any())
+                {
+                    foreach (var pic in Model.PersonsInCharge)
+                    {
+                        <div class="pic-list-item" data-employee-id="@pic.IdEmployee">
+                            <div class="pic-info">
+                                <div class="pic-name">@pic.FullName</div>
+                                <div class="pic-property-count">
+                                    <i class="ti ti-building me-1"></i>
+                                    <span class="badge">@pic.TotalAssignedProperties</span> / @pic.TotalProperties properties
+                                </div>
+                            </div>
+                            <div class="pic-actions">
+                                <button type="button" class="btn btn-edit btn-action btn-sm btn-edit-pic"
+                                        data-employee-id="@pic.IdEmployee">
+                                    <i class="ti ti-edit me-1"></i>Edit
+                                </button>
+                                <button type="button" class="btn btn-delete btn-action btn-sm btn-delete-pic"
+                                        data-employee-id="@pic.IdEmployee"
+                                        data-employee-name="@pic.FullName">
+                                    <i class="ti ti-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state" id="emptyState">
+                        <i class="ti ti-user-off"></i>
+                        <p>No persons in charge found</p>
+                    </div>
+                }
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if (Model?.Paging != null)
+        {
+            @await Html.PartialAsync("_Pagination", Model.Paging)
+        }
     </div>
 </div>
 
@@ -340,19 +434,42 @@
         <!-- Employee Search Section -->
         <div class="form-section">
             <div class="form-section-title">Select Employee</div>
-            <div class="employee-search-container">
+            <input type="hidden" id="selectedEmployeeId" />
+
+            <!-- Search container (visible when no employee selected) -->
+            <div id="employeeSearchContainer" class="employee-search-container">
                 <input type="text"
                        class="form-control"
                        id="employeeSearchInput"
-                       placeholder="Search employee by name or email..."
+                       placeholder="Search employee by name..."
                        autocomplete="off">
                 <div class="employee-search-results" id="employeeSearchResults"></div>
-                <div id="selectedEmployeeDisplay"></div>
+            </div>
+
+            <!-- Employee card (hidden until selected) -->
+            <div id="employeeCard" class="employee-card" style="display: none;">
+                <div class="d-flex align-items-start">
+                    <div class="avatar-circle me-3" id="employeeAvatar">
+                        <span id="employeeInitials"></span>
+                    </div>
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="mb-0 fw-semibold text-truncate" id="employeeCardName"></h6>
+                            <button type="button"
+                                    class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    id="clearEmployeeBtn"
+                                    title="Remove selection">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
+                        <div class="employee-card-details" id="employeeCardDetails"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Property Assignment Section -->
-        <div class="form-section">
+        <!-- Property Assignment Section (hidden until employee selected) -->
+        <div class="form-section property-section-hidden" id="addPropertySection">
             <div class="form-section-title">Assign Properties</div>
             <div class="dual-listbox-container">
                 <!-- Available Properties -->
@@ -430,7 +547,7 @@
             </small>
         </div>
 
-        <!-- Property Assignment Section (Same as Add) -->
+        <!-- Property Assignment Section -->
         <div class="form-section">
             <div class="form-section-title">Assign Properties</div>
             <div class="dual-listbox-container">
@@ -513,5 +630,15 @@
 </div>
 
 @section scripts {
+    <script>
+        window.currentPage = @(Model?.Paging?.CurrentPage ?? 1);
+        window.searchKeyword = '@Html.Raw(Model?.SearchKeyword ?? "")';
+
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0),
+            idCompany: @(Model?.IdCompany ?? 0)
+        };
+    </script>
+    <script src="~/assets/js/helpers/client-session-monitor.js"></script>
     <script src="~/assets/js/pages/settings/person-in-charge.js"></script>
 }

@@ -260,7 +260,8 @@
                             </div>
                             <div class="category-description">@category.TypeName</div>
                             <div class="category-actions">
-                                <button type="button"
+                                @* reorder function *@
+                                @* <button type="button"
                                         class="btn btn-outline-secondary btn-order"
                                         onclick="moveItemUp(@category.IdType)"
                                         title="Move Up"
@@ -273,7 +274,7 @@
                                         title="Move Down"
                                         @(isLast ? "disabled" : "")>
                                     <i class="ti ti-arrow-down"></i>
-                                </button>
+                                </button> *@
                                 <button type="button"
                                         class="btn btn-outline-primary btn-action"
                                         onclick="editItem(@category.IdType)">

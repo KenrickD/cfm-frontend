@@ -172,8 +172,8 @@
                  * Person in Charge CRUD
                  */
                 PersonInCharge: {
-                    List: '/Helpdesk/GetPersonsInCharge',
-                    GetById: '/Helpdesk/GetPersonInChargeById',
+                    List: '/Helpdesk/GetPersonsInChargePaged',
+                    GetDetails: '/Helpdesk/GetPicDetails',
                     Create: '/Helpdesk/CreatePersonInCharge',
                     Update: '/Helpdesk/UpdatePersonInCharge',
                     Delete: '/Helpdesk/DeletePersonInCharge'

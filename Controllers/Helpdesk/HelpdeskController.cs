@@ -449,37 +449,50 @@ namespace cfm_frontend.Controllers.Helpdesk
                 _fileLogger.LogInfo("Work request payload: {Payload}", jsonPayload);
                 var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
 
-                if (response.IsSuccessStatusCode)
+                // Read response body regardless of HTTP status code
+                // (backend returns ApiResponseDto for both success and error cases)
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                ApiResponseDto<WorkRequestCreateData> apiResponse = null;
+                try
                 {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<WorkRequestCreateResponse>(
-                        responseStream,
+                    apiResponse = JsonSerializer.Deserialize<ApiResponseDto<WorkRequestCreateData>>(
+                        responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
+                }
+                catch (JsonException jsonEx)
+                {
+                    _logger.LogError(jsonEx, "Failed to deserialize work request creation response. Body: {Body}", responseBody);
+                }
 
-                    if (result != null && result.success)
+                if (apiResponse?.Success == true && apiResponse.Data != null)
+                {
+                    _logger.LogInformation("Work request created successfully. IdWorkRequest: {IdWorkRequest}",
+                        apiResponse.Data.IdWorkRequest);
+                    return Json(new
                     {
-                        _logger.LogInformation("Work request created successfully: {WorkRequestCode}", result.workRequestCode);
-                        return Json(new
-                        {
-                            success = true,
-                            message = $"Work Request {result.workRequestCode} created successfully!",
-                            redirectUrl = "/Helpdesk/Index",
-                            workRequestCode = result.workRequestCode
-                        });
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Work request creation failed: {Message}", result?.message);
-                        return Json(new { success = false, message = result?.message ?? "Failed to create work request" });
-                    }
+                        success = true,
+                        message = "Work Request created successfully!",
+                        redirectUrl = "/Helpdesk/Index",
+                        idWorkRequest = apiResponse.Data.IdWorkRequest
+                    });
                 }
                 else
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("Failed to create work request. Status: {StatusCode}, Content: {Content}",
-                        response.StatusCode, errorContent);
-                    return Json(new { success = false, message = "Failed to create work request. Please try again." });
+                    var errorMessage = apiResponse?.Message ?? "Failed to create work request";
+                    var errorDetails = apiResponse?.Errors != null && apiResponse.Errors.Count > 0
+                        ? string.Join("; ", apiResponse.Errors)
+                        : string.Empty;
+
+                    _logger.LogWarning("Work request creation failed. Status: {StatusCode}, Message: {Message}, Errors: {Errors}",
+                        response.StatusCode, errorMessage, errorDetails);
+
+                    var userMessage = !string.IsNullOrEmpty(errorDetails)
+                        ? $"{errorMessage}: {errorDetails}"
+                        : errorMessage;
+
+                    return Json(new { success = false, message = userMessage });
                 }
             }
             catch (Exception ex)
@@ -745,6 +758,249 @@ namespace cfm_frontend.Controllers.Helpdesk
             return View("~/Views/Helpdesk/WorkRequest/WorkRequestDetail.cshtml", viewModel);
         }
 
+        /// <summary>
+        /// GET: Work Request Edit page
+        /// Combines dropdown data loading (like Add) with existing work request data loading (like Detail)
+        /// </summary>
+        [Authorize]
+        public async Task<IActionResult> WorkRequestEdit(int id)
+        {
+            var totalStopwatch = Stopwatch.StartNew();
+            var apiTimingResults = new List<ApiTimingResult>();
+
+            // Check if user has permission to edit Work Requests
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
+            // Check if user is authenticated
+            if (!User.Identity?.IsAuthenticated ?? false)
+            {
+                _logger.LogWarning("User not authenticated, redirecting to login");
+                _fileLogger.LogWarning("WorkRequestEdit: User not authenticated, redirecting to login", "AUTH");
+                return RedirectToAction("Index", "Login");
+            }
+
+            var viewmodel = new WorkRequestEditViewModel();
+            viewmodel.IdWorkRequest = id;
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Get user session
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    _logger.LogWarning("User session not found, redirecting to login");
+                    _fileLogger.LogWarning("WorkRequestEdit: User session not found, redirecting to login", "SESSION");
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(
+                    userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null)
+                    return RedirectToAction("Index", "Login");
+
+                var idClient = userInfo.PreferredClientId;
+                var idCompany = userInfo.IdCompany;
+
+                _fileLogger.LogInfo($"WorkRequestEdit: Starting API calls for id={id}, idClient={idClient}, idCompany={idCompany}", "PAGE-LOAD");
+
+                // Create cancellation token with overall timeout for all parallel tasks (60 seconds)
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                var ct = cts.Token;
+
+                // Load all dropdown data AND existing work request data in parallel
+
+                // Dropdown data (same as WorkRequestAdd)
+                var locationsTask = _fileLogger.ExecuteTimedAsync(
+                    "Locations",
+                    $"{ApiEndpoints.Property.List}?idClient={idClient}",
+                    () => GetLocationsAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var workCategoriesTask = _fileLogger.ExecuteTimedAsync(
+                    "WorkCategories",
+                    $"{ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkCategory)}?idClient={idClient}",
+                    () => GetWorkCategoriesByTypesAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var otherCategoriesTask = _fileLogger.ExecuteTimedAsync(
+                    "OtherCategories",
+                    $"{ApiEndpoints.Masters.GetTypes("workRequestCustomCategory")}?idClient={idClient}",
+                    () => GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory", ct),
+                    apiTimingResults);
+
+                var otherCategories2Task = _fileLogger.ExecuteTimedAsync(
+                    "OtherCategories2",
+                    $"{ApiEndpoints.Masters.GetTypes("workRequestCustomCategory2")}?idClient={idClient}",
+                    () => GetOtherCategoriesByTypeAsync(client, backendUrl, idClient, "workRequestCustomCategory2", ct),
+                    apiTimingResults);
+
+                var serviceProvidersTask = _fileLogger.ExecuteTimedAsync(
+                    "ServiceProviders",
+                    $"{ApiEndpoints.ServiceProvider.List}?idClient={idClient}&idCompany={idCompany}",
+                    () => GetServiceProvidersAsync(client, backendUrl, idClient, idCompany, ct),
+                    apiTimingResults);
+
+                var priorityLevelsTask = _fileLogger.ExecuteTimedAsync(
+                    "PriorityLevels",
+                    $"{ApiEndpoints.PriorityLevelDetail.List}?idClient={idClient}",
+                    () => GetPriorityLevelsWithDetailsAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                var feedbackTypesTask = _fileLogger.ExecuteTimedAsync(
+                    "FeedbackTypes",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestFeedbackType),
+                    () => GetFeedbackTypesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var currenciesTask = _fileLogger.ExecuteTimedAsync(
+                    "Currencies",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.Currency),
+                    () => FetchCurrenciesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var requestMethodsTask = _fileLogger.ExecuteTimedAsync(
+                    "RequestMethods",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestMethod),
+                    () => GetRequestMethodsAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var statusesTask = _fileLogger.ExecuteTimedAsync(
+                    "Statuses",
+                    ApiEndpoints.Masters.GetEnums(ApiEndpoints.Masters.CategoryTypes.WorkRequestStatus),
+                    () => GetStatusesAsync(client, backendUrl, ct),
+                    apiTimingResults);
+
+                var checklistTask = _fileLogger.ExecuteTimedAsync(
+                    "ImportantChecklist",
+                    $"{ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestAdditionalInformation)}?idClient={idClient}",
+                    () => GetImportantChecklistAsync(client, backendUrl, idClient, ct),
+                    apiTimingResults);
+
+                // Existing work request data (like WorkRequestDetail)
+                var workRequestTask = _fileLogger.ExecuteTimedAsync(
+                    "WorkRequestData",
+                    $"{ApiEndpoints.WorkRequest.GetById(id)}?cid={idClient}",
+                    () => client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.GetById(id)}?cid={idClient}", ct),
+                    apiTimingResults);
+
+                // Wait for all tasks
+                try
+                {
+                    await Task.WhenAll(
+                        locationsTask, workCategoriesTask, otherCategoriesTask, otherCategories2Task,
+                        serviceProvidersTask, priorityLevelsTask, feedbackTypesTask, currenciesTask,
+                        requestMethodsTask, statusesTask, checklistTask, workRequestTask
+                    );
+                }
+                catch (Exception taskEx)
+                {
+                    _logger.LogWarning(taskEx, "One or more data loading tasks failed, will use partial results");
+                }
+
+                // Populate dropdown data
+                viewmodel.Locations = locationsTask.IsCompletedSuccessfully ? locationsTask.Result : [];
+                viewmodel.WorkCategories = workCategoriesTask.IsCompletedSuccessfully ? workCategoriesTask.Result : [];
+                viewmodel.OtherCategories = otherCategoriesTask.IsCompletedSuccessfully ? otherCategoriesTask.Result : [];
+                viewmodel.OtherCategories2 = otherCategories2Task.IsCompletedSuccessfully ? otherCategories2Task.Result : [];
+                viewmodel.ServiceProviders = serviceProvidersTask.IsCompletedSuccessfully ? serviceProvidersTask.Result : [];
+                viewmodel.PriorityLevels = priorityLevelsTask.IsCompletedSuccessfully ? priorityLevelsTask.Result : [];
+                viewmodel.FeedbackTypes = feedbackTypesTask.IsCompletedSuccessfully ? feedbackTypesTask.Result : [];
+                viewmodel.Currencies = currenciesTask.IsCompletedSuccessfully ? currenciesTask.Result : [];
+                viewmodel.RequestMethods = requestMethodsTask.IsCompletedSuccessfully ? requestMethodsTask.Result : [];
+                viewmodel.Statuses = statusesTask.IsCompletedSuccessfully ? statusesTask.Result : [];
+                viewmodel.ImportantChecklist = checklistTask.IsCompletedSuccessfully ? checklistTask.Result : [];
+
+                // Populate work request data
+                if (workRequestTask.IsCompletedSuccessfully)
+                {
+                    var response = workRequestTask.Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseStream = await response.Content.ReadAsStreamAsync();
+                        var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<WorkRequestFormDetailDto>>(
+                            responseStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (apiResponse?.Success == true && apiResponse.Data != null)
+                        {
+                            viewmodel.WorkRequestData = apiResponse.Data;
+                        }
+                    }
+                }
+
+                // Validate work request was found
+                if (viewmodel.WorkRequestData == null)
+                {
+                    _logger.LogWarning("Work request {Id} not found or access denied", id);
+                    TempData["ErrorMessage"] = "Work request not found or access denied";
+                    return RedirectToAction("Index", "Helpdesk");
+                }
+
+                // Capture client context at page load for multi-tab session safety
+                viewmodel.IdClient = idClient;
+                viewmodel.IdCompany = idCompany;
+
+                // Update record counts in timing results
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Locations", viewmodel.Locations?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "WorkCategories", viewmodel.WorkCategories?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "OtherCategories", viewmodel.OtherCategories?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "OtherCategories2", viewmodel.OtherCategories2?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "ServiceProviders", viewmodel.ServiceProviders?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "PriorityLevels", viewmodel.PriorityLevels?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "FeedbackTypes", viewmodel.FeedbackTypes?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Currencies", viewmodel.Currencies?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "RequestMethods", viewmodel.RequestMethods?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "Statuses", viewmodel.Statuses?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "ImportantChecklist", viewmodel.ImportantChecklist?.Count);
+                _fileLogger.UpdateTimingResultRecordCount(apiTimingResults, "WorkRequestData", 1);
+
+                _logger.LogInformation("Work Request Edit page data loaded successfully for ID {Id}: {LocationCount} locations, {CategoryCount} categories",
+                    id,
+                    viewmodel.Locations?.Count ?? 0,
+                    viewmodel.WorkCategories?.Count ?? 0);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work request edit page data for ID {Id}", id);
+                _fileLogger.LogError($"WorkRequestEdit: Critical error loading page data for ID {id}", ex, "PAGE-LOAD");
+                TempData["ErrorMessage"] = "An error occurred while loading the work request";
+                return RedirectToAction("Index", "Helpdesk");
+            }
+            finally
+            {
+                totalStopwatch.Stop();
+
+                // Log comprehensive timing summary to file
+                _fileLogger.LogApiTimingBatch("WorkRequestEdit Page Load", apiTimingResults, totalStopwatch.Elapsed);
+
+                // Also log summary to standard logger
+                var failedApis = apiTimingResults.Where(r => !r.Success).ToList();
+                if (failedApis.Any())
+                {
+                    _logger.LogWarning(
+                        "WorkRequestEdit: {FailedCount}/{TotalCount} API calls failed. Total time: {TotalMs}ms. Failed APIs: {FailedApis}",
+                        failedApis.Count,
+                        apiTimingResults.Count,
+                        totalStopwatch.ElapsedMilliseconds,
+                        string.Join(", ", failedApis.Select(f => f.ApiName)));
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "WorkRequestEdit: All {TotalCount} API calls succeeded. Total time: {TotalMs}ms",
+                        apiTimingResults.Count,
+                        totalStopwatch.ElapsedMilliseconds);
+                }
+            }
+
+            return View("~/Views/Helpdesk/WorkRequest/WorkRequestEdit.cshtml", viewmodel);
+        }
+
 
         #region API Endpoints for Dynamic Data Loading
 
@@ -998,7 +1254,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var (success, data, message) = await SafeExecuteApiAsync<List<WorkerFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={effectiveIdCompany}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={effectiveIdCompany}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}&idUserCompany={effectiveIdCompany}"),
                 "Error searching workers");
 
             return Json(new { success, data, message });
@@ -1009,7 +1265,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// Optional idClient parameter for multi-tab session safety
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchWorkersByServiceProvider(string term, int idLocation, int idServiceProvider, int? idClient = null)
+        public async Task<IActionResult> SearchWorkersByServiceProvider(string term, int idLocation, int idServiceProvider, int? idClient = null,int? idCompany = null)
         {
             // Get user session
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1026,7 +1282,6 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             // Use passed idClient if provided, otherwise fall back to session (not currently used in API call but kept for consistency)
             var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
-
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -1034,7 +1289,7 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             // Now search workers with the company ID
             var (success, data, message) = await SafeExecuteApiAsync<List<WorkerFormDetailResponse>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idServiceProvider}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}"),
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Employee.SearchWorkers}?idCompany={idServiceProvider}&idProperty={idLocation}&prefiks={Uri.EscapeDataString(term)}&idUserCompany={idCompany}"),
                 "Failed to search workers");
 
             return Json(new { success, data, message });
@@ -3225,37 +3480,172 @@ namespace cfm_frontend.Controllers.Helpdesk
         #endregion
 
         #region Person in Charge
+
         [Authorize]
-        public IActionResult PersonInCharge()
+        public async Task<IActionResult> PersonInCharge(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Person in Charge";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/PersonInCharge.cshtml");
+
+            var viewmodel = new PersonInChargeViewModel
+            {
+                SearchKeyword = search
+            };
+
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var idClient = userInfo.PreferredClientId;
+                viewmodel.IdClient = idClient;
+                viewmodel.IdCompany = userInfo.IdCompany;
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var response = await GetPicListPagedAsync(client, backendUrl, idClient, page, search);
+
+                if (response != null)
+                {
+                    viewmodel.PersonsInCharge = response.Data;
+                    viewmodel.Paging = new PagingInfo
+                    {
+                        CurrentPage = response.Metadata.CurrentPage,
+                        TotalPages = response.Metadata.TotalPages,
+                        PageSize = response.Metadata.PageSize,
+                        TotalCount = response.Metadata.TotalCount
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading persons in charge");
+                TempData["ErrorMessage"] = "Failed to load persons in charge. Please try again.";
+            }
+
+            return View("~/Views/Helpdesk/Settings/PersonInCharge.cshtml", viewmodel);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetPersonsInCharge()
+        /// <summary>
+        /// Helper method to fetch paginated PIC list from backend API
+        /// </summary>
+        private async Task<PicListResponse?> GetPicListPagedAsync(
+            HttpClient client,
+            string? backendUrl,
+            int idClient,
+            int page,
+            string? keyword)
         {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"cid={idClient}",
+                    $"page={page}",
+                    $"limit=20"
+                };
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    queryParams.Add($"keyword={Uri.EscapeDataString(keyword)}");
+                }
+
+                var queryString = string.Join("&", queryParams);
+                var response = await client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.List}?{queryString}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<PicListResponse>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return apiResponse?.Data;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to fetch PIC list. Status: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching PIC list from API");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// API: Get paginated PIC list for AJAX requests
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPersonsInChargePaged(int page = 1, string? keyword = "", int? idClient = null)
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.List}"),
-                "Failed to load persons in charge");
+            var response = await GetPicListPagedAsync(client, backendUrl, effectiveIdClient, page, keyword);
 
-            return Json(new { success, data, message });
+            if (response != null)
+            {
+                return Json(new { success = true, data = response.Data, paging = response.Metadata });
+            }
+
+            return Json(new { success = false, message = "Failed to load persons in charge" });
         }
 
+        /// <summary>
+        /// API: Get PIC details with property assignments
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetPersonInChargeById(int id)
+        public async Task<IActionResult> GetPicDetails(int employeeId, int? idClient = null)
         {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<object>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.GetById(id)}"),
-                "Failed to load person in charge details");
+            var (success, data, message) = await SafeExecuteApiAsync<PicPropertyAssignmentDto>(
+                () => client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.GetDetails(employeeId)}?cid={effectiveIdClient}"),
+                "Failed to load PIC details");
 
             return Json(new { success, data, message });
         }
@@ -3282,8 +3672,11 @@ namespace cfm_frontend.Controllers.Helpdesk
             return Json(new { success, data, message });
         }
 
+        /// <summary>
+        /// API: Create PIC property assignment
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreatePersonInCharge([FromBody] dynamic model)
+        public async Task<IActionResult> CreatePersonInCharge([FromBody] PicPropertyPayloadDto model)
         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -3295,15 +3688,18 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
+            var (success, _, message) = await SafeExecuteApiAsync<PicPropertySummaryDto>(
                 () => client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Create}", content),
                 "Failed to add person in charge");
 
-            return Json(new { success, message = success ? "Person in charge added successfully" : message });
+            return Json(new { success, message = success ? "Person in charge added" : message });
         }
 
+        /// <summary>
+        /// API: Update PIC property assignment
+        /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdatePersonInCharge([FromBody] dynamic model)
+        public async Task<IActionResult> UpdatePersonInCharge([FromBody] PicPropertyPayloadDto model)
         {
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -3315,26 +3711,39 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
+            var (success, _, message) = await SafeExecuteApiAsync<PicPropertySummaryDto>(
                 () => client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Update}", content),
                 "Failed to update person in charge");
 
-            return Json(new { success, message = success ? "Person in charge updated successfully" : message });
+            return Json(new { success, message = success ? "Person in charge updated" : message });
         }
 
+        /// <summary>
+        /// API: Delete PIC by employee ID
+        /// </summary>
         [HttpDelete]
-        public async Task<IActionResult> DeletePersonInCharge([FromBody] dynamic model)
+        public async Task<IActionResult> DeletePersonInCharge(int employeeId, int? idClient = null)
         {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var id = ((JsonElement)model.GetProperty("id")).GetInt32();
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(id)}"),
+            var (success, _, message) = await SafeExecuteApiAsync<bool>(
+                () => client.DeleteAsync(
+                    $"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(employeeId)}?cid={effectiveIdClient}"),
                 "Failed to delete person in charge");
 
-            return Json(new { success, message = success ? "Person in charge deleted successfully" : message });
+            return Json(new { success, message = success ? "Person in charge deleted" : message });
         }
 
         #endregion

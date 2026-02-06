@@ -7,4 +7,13 @@
         public int idWorkRequest { get; set; }
         public string workRequestCode { get; set; }
     }
+
+    /// <summary>
+    /// Data payload returned by the Work Request Create API endpoint.
+    /// Used as T in ApiResponseDto&lt;WorkRequestCreateData&gt;.
+    /// </summary>
+    public class WorkRequestCreateData
+    {
+        public int IdWorkRequest { get; set; }
+    }
 }
