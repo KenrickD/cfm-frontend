@@ -28,6 +28,30 @@ namespace cfm_frontend.Constants
             /// </summary>
             public const string RefreshToken = Base + "/refresh_token";
 
+            /// <summary>
+            /// POST: Request password reset email
+            /// </summary>
+            public const string ForgotPassword = Base + "/ForgotPassword";
+
+            /// <summary>
+            /// POST: Reset password with token
+            /// </summary>
+            public const string ResetPassword = Base + "/ResetPassword";
+
+            /// <summary>
+            /// POST: Validate license key for registration
+            /// </summary>
+            public const string ValidateLicense = Base + "/ValidateLicense";
+
+            /// <summary>
+            /// POST: Register new user account
+            /// </summary>
+            public const string Register = Base + "/Register";
+
+            /// <summary>
+            /// GET: Verify email address with token
+            /// </summary>
+            public const string VerifyEmail = Base + "/VerifyEmail";
         }
 
         #endregion
@@ -700,21 +724,22 @@ namespace cfm_frontend.Constants
 
             /// <summary>
             /// Priority Level settings endpoints
+            /// Uses new work-request API: /api/v1/work-request/priority-levels
             /// </summary>
             public static class PriorityLevel
             {
-                private const string PriorityLevelBase = Base + "/priority-level";
+                private const string PriorityLevelBase = ApiBase + "/work-request/priority-levels";
 
                 /// <summary>
-                /// GET: Get all priority levels for client
-                /// Query params: idClient
+                /// GET: Get paginated priority levels for client
+                /// Query params: cid (clientId), keyword, page, limit
                 /// </summary>
                 public const string List = PriorityLevelBase;
 
                 /// <summary>
                 /// GET: Get priority level by ID
                 /// Path params: {id}
-                /// Query params: idClient
+                /// Query params: cid (clientId)
                 /// </summary>
                 /// <param name="id">Priority level ID</param>
                 /// <returns>Get by ID endpoint URL</returns>
@@ -722,21 +747,42 @@ namespace cfm_frontend.Constants
 
                 /// <summary>
                 /// POST: Create priority level
+                /// Body: PriorityLevelDetailsDto
                 /// </summary>
                 public const string Create = PriorityLevelBase;
 
                 /// <summary>
                 /// PUT: Update priority level
+                /// Body: PriorityLevelDetailsDto
                 /// </summary>
                 public const string Update = PriorityLevelBase;
 
                 /// <summary>
                 /// DELETE: Delete priority level by ID
                 /// Path params: {id}
+                /// Query params: cid (clientId)
                 /// </summary>
                 /// <param name="id">Priority level ID</param>
                 /// <returns>Delete endpoint URL</returns>
                 public static string Delete(int id) => $"{PriorityLevelBase}/{id}";
+
+                /// <summary>
+                /// POST: Move priority level up in display order
+                /// Path params: {id}
+                /// Query params: cid (clientId)
+                /// </summary>
+                /// <param name="id">Priority level ID</param>
+                /// <returns>Move up endpoint URL</returns>
+                public static string MoveUp(int id) => $"{PriorityLevelBase}/{id}/move-up";
+
+                /// <summary>
+                /// POST: Move priority level down in display order
+                /// Path params: {id}
+                /// Query params: cid (clientId)
+                /// </summary>
+                /// <param name="id">Priority level ID</param>
+                /// <returns>Move down endpoint URL</returns>
+                public static string MoveDown(int id) => $"{PriorityLevelBase}/{id}/move-down";
 
                 /// <summary>
                 /// GET: Get dropdown options for priority level forms
@@ -985,6 +1031,14 @@ namespace cfm_frontend.Constants
                 public const string Currency = "currency";
                 public const string MeasurementUnit = "measurementUnit";
                 public const string MaterialLabel = "materialLabel";
+
+                // Priority Level reference types
+                public const string PriorityLevelInitialFollowUp = "priorityLevelInitialFollowUp";
+                public const string PriorityLevelQuotationSubmission = "priorityLevelQuotationSubmission";
+                public const string PriorityLevelCostApproval = "priorityLevelCostApproval";
+                public const string PriorityLevelWorkCompletion = "priorityLevelWorkCompletion";
+                public const string PriorityLevelAfterWorkFollowUp = "priorityLevelAfterWorkFollowUp";
+                public const string VisualColor = "visualColor";
             }
         }
 

@@ -1,0 +1,212 @@
+@model cfm_frontend.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Sign Up";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>@ViewData["Title"] | CFM System</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link rel="icon" href="~/assets/images/favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="~/assets/fonts/inter/inter.css" id="main-font-link" />
+    <link rel="stylesheet" href="~/assets/fonts/tabler-icons.min.css" />
+    <link rel="stylesheet" href="~/assets/fonts/feather.css" />
+    <link rel="stylesheet" href="~/assets/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="~/assets/fonts/material.css" />
+    <link rel="stylesheet" href="~/assets/css/style.css" id="main-style-link" />
+    <link rel="stylesheet" href="~/assets/css/style-preset.css" />
+</head>
+
+<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme_contrast="" data-pc-theme="dark">
+    <div class="loader-bg">
+        <div class="loader-track">
+            <div class="loader-fill"></div>
+        </div>
+    </div>
+    <div class="auth-main v2">
+        <div class="bg-overlay bg-dark"></div>
+        <div class="auth-wrapper">
+            <div class="auth-sidecontent">
+                <div class="auth-sidefooter">
+                    <img src="~/assets/images/cfm-system-logo.png" class="w-25 mb-4 img-fluid" alt="CFM System Logo" />
+                    <hr class="mb-3 mt-4" />
+                    <div class="row">
+                        <div class="col my-1">
+                            <p class="m-0">
+                                Copyright &copy; 2024 <a href="https://colliers.id" target="_blank"> PT. Colliers International Indonesia</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-form" style="max-width: 600px;">
+                <div class="card my-5 mx-3" style="background-color: #2d3035;">
+                    <div class="m-3">
+                        <a href="@Url.Action("ValidateLicense", "Registration")" type="button"
+                           class="d-inline-flex btn btn-outline-secondary justify-content-center align-items-center gap-2">
+                            <i class="fa fa-chevron-left fa-xs"></i>
+                            Back
+                        </a>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Client Info Header -->
+                        <div class="d-flex align-items-center mb-4">
+                            @if (!string.IsNullOrEmpty(Model.LicenseInfo?.ClientLogoUrl))
+                            {
+                                <img src="@Model.LicenseInfo.ClientLogoUrl" class="me-3" style="max-height: 50px;" alt="Client Logo" />
+                            }
+                            <div>
+                                <h5 class="text-white mb-1">@Model.LicenseInfo?.ClientName</h5>
+                                <small class="text-muted">License: @(Model.LicenseInfo?.LicenseKey?.Insert(4, "-").Insert(9, "-").Insert(14, "-") ?? "")</small>
+                            </div>
+                        </div>
+
+                        <h4 class="f-w-500 mb-1 text-white">Sign Up Form</h4>
+                        <p class="mb-3 text-muted">
+                            Fill in your details to create your account.
+                        </p>
+
+                        <form asp-controller="Registration" asp-action="Index" method="post">
+                            @Html.AntiForgeryToken()
+
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger d-flex align-items-center" role="alert">
+                                <i class="ti ti-alert-circle me-2"></i>
+                            </div>
+
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label asp-for="SalutationId" class="form-label text-white">Salutation <span class="text-danger">*</span></label>
+                                        <select asp-for="SalutationId" class="form-select bg-transparent text-white">
+                                            <option value="">Select...</option>
+                                            @foreach (var item in Model.Salutations)
+                                            {
+                                                <option value="@item.Id">@item.Text</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="SalutationId" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="FirstName" class="form-label text-white">First Name <span class="text-danger">*</span></label>
+                                        <input asp-for="FirstName" class="form-control bg-transparent text-white" placeholder="First name" />
+                                        <span asp-validation-for="FirstName" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="LastName" class="form-label text-white">Last Name <span class="text-danger">*</span></label>
+                                        <input asp-for="LastName" class="form-control bg-transparent text-white" placeholder="Last name" />
+                                        <span asp-validation-for="LastName" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="DepartmentId" class="form-label text-white">Department <span class="text-danger">*</span></label>
+                                        <select asp-for="DepartmentId" class="form-select bg-transparent text-white">
+                                            <option value="">Select...</option>
+                                            @foreach (var item in Model.Departments)
+                                            {
+                                                <option value="@item.Id">@item.Text</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="DepartmentId" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Title" class="form-label text-white">Role/Title</label>
+                                        <input asp-for="Title" class="form-control bg-transparent text-white" placeholder='e.g. "Marketing Manager"' />
+                                        <span asp-validation-for="Title" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="PhoneNumber" class="form-label text-white">Mobile Phone</label>
+                                        <input asp-for="PhoneNumber" class="form-control bg-transparent text-white" placeholder="e.g. 081234567890" />
+                                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Email" class="form-label text-white">Email <span class="text-danger">*</span></label>
+                                        <input asp-for="Email" type="email" class="form-control bg-transparent text-white" placeholder="your.email@company.com" />
+                                        <span asp-validation-for="Email" class="text-danger small"></span>
+                                        @if (!string.IsNullOrEmpty(Model.LicenseInfo?.RequiredEmailDomain))
+                                        {
+                                            <small class="text-muted">Allowed domains: @Model.LicenseInfo.RequiredEmailDomain.Replace(";", ", ")</small>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label asp-for="TimeZoneId" class="form-label text-white">Preferred Time Zone <span class="text-danger">*</span></label>
+                                        <select asp-for="TimeZoneId" class="form-select bg-transparent text-white">
+                                            @foreach (var item in Model.TimeZones)
+                                            {
+                                                <option value="@item.Id" selected="@item.IsDefault">@item.Text</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="TimeZoneId" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="CurrencyId" class="form-label text-white">Preferred Currency <span class="text-danger">*</span></label>
+                                        <select asp-for="CurrencyId" class="form-select bg-transparent text-white">
+                                            @foreach (var item in Model.Currencies)
+                                            {
+                                                <option value="@item.Id" selected="@item.IsDefault">@item.Text</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="CurrencyId" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Username" class="form-label text-white">Username <span class="text-danger">*</span></label>
+                                        <input asp-for="Username" class="form-control bg-transparent text-white" placeholder="Choose a username" />
+                                        <span asp-validation-for="Username" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Password" class="form-label text-white">Password <span class="text-danger">*</span></label>
+                                        <input asp-for="Password" type="password" class="form-control bg-transparent text-white" placeholder="Enter password" />
+                                        <span asp-validation-for="Password" class="text-danger small"></span>
+                                        <small class="text-muted">
+                                            Min 8 chars with uppercase, lowercase, number, and special character.
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="ConfirmPassword" class="form-label text-white">Confirm Password <span class="text-danger">*</span></label>
+                                        <input asp-for="ConfirmPassword" type="password" class="form-control bg-transparent text-white" placeholder="Confirm password" />
+                                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary">Create Account</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/assets/js/plugins/popper.min.js"></script>
+    <script src="~/assets/js/plugins/simplebar.min.js"></script>
+    <script src="~/assets/js/plugins/bootstrap.min.js"></script>
+    <script src="~/assets/js/fonts/custom-font.js"></script>
+    <script src="~/assets/js/pcoded.js"></script>
+    <script src="~/assets/js/plugins/feather.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+</body>
+</html>

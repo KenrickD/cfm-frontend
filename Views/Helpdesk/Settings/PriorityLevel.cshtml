@@ -1,3 +1,4 @@
+@model cfm_frontend.ViewModels.PriorityLevelListViewModel
 @{
     ViewBag.Title = "Priority Level Management";
     ViewBag.pTitle = "Settings";
@@ -9,7 +10,7 @@
         .stats-section {
             display: flex;
             justify-content: space-between;
-            align-items-center;
+            align-items: center;
             margin-bottom: 1rem;
         }
 
@@ -18,10 +19,21 @@
             color: #495057;
         }
 
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .search-box .form-control {
+            max-width: 250px;
+        }
+
         .priority-table-header {
             padding: 0.75rem 1rem;
             font-weight: 600;
             font-size: 0.875rem;
+            background-color: #f8f9fa;
         }
 
         .priority-row {
@@ -50,6 +62,7 @@
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
+            color: #2c3e50;
         }
 
         .priority-name:hover {
@@ -61,19 +74,6 @@
             font-size: 0.875rem;
             color: #6c757d;
             margin-top: 0.25rem;
-        }
-
-        .target-section {
-            margin-bottom: 0.5rem;
-        }
-
-        .target-label {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .target-value {
-            color: #6c757d;
         }
 
         .within-office-hours {
@@ -88,18 +88,60 @@
 
         .action-buttons {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.25rem;
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
 
         .btn-action {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 0.25rem;
+        }
+
+        .btn-move {
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+            color: #495057;
+        }
+
+        .btn-move:hover {
+            background-color: #dee2e6;
+            border-color: #ced4da;
+        }
+
+        .btn-view {
+            background-color: #e3f2fd;
+            border-color: #bbdefb;
+            color: #1976d2;
+        }
+
+        .btn-view:hover {
+            background-color: #bbdefb;
+        }
+
+        .btn-edit {
+            background-color: #fff3e0;
+            border-color: #ffcc80;
+            color: #e65100;
+        }
+
+        .btn-edit:hover {
+            background-color: #ffcc80;
+        }
+
+        .btn-delete {
+            background-color: #ffebee;
+            border-color: #ef9a9a;
+            color: #c62828;
+        }
+
+        .btn-delete:hover {
+            background-color: #ef9a9a;
         }
 
         .empty-state {
@@ -112,16 +154,6 @@
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
-        }
-
-        .compliance-badge {
-            display: inline-block;
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 0.125rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            margin-left: 0.25rem;
         }
 
         .checkbox-info {
@@ -143,16 +175,23 @@
             color: #9ca3af;
         }
 
+        [data-pc-theme="dark"] .priority-table-header {
+            background-color: #374151;
+        }
+
         [data-pc-theme="dark"] .priority-row:hover {
             background-color: #374151;
+        }
+
+        [data-pc-theme="dark"] .priority-name {
+            color: #e5e7eb;
         }
 
         [data-pc-theme="dark"] .priority-name:hover {
             color: #60a5fa;
         }
 
-        [data-pc-theme="dark"] .target-info,
-        [data-pc-theme="dark"] .target-value {
+        [data-pc-theme="dark"] .target-info {
             color: #9ca3af;
         }
 
@@ -165,16 +204,19 @@
             color: #60a5fa;
         }
 
-        [data-pc-theme="dark"] .compliance-badge {
-            background-color: #3a3010;
-            color: #fbbf24;
+        [data-pc-theme="dark"] .checkbox-info {
+            color: #9ca3af;
         }
 
-        [data-pc-theme="dark"] .checkbox-info {
+        [data-pc-theme="dark"] .btn-move {
+            background-color: #374151;
+            border-color: #4b5563;
             color: #9ca3af;
         }
     </style>
 }
+
+@Html.AntiForgeryToken()
 
 <div class="row">
     <div class="col-sm-12">
@@ -196,10 +238,37 @@
             </div>
         </div>
 
-        <!-- Stats Section -->
+        <!-- Stats Section with Search -->
         <div class="stats-section">
             <div class="total-count">
-                Showing total of <strong><span id="totalCount">0</span></strong> Priority Levels
+                @if (Model?.Paging != null && Model.Paging.TotalCount > 0)
+                {
+                    var startRecord = (Model.Paging.CurrentPage - 1) * Model.Paging.PageSize + 1;
+                    var endRecord = Math.Min(Model.Paging.CurrentPage * Model.Paging.PageSize, Model.Paging.TotalCount);
+                    <span>Showing <strong>@startRecord</strong> to <strong>@endRecord</strong> of <strong>@Model.Paging.TotalCount</strong> Priority Levels</span>
+                }
+                else
+                {
+                    <span>Showing total of <strong>0</strong> Priority Levels</span>
+                }
+            </div>
+            <div class="search-box">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           id="searchInput"
+                           placeholder="Search priority levels..."
+                           value="@Model?.SearchKeyword">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="searchBtn">
+                        <i class="ti ti-search"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model?.SearchKeyword))
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearchBtn">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
 
@@ -209,22 +278,129 @@
                 <div class="row">
                     <div class="col-md-1 text-center">No.</div>
                     <div class="col-md-2">Name</div>
-                    <div class="col-md-1">Helpdesk Response Target</div>
-                    <div class="col-md-2">Initial Follow Up Target</div>
-                    <div class="col-md-2">Quotation Submission Target</div>
-                    <div class="col-md-1">Cost Approval Target</div>
-                    <div class="col-md-2">Work Completion Target</div>
-                    <div class="col-md-1">After Work Follow Up Target</div>
+                    <div class="col-md-1">Helpdesk Response</div>
+                    <div class="col-md-2">Initial Follow Up</div>
+                    <div class="col-md-2">Quotation Submission</div>
+                    <div class="col-md-1">Cost Approval</div>
+                    <div class="col-md-1">Work Completion</div>
+                    <div class="col-md-1">After Work Follow Up</div>
                     <div class="col-md-1 text-end">Actions</div>
                 </div>
             </div>
             <div class="card-body" id="priorityTableBody">
-                <div class="empty-state" id="emptyState">
-                    <i class="ti ti-alert-triangle"></i>
-                    <p>No priority levels found</p>
-                </div>
+                @if (Model?.PriorityLevels != null && Model.PriorityLevels.Any())
+                {
+                    var startIndex = Model.Paging != null ? (Model.Paging.CurrentPage - 1) * Model.Paging.PageSize : 0;
+                    var index = 0;
+                    foreach (var level in Model.PriorityLevels)
+                    {
+                        var colorStyle = GetColorStyle(level.VisualColor?.TypeName);
+                        <div class="priority-row" data-id="@level.IdPriorityLevel">
+                            <div class="row align-items-start">
+                                <div class="col-md-1 text-center">
+                                    <div style="padding-top: 0.5rem;">
+                                        <span class="priority-badge" style="background-color: @colorStyle"></span>
+                                        @(startIndex + index + 1)
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <a href="/Helpdesk/PriorityLevelDetail?id=@level.IdPriorityLevel" class="priority-name">
+                                        @level.Name
+                                    </a>
+                                </div>
+                                <div class="col-md-1">
+                                    <div class="target-info">
+                                        @FormatDuration(level.HelpdeskResponseTarget?.Duration)
+                                        @if (level.HelpdeskResponseTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="target-info">
+                                        @FormatDuration(level.InitialFollowUpTarget?.Duration)
+                                        @if (level.InitialFollowUpTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="target-info">
+                                        @FormatDuration(level.QuotationSubmissionTarget?.Duration)
+                                        @if (level.QuotationSubmissionTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <div class="target-info">
+                                        @FormatDuration(level.CostApprovalTarget?.Duration)
+                                        @if (level.CostApprovalTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <div class="target-info">
+                                        @FormatDuration(level.WorkCompletionTarget?.Duration)
+                                        @if (level.WorkCompletionTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <div class="target-info">
+                                        @FormatDuration(level.AfterWorkFollowUpTarget?.Duration)
+                                        @if (level.AfterWorkFollowUpTarget?.WithinOfficeHours == true)
+                                        {
+                                            <span class="within-office-hours">Within Office Hours</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <div class="action-buttons">
+                                        <button type="button" class="btn btn-move btn-action" onclick="movePriorityLevelUp(@level.IdPriorityLevel)" title="Move Up">
+                                            <i class="ti ti-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-move btn-action" onclick="movePriorityLevelDown(@level.IdPriorityLevel)" title="Move Down">
+                                            <i class="ti ti-arrow-down"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-view btn-action" onclick="viewPriorityLevel(@level.IdPriorityLevel)" title="View">
+                                            <i class="ti ti-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-edit btn-action" onclick="editPriorityLevel(@level.IdPriorityLevel)" title="Edit">
+                                            <i class="ti ti-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-delete btn-action" onclick="showDeleteModal(@level.IdPriorityLevel, '@Html.Raw(level.Name?.Replace("'", "\\'") ?? "")')" title="Delete">
+                                            <i class="ti ti-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <div class="empty-state" id="emptyState">
+                        <i class="ti ti-alert-triangle"></i>
+                        <p>No priority levels found</p>
+                    </div>
+                }
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if (Model?.Paging != null)
+        {
+            @await Html.PartialAsync("_Pagination", Model.Paging)
+        }
     </div>
 </div>
 
@@ -241,6 +417,10 @@
                 <p class="text-muted small mb-0">
                     <strong id="deletePriorityName"></strong>
                 </p>
+                <p class="text-danger small mt-2 mb-0">
+                    <i class="ti ti-alert-triangle me-1"></i>
+                    This action cannot be undone.
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -251,5 +431,43 @@
 </div>
 
 @section scripts {
+    <script>
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+    </script>
     <script src="~/assets/js/pages/settings/priority-level.js"></script>
+}
+
+@functions {
+    string GetColorStyle(string? colorName)
+    {
+        return colorName switch
+        {
+            "Red" => "#dc3545",
+            "Orange" => "#fd7e14",
+            "Yellow" => "#ffc107",
+            "Green" => "#28a745",
+            "Blue" => "#007bff",
+            "Purple" => "#6f42c1",
+            "Pink" => "#e83e8c",
+            "Cyan" => "#17a2b8",
+            "Gray" => "#6c757d",
+            "Brown" => "#8b4513",
+            _ => "#6c757d"
+        };
+    }
+
+    string FormatDuration(cfm_frontend.DTOs.PriorityLevel.PriorityLevelTargetDurationDto? duration)
+    {
+        if (duration == null)
+            return "-";
+
+        var parts = new List<string>();
+        if (duration.Days > 0) parts.Add($"{duration.Days} day{(duration.Days > 1 ? "s" : "")}");
+        if (duration.Hours > 0) parts.Add($"{duration.Hours} hour{(duration.Hours > 1 ? "s" : "")}");
+        if (duration.Minutes > 0) parts.Add($"{duration.Minutes} minute{(duration.Minutes > 1 ? "s" : "")}");
+
+        return parts.Count == 0 ? "-" : string.Join(" ", parts);
+    }
 }

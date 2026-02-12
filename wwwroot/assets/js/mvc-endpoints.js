@@ -93,6 +93,12 @@
             DeletePriorityLevel: '/Helpdesk/DeletePriorityLevel',
 
             /**
+             * Generic Enums Endpoint
+             * For loading dropdown options by category
+             */
+            GetEnumsByCategory: '/Helpdesk/GetEnumsByCategory',
+
+            /**
              * Settings Namespace
              * Configuration and master data management
              */
@@ -185,12 +191,17 @@
                 GetProperties: '/Helpdesk/GetProperties',
 
                 /**
-                 * Priority Level (Settings context)
-                 * Note: Uses same endpoints as main Helpdesk controller
+                 * Priority Level CRUD (Settings context)
                  */
                 PriorityLevel: {
-                    List: '/Helpdesk/GetPriorityLevels',
-                    Delete: '/Helpdesk/DeletePriorityLevel'
+                    List: '/Helpdesk/PriorityLevel',
+                    GetById: '/Helpdesk/GetPriorityLevelById',
+                    Create: '/Helpdesk/CreatePriorityLevel',
+                    Update: '/Helpdesk/UpdatePriorityLevel',
+                    Delete: '/Helpdesk/DeletePriorityLevel',
+                    MoveUp: '/Helpdesk/MovePriorityLevelUp',
+                    MoveDown: '/Helpdesk/MovePriorityLevelDown',
+                    DropdownOptions: '/Helpdesk/GetPriorityLevelDropdownOptions'
                 },
 
                 /**

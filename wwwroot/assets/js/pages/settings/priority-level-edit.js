@@ -2,13 +2,13 @@
 (function () {
     'use strict';
 
-    const dropdownTypes = [
-        { id: 'helpdeskResponseTargetReference', type: 'priorityLevelInitialFollowUp' },
-        { id: 'initialFollowUpTargetReference', type: 'priorityLevelInitialFollowUp' },
-        { id: 'quotationSubmissionTargetReference', type: 'priorityLevelQuotationSubmission' },
-        { id: 'costApprovalTargetReference', type: 'priorityLevelCostApproval' },
-        { id: 'workCompletionTargetReference', type: 'priorityLevelWorkCompletion' },
-        { id: 'afterWorkFollowUpTargetReference', type: 'priorityLevelAfterWorkFollowUp' }
+    // Reference dropdowns to load from GetEnums endpoint
+    const enumDropdowns = [
+        { id: 'initialFollowUpTargetReference', category: 'priorityLevelInitialFollowUp' },
+        { id: 'quotationSubmissionTargetReference', category: 'priorityLevelQuotationSubmission' },
+        { id: 'costApprovalTargetReference', category: 'priorityLevelCostApproval' },
+        { id: 'workCompletionTargetReference', category: 'priorityLevelWorkCompletion' },
+        { id: 'afterWorkFollowUpTargetReference', category: 'priorityLevelAfterWorkFollowUp' }
     ];
 
     let currentData = null;
@@ -25,16 +25,49 @@
             form.addEventListener('submit', handleSubmit);
         }
 
-        // Handle compliance duration toggles
-        const helpdeskComplianceCheckbox = document.getElementById('helpdeskResponseTargetActivateCompliance');
-        if (helpdeskComplianceCheckbox) {
-            helpdeskComplianceCheckbox.addEventListener('change', function () {
-                const complianceDiv = document.getElementById('helpdeskComplianceDuration');
-                if (complianceDiv) {
-                    complianceDiv.style.display = this.checked ? 'block' : 'none';
-                }
-            });
-        }
+        // Handle compliance duration toggles for all target sections
+        const complianceToggles = [
+            { checkboxId: 'helpdeskResponseTargetActivateCompliance', divId: 'helpdeskComplianceDuration' },
+            { checkboxId: 'initialFollowUpTargetActivateCompliance', divId: 'initialFollowUpComplianceDuration' },
+            { checkboxId: 'quotationSubmissionTargetActivateCompliance', divId: 'quotationSubmissionComplianceDuration' },
+            { checkboxId: 'costApprovalTargetActivateCompliance', divId: 'costApprovalComplianceDuration' },
+            { checkboxId: 'workCompletionTargetActivateCompliance', divId: 'workCompletionComplianceDuration' },
+            { checkboxId: 'afterWorkFollowUpTargetActivateCompliance', divId: 'afterWorkFollowUpComplianceDuration' }
+        ];
+
+        complianceToggles.forEach(toggle => {
+            const checkbox = document.getElementById(toggle.checkboxId);
+            if (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    const complianceDiv = document.getElementById(toggle.divId);
+                    if (complianceDiv) {
+                        complianceDiv.style.display = this.checked ? 'block' : 'none';
+                    }
+                });
+            }
+        });
+
+        // Handle reminder duration toggles for all target sections
+        const reminderToggles = [
+            { checkboxId: 'helpdeskResponseTargetReminderBeforeTarget', divId: 'helpdeskReminderDuration' },
+            { checkboxId: 'initialFollowUpTargetReminderBeforeTarget', divId: 'initialFollowUpReminderDuration' },
+            { checkboxId: 'quotationSubmissionTargetReminderBeforeTarget', divId: 'quotationSubmissionReminderDuration' },
+            { checkboxId: 'costApprovalTargetReminderBeforeTarget', divId: 'costApprovalReminderDuration' },
+            { checkboxId: 'workCompletionTargetReminderBeforeTarget', divId: 'workCompletionReminderDuration' },
+            { checkboxId: 'afterWorkFollowUpTargetReminderBeforeTarget', divId: 'afterWorkFollowUpReminderDuration' }
+        ];
+
+        reminderToggles.forEach(toggle => {
+            const checkbox = document.getElementById(toggle.checkboxId);
+            if (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    const reminderDiv = document.getElementById(toggle.divId);
+                    if (reminderDiv) {
+                        reminderDiv.style.display = this.checked ? 'block' : 'none';
+                    }
+                });
+            }
+        });
 
         // Handle visual color preview
         const colorSelect = document.getElementById('visualColor');
@@ -44,42 +77,35 @@
     }
 
     async function loadDropdownDataThenPriorityLevel() {
-        // Load visual colors
-        await loadVisualColors();
+        // Hardcode Helpdesk Response Target Reference (id: 172, "After Request Date")
+        const helpdeskSelect = document.getElementById('helpdeskResponseTargetReference');
+        if (helpdeskSelect) {
+            const opt = document.createElement('option');
+            opt.value = '172';
+            opt.textContent = 'After Request Date';
+            helpdeskSelect.appendChild(opt);
 
-        // Load reference dropdowns
-        for (const dropdown of dropdownTypes) {
-            await loadDropdownOptions(dropdown.id, dropdown.type);
+            // Reload the searchable dropdown to recognize the new option
+            if (helpdeskSelect._searchableDropdown) {
+                helpdeskSelect._searchableDropdown.loadFromSelect();
+            }
+        }
+
+        // Load visual colors from GetEnums
+        await loadEnumDropdown('visualColor', 'visualColor');
+
+        // Load reference dropdowns from GetEnums
+        for (const dropdown of enumDropdowns) {
+            await loadEnumDropdown(dropdown.id, dropdown.category);
         }
 
         // After dropdowns are loaded, load priority level data
         await loadPriorityLevel();
     }
 
-    async function loadVisualColors() {
+    async function loadEnumDropdown(selectId, category) {
         try {
-            const response = await fetch('/Helpdesk/GetPriorityLevelDropdownOptions?type=visualColor');
-            const result = await response.json();
-
-            if (result.success && result.data) {
-                const select = document.getElementById('visualColor');
-                if (select) {
-                    result.data.forEach(option => {
-                        const opt = document.createElement('option');
-                        opt.value = option.value;
-                        opt.textContent = option.label;
-                        select.appendChild(opt);
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('Error loading visual colors:', error);
-        }
-    }
-
-    async function loadDropdownOptions(selectId, type) {
-        try {
-            const response = await fetch(`/Helpdesk/GetPriorityLevelDropdownOptions?type=${type}`);
+            const response = await fetch(`${MvcEndpoints.Helpdesk.GetEnumsByCategory}?category=${category}`);
             const result = await response.json();
 
             if (result.success && result.data) {
@@ -87,14 +113,19 @@
                 if (select) {
                     result.data.forEach(option => {
                         const opt = document.createElement('option');
-                        opt.value = option.value;
-                        opt.textContent = option.label;
+                        opt.value = option.idEnum;        // EnumFormDetailResponse.IdEnum
+                        opt.textContent = option.enumName; // EnumFormDetailResponse.EnumName
                         select.appendChild(opt);
                     });
+
+                    // Reload the searchable dropdown to recognize new options
+                    if (select._searchableDropdown) {
+                        select._searchableDropdown.loadFromSelect();
+                    }
                 }
             }
         } catch (error) {
-            console.error(`Error loading dropdown options for ${selectId}:`, error);
+            console.error(`Error loading enum dropdown for ${selectId}:`, error);
         }
     }
 
@@ -123,7 +154,7 @@
     function populateForm(data) {
         // Basic Information
         setValue('name', data.name);
-        setValue('visualColor', data.visualColor);
+        setValue('visualColor', data.visualColorId);
         updateColorPreview();
 
         // Helpdesk Response Target
@@ -131,7 +162,7 @@
         setValue('helpdeskResponseTargetHours', data.helpdeskResponseTargetHours);
         setValue('helpdeskResponseTargetMinutes', data.helpdeskResponseTargetMinutes);
         setCheckboxValue('helpdeskResponseTargetWithinOfficeHours', data.helpdeskResponseTargetWithinOfficeHours);
-        setValue('helpdeskResponseTargetReference', data.helpdeskResponseTargetReference);
+        setValue('helpdeskResponseTargetReference', '172'); // Always "After Request Date"
         setCheckboxValue('helpdeskResponseTargetRequiredToFill', data.helpdeskResponseTargetRequiredToFill);
         setCheckboxValue('helpdeskResponseTargetActivateCompliance', data.helpdeskResponseTargetActivateCompliance);
 
@@ -148,6 +179,16 @@
         setCheckboxValue('helpdeskResponseTargetAcknowledgeTargetChanged', data.helpdeskResponseTargetAcknowledgeTargetChanged);
         setCheckboxValue('helpdeskResponseTargetReminderBeforeTarget', data.helpdeskResponseTargetReminderBeforeTarget);
 
+        // Show/hide reminder duration
+        const helpdeskReminderDiv = document.getElementById('helpdeskReminderDuration');
+        if (helpdeskReminderDiv) {
+            helpdeskReminderDiv.style.display = data.helpdeskResponseTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('helpdeskResponseTargetReminderBeforeTargetDurationDays', data.helpdeskResponseTargetReminderBeforeTargetDurationDays);
+        setValue('helpdeskResponseTargetReminderBeforeTargetDurationHours', data.helpdeskResponseTargetReminderBeforeTargetDurationHours);
+        setValue('helpdeskResponseTargetReminderBeforeTargetDurationMinutes', data.helpdeskResponseTargetReminderBeforeTargetDurationMinutes);
+
         // Initial Follow Up Target
         setValue('initialFollowUpTargetDays', data.initialFollowUpTargetDays);
         setValue('initialFollowUpTargetHours', data.initialFollowUpTargetHours);
@@ -156,9 +197,29 @@
         setValue('initialFollowUpTargetReference', data.initialFollowUpTargetReference);
         setCheckboxValue('initialFollowUpTargetRequiredToFill', data.initialFollowUpTargetRequiredToFill);
         setCheckboxValue('initialFollowUpTargetActivateCompliance', data.initialFollowUpTargetActivateCompliance);
+
+        // Show/hide compliance duration
+        const initialFollowUpComplianceDiv = document.getElementById('initialFollowUpComplianceDuration');
+        if (initialFollowUpComplianceDiv) {
+            initialFollowUpComplianceDiv.style.display = data.initialFollowUpTargetActivateCompliance ? 'block' : 'none';
+        }
+
+        setValue('initialFollowUpTargetComplianceDurationDays', data.initialFollowUpTargetComplianceDurationDays);
+        setValue('initialFollowUpTargetComplianceDurationHours', data.initialFollowUpTargetComplianceDurationHours);
+        setValue('initialFollowUpTargetComplianceDurationMinutes', data.initialFollowUpTargetComplianceDurationMinutes);
         setCheckboxValue('initialFollowUpTargetAcknowledgeActual', data.initialFollowUpTargetAcknowledgeActual);
         setCheckboxValue('initialFollowUpTargetAcknowledgeTargetChanged', data.initialFollowUpTargetAcknowledgeTargetChanged);
         setCheckboxValue('initialFollowUpTargetReminderBeforeTarget', data.initialFollowUpTargetReminderBeforeTarget);
+
+        // Show/hide reminder duration
+        const initialFollowUpReminderDiv = document.getElementById('initialFollowUpReminderDuration');
+        if (initialFollowUpReminderDiv) {
+            initialFollowUpReminderDiv.style.display = data.initialFollowUpTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('initialFollowUpTargetReminderBeforeTargetDurationDays', data.initialFollowUpTargetReminderBeforeTargetDurationDays);
+        setValue('initialFollowUpTargetReminderBeforeTargetDurationHours', data.initialFollowUpTargetReminderBeforeTargetDurationHours);
+        setValue('initialFollowUpTargetReminderBeforeTargetDurationMinutes', data.initialFollowUpTargetReminderBeforeTargetDurationMinutes);
 
         // Quotation Submission Target
         setValue('quotationSubmissionTargetDays', data.quotationSubmissionTargetDays);
@@ -168,9 +229,29 @@
         setValue('quotationSubmissionTargetReference', data.quotationSubmissionTargetReference);
         setCheckboxValue('quotationSubmissionTargetRequiredToFill', data.quotationSubmissionTargetRequiredToFill);
         setCheckboxValue('quotationSubmissionTargetActivateCompliance', data.quotationSubmissionTargetActivateCompliance);
+
+        // Show/hide compliance duration
+        const quotationSubmissionComplianceDiv = document.getElementById('quotationSubmissionComplianceDuration');
+        if (quotationSubmissionComplianceDiv) {
+            quotationSubmissionComplianceDiv.style.display = data.quotationSubmissionTargetActivateCompliance ? 'block' : 'none';
+        }
+
+        setValue('quotationSubmissionTargetComplianceDurationDays', data.quotationSubmissionTargetComplianceDurationDays);
+        setValue('quotationSubmissionTargetComplianceDurationHours', data.quotationSubmissionTargetComplianceDurationHours);
+        setValue('quotationSubmissionTargetComplianceDurationMinutes', data.quotationSubmissionTargetComplianceDurationMinutes);
         setCheckboxValue('quotationSubmissionTargetAcknowledgeActual', data.quotationSubmissionTargetAcknowledgeActual);
         setCheckboxValue('quotationSubmissionTargetAcknowledgeTargetChanged', data.quotationSubmissionTargetAcknowledgeTargetChanged);
         setCheckboxValue('quotationSubmissionTargetReminderBeforeTarget', data.quotationSubmissionTargetReminderBeforeTarget);
+
+        // Show/hide reminder duration
+        const quotationSubmissionReminderDiv = document.getElementById('quotationSubmissionReminderDuration');
+        if (quotationSubmissionReminderDiv) {
+            quotationSubmissionReminderDiv.style.display = data.quotationSubmissionTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('quotationSubmissionTargetReminderBeforeTargetDurationDays', data.quotationSubmissionTargetReminderBeforeTargetDurationDays);
+        setValue('quotationSubmissionTargetReminderBeforeTargetDurationHours', data.quotationSubmissionTargetReminderBeforeTargetDurationHours);
+        setValue('quotationSubmissionTargetReminderBeforeTargetDurationMinutes', data.quotationSubmissionTargetReminderBeforeTargetDurationMinutes);
 
         // Cost Approval Target
         setValue('costApprovalTargetDays', data.costApprovalTargetDays);
@@ -180,9 +261,29 @@
         setValue('costApprovalTargetReference', data.costApprovalTargetReference);
         setCheckboxValue('costApprovalTargetRequiredToFill', data.costApprovalTargetRequiredToFill);
         setCheckboxValue('costApprovalTargetActivateCompliance', data.costApprovalTargetActivateCompliance);
+
+        // Show/hide compliance duration
+        const costApprovalComplianceDiv = document.getElementById('costApprovalComplianceDuration');
+        if (costApprovalComplianceDiv) {
+            costApprovalComplianceDiv.style.display = data.costApprovalTargetActivateCompliance ? 'block' : 'none';
+        }
+
+        setValue('costApprovalTargetComplianceDurationDays', data.costApprovalTargetComplianceDurationDays);
+        setValue('costApprovalTargetComplianceDurationHours', data.costApprovalTargetComplianceDurationHours);
+        setValue('costApprovalTargetComplianceDurationMinutes', data.costApprovalTargetComplianceDurationMinutes);
         setCheckboxValue('costApprovalTargetAcknowledgeActual', data.costApprovalTargetAcknowledgeActual);
         setCheckboxValue('costApprovalTargetAcknowledgeTargetChanged', data.costApprovalTargetAcknowledgeTargetChanged);
         setCheckboxValue('costApprovalTargetReminderBeforeTarget', data.costApprovalTargetReminderBeforeTarget);
+
+        // Show/hide reminder duration
+        const costApprovalReminderDiv = document.getElementById('costApprovalReminderDuration');
+        if (costApprovalReminderDiv) {
+            costApprovalReminderDiv.style.display = data.costApprovalTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('costApprovalTargetReminderBeforeTargetDurationDays', data.costApprovalTargetReminderBeforeTargetDurationDays);
+        setValue('costApprovalTargetReminderBeforeTargetDurationHours', data.costApprovalTargetReminderBeforeTargetDurationHours);
+        setValue('costApprovalTargetReminderBeforeTargetDurationMinutes', data.costApprovalTargetReminderBeforeTargetDurationMinutes);
 
         // Work Completion Target
         setValue('workCompletionTargetDays', data.workCompletionTargetDays);
@@ -192,9 +293,29 @@
         setValue('workCompletionTargetReference', data.workCompletionTargetReference);
         setCheckboxValue('workCompletionTargetRequiredToFill', data.workCompletionTargetRequiredToFill);
         setCheckboxValue('workCompletionTargetActivateCompliance', data.workCompletionTargetActivateCompliance);
+
+        // Show/hide compliance duration
+        const workCompletionComplianceDiv = document.getElementById('workCompletionComplianceDuration');
+        if (workCompletionComplianceDiv) {
+            workCompletionComplianceDiv.style.display = data.workCompletionTargetActivateCompliance ? 'block' : 'none';
+        }
+
+        setValue('workCompletionTargetComplianceDurationDays', data.workCompletionTargetComplianceDurationDays);
+        setValue('workCompletionTargetComplianceDurationHours', data.workCompletionTargetComplianceDurationHours);
+        setValue('workCompletionTargetComplianceDurationMinutes', data.workCompletionTargetComplianceDurationMinutes);
         setCheckboxValue('workCompletionTargetAcknowledgeActual', data.workCompletionTargetAcknowledgeActual);
         setCheckboxValue('workCompletionTargetAcknowledgeTargetChanged', data.workCompletionTargetAcknowledgeTargetChanged);
         setCheckboxValue('workCompletionTargetReminderBeforeTarget', data.workCompletionTargetReminderBeforeTarget);
+
+        // Show/hide reminder duration
+        const workCompletionReminderDiv = document.getElementById('workCompletionReminderDuration');
+        if (workCompletionReminderDiv) {
+            workCompletionReminderDiv.style.display = data.workCompletionTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('workCompletionTargetReminderBeforeTargetDurationDays', data.workCompletionTargetReminderBeforeTargetDurationDays);
+        setValue('workCompletionTargetReminderBeforeTargetDurationHours', data.workCompletionTargetReminderBeforeTargetDurationHours);
+        setValue('workCompletionTargetReminderBeforeTargetDurationMinutes', data.workCompletionTargetReminderBeforeTargetDurationMinutes);
 
         // After Work Follow Up Target
         setValue('afterWorkFollowUpTargetDays', data.afterWorkFollowUpTargetDays);
@@ -204,9 +325,29 @@
         setValue('afterWorkFollowUpTargetReference', data.afterWorkFollowUpTargetReference);
         setCheckboxValue('afterWorkFollowUpTargetRequiredToFill', data.afterWorkFollowUpTargetRequiredToFill);
         setCheckboxValue('afterWorkFollowUpTargetActivateCompliance', data.afterWorkFollowUpTargetActivateCompliance);
+
+        // Show/hide compliance duration
+        const afterWorkFollowUpComplianceDiv = document.getElementById('afterWorkFollowUpComplianceDuration');
+        if (afterWorkFollowUpComplianceDiv) {
+            afterWorkFollowUpComplianceDiv.style.display = data.afterWorkFollowUpTargetActivateCompliance ? 'block' : 'none';
+        }
+
+        setValue('afterWorkFollowUpTargetComplianceDurationDays', data.afterWorkFollowUpTargetComplianceDurationDays);
+        setValue('afterWorkFollowUpTargetComplianceDurationHours', data.afterWorkFollowUpTargetComplianceDurationHours);
+        setValue('afterWorkFollowUpTargetComplianceDurationMinutes', data.afterWorkFollowUpTargetComplianceDurationMinutes);
         setCheckboxValue('afterWorkFollowUpTargetAcknowledgeActual', data.afterWorkFollowUpTargetAcknowledgeActual);
         setCheckboxValue('afterWorkFollowUpTargetAcknowledgeTargetChanged', data.afterWorkFollowUpTargetAcknowledgeTargetChanged);
         setCheckboxValue('afterWorkFollowUpTargetReminderBeforeTarget', data.afterWorkFollowUpTargetReminderBeforeTarget);
+
+        // Show/hide reminder duration
+        const afterWorkFollowUpReminderDiv = document.getElementById('afterWorkFollowUpReminderDuration');
+        if (afterWorkFollowUpReminderDiv) {
+            afterWorkFollowUpReminderDiv.style.display = data.afterWorkFollowUpTargetReminderBeforeTarget ? 'block' : 'none';
+        }
+
+        setValue('afterWorkFollowUpTargetReminderBeforeTargetDurationDays', data.afterWorkFollowUpTargetReminderBeforeTargetDurationDays);
+        setValue('afterWorkFollowUpTargetReminderBeforeTargetDurationHours', data.afterWorkFollowUpTargetReminderBeforeTargetDurationHours);
+        setValue('afterWorkFollowUpTargetReminderBeforeTargetDurationMinutes', data.afterWorkFollowUpTargetReminderBeforeTargetDurationMinutes);
         setCheckboxValue('afterWorkFollowUpTargetActivateAutoFill', data.afterWorkFollowUpTargetActivateAutoFill);
     }
 
@@ -252,11 +393,15 @@
         formData.id = currentData.id;
         formData.idClient = currentData.idClient;
 
+        // Get CSRF token
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
         try {
-            const response = await fetch('/Helpdesk/UpdatePriorityLevel', {
+            const response = await fetch(MvcEndpoints.Helpdesk.Settings.PriorityLevel.Update, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
                 },
                 body: JSON.stringify(formData)
             });
@@ -264,16 +409,16 @@
             const result = await response.json();
 
             if (result.success) {
-                showSuccess('Priority level updated successfully');
+                showNotification('Priority level updated successfully', 'success');
                 setTimeout(() => {
                     window.location.href = '/Helpdesk/PriorityLevel';
                 }, 1000);
             } else {
-                showError('Failed to update priority level: ' + (result.message || 'Unknown error'));
+                showNotification('Failed to update priority level: ' + (result.message || 'Unknown error'), 'error');
             }
         } catch (error) {
             console.error('Error updating priority level:', error);
-            showError('An error occurred while updating the priority level');
+            showNotification('An error occurred while updating the priority level', 'error');
         }
     }
 
@@ -296,6 +441,9 @@
             helpdeskResponseTargetAcknowledgeActual: getCheckboxValue('helpdeskResponseTargetAcknowledgeActual'),
             helpdeskResponseTargetAcknowledgeTargetChanged: getCheckboxValue('helpdeskResponseTargetAcknowledgeTargetChanged'),
             helpdeskResponseTargetReminderBeforeTarget: getCheckboxValue('helpdeskResponseTargetReminderBeforeTarget'),
+            helpdeskResponseTargetReminderBeforeTargetDurationDays: getNumericValue('helpdeskResponseTargetReminderBeforeTargetDurationDays'),
+            helpdeskResponseTargetReminderBeforeTargetDurationHours: getNumericValue('helpdeskResponseTargetReminderBeforeTargetDurationHours'),
+            helpdeskResponseTargetReminderBeforeTargetDurationMinutes: getNumericValue('helpdeskResponseTargetReminderBeforeTargetDurationMinutes'),
 
             // Initial Follow Up Target
             initialFollowUpTargetDays: getNumericValue('initialFollowUpTargetDays'),
@@ -305,9 +453,15 @@
             initialFollowUpTargetReference: getValue('initialFollowUpTargetReference'),
             initialFollowUpTargetRequiredToFill: getCheckboxValue('initialFollowUpTargetRequiredToFill'),
             initialFollowUpTargetActivateCompliance: getCheckboxValue('initialFollowUpTargetActivateCompliance'),
+            initialFollowUpTargetComplianceDurationDays: getNumericValue('initialFollowUpTargetComplianceDurationDays'),
+            initialFollowUpTargetComplianceDurationHours: getNumericValue('initialFollowUpTargetComplianceDurationHours'),
+            initialFollowUpTargetComplianceDurationMinutes: getNumericValue('initialFollowUpTargetComplianceDurationMinutes'),
             initialFollowUpTargetAcknowledgeActual: getCheckboxValue('initialFollowUpTargetAcknowledgeActual'),
             initialFollowUpTargetAcknowledgeTargetChanged: getCheckboxValue('initialFollowUpTargetAcknowledgeTargetChanged'),
             initialFollowUpTargetReminderBeforeTarget: getCheckboxValue('initialFollowUpTargetReminderBeforeTarget'),
+            initialFollowUpTargetReminderBeforeTargetDurationDays: getNumericValue('initialFollowUpTargetReminderBeforeTargetDurationDays'),
+            initialFollowUpTargetReminderBeforeTargetDurationHours: getNumericValue('initialFollowUpTargetReminderBeforeTargetDurationHours'),
+            initialFollowUpTargetReminderBeforeTargetDurationMinutes: getNumericValue('initialFollowUpTargetReminderBeforeTargetDurationMinutes'),
 
             // Quotation Submission Target
             quotationSubmissionTargetDays: getNumericValue('quotationSubmissionTargetDays'),
@@ -317,9 +471,15 @@
             quotationSubmissionTargetReference: getValue('quotationSubmissionTargetReference'),
             quotationSubmissionTargetRequiredToFill: getCheckboxValue('quotationSubmissionTargetRequiredToFill'),
             quotationSubmissionTargetActivateCompliance: getCheckboxValue('quotationSubmissionTargetActivateCompliance'),
+            quotationSubmissionTargetComplianceDurationDays: getNumericValue('quotationSubmissionTargetComplianceDurationDays'),
+            quotationSubmissionTargetComplianceDurationHours: getNumericValue('quotationSubmissionTargetComplianceDurationHours'),
+            quotationSubmissionTargetComplianceDurationMinutes: getNumericValue('quotationSubmissionTargetComplianceDurationMinutes'),
             quotationSubmissionTargetAcknowledgeActual: getCheckboxValue('quotationSubmissionTargetAcknowledgeActual'),
             quotationSubmissionTargetAcknowledgeTargetChanged: getCheckboxValue('quotationSubmissionTargetAcknowledgeTargetChanged'),
             quotationSubmissionTargetReminderBeforeTarget: getCheckboxValue('quotationSubmissionTargetReminderBeforeTarget'),
+            quotationSubmissionTargetReminderBeforeTargetDurationDays: getNumericValue('quotationSubmissionTargetReminderBeforeTargetDurationDays'),
+            quotationSubmissionTargetReminderBeforeTargetDurationHours: getNumericValue('quotationSubmissionTargetReminderBeforeTargetDurationHours'),
+            quotationSubmissionTargetReminderBeforeTargetDurationMinutes: getNumericValue('quotationSubmissionTargetReminderBeforeTargetDurationMinutes'),
 
             // Cost Approval Target
             costApprovalTargetDays: getNumericValue('costApprovalTargetDays'),
@@ -329,9 +489,15 @@
             costApprovalTargetReference: getValue('costApprovalTargetReference'),
             costApprovalTargetRequiredToFill: getCheckboxValue('costApprovalTargetRequiredToFill'),
             costApprovalTargetActivateCompliance: getCheckboxValue('costApprovalTargetActivateCompliance'),
+            costApprovalTargetComplianceDurationDays: getNumericValue('costApprovalTargetComplianceDurationDays'),
+            costApprovalTargetComplianceDurationHours: getNumericValue('costApprovalTargetComplianceDurationHours'),
+            costApprovalTargetComplianceDurationMinutes: getNumericValue('costApprovalTargetComplianceDurationMinutes'),
             costApprovalTargetAcknowledgeActual: getCheckboxValue('costApprovalTargetAcknowledgeActual'),
             costApprovalTargetAcknowledgeTargetChanged: getCheckboxValue('costApprovalTargetAcknowledgeTargetChanged'),
             costApprovalTargetReminderBeforeTarget: getCheckboxValue('costApprovalTargetReminderBeforeTarget'),
+            costApprovalTargetReminderBeforeTargetDurationDays: getNumericValue('costApprovalTargetReminderBeforeTargetDurationDays'),
+            costApprovalTargetReminderBeforeTargetDurationHours: getNumericValue('costApprovalTargetReminderBeforeTargetDurationHours'),
+            costApprovalTargetReminderBeforeTargetDurationMinutes: getNumericValue('costApprovalTargetReminderBeforeTargetDurationMinutes'),
 
             // Work Completion Target
             workCompletionTargetDays: getNumericValue('workCompletionTargetDays'),
@@ -341,9 +507,15 @@
             workCompletionTargetReference: getValue('workCompletionTargetReference'),
             workCompletionTargetRequiredToFill: getCheckboxValue('workCompletionTargetRequiredToFill'),
             workCompletionTargetActivateCompliance: getCheckboxValue('workCompletionTargetActivateCompliance'),
+            workCompletionTargetComplianceDurationDays: getNumericValue('workCompletionTargetComplianceDurationDays'),
+            workCompletionTargetComplianceDurationHours: getNumericValue('workCompletionTargetComplianceDurationHours'),
+            workCompletionTargetComplianceDurationMinutes: getNumericValue('workCompletionTargetComplianceDurationMinutes'),
             workCompletionTargetAcknowledgeActual: getCheckboxValue('workCompletionTargetAcknowledgeActual'),
             workCompletionTargetAcknowledgeTargetChanged: getCheckboxValue('workCompletionTargetAcknowledgeTargetChanged'),
             workCompletionTargetReminderBeforeTarget: getCheckboxValue('workCompletionTargetReminderBeforeTarget'),
+            workCompletionTargetReminderBeforeTargetDurationDays: getNumericValue('workCompletionTargetReminderBeforeTargetDurationDays'),
+            workCompletionTargetReminderBeforeTargetDurationHours: getNumericValue('workCompletionTargetReminderBeforeTargetDurationHours'),
+            workCompletionTargetReminderBeforeTargetDurationMinutes: getNumericValue('workCompletionTargetReminderBeforeTargetDurationMinutes'),
 
             // After Work Follow Up Target
             afterWorkFollowUpTargetDays: getNumericValue('afterWorkFollowUpTargetDays'),
@@ -353,9 +525,15 @@
             afterWorkFollowUpTargetReference: getValue('afterWorkFollowUpTargetReference'),
             afterWorkFollowUpTargetRequiredToFill: getCheckboxValue('afterWorkFollowUpTargetRequiredToFill'),
             afterWorkFollowUpTargetActivateCompliance: getCheckboxValue('afterWorkFollowUpTargetActivateCompliance'),
+            afterWorkFollowUpTargetComplianceDurationDays: getNumericValue('afterWorkFollowUpTargetComplianceDurationDays'),
+            afterWorkFollowUpTargetComplianceDurationHours: getNumericValue('afterWorkFollowUpTargetComplianceDurationHours'),
+            afterWorkFollowUpTargetComplianceDurationMinutes: getNumericValue('afterWorkFollowUpTargetComplianceDurationMinutes'),
             afterWorkFollowUpTargetAcknowledgeActual: getCheckboxValue('afterWorkFollowUpTargetAcknowledgeActual'),
             afterWorkFollowUpTargetAcknowledgeTargetChanged: getCheckboxValue('afterWorkFollowUpTargetAcknowledgeTargetChanged'),
             afterWorkFollowUpTargetReminderBeforeTarget: getCheckboxValue('afterWorkFollowUpTargetReminderBeforeTarget'),
+            afterWorkFollowUpTargetReminderBeforeTargetDurationDays: getNumericValue('afterWorkFollowUpTargetReminderBeforeTargetDurationDays'),
+            afterWorkFollowUpTargetReminderBeforeTargetDurationHours: getNumericValue('afterWorkFollowUpTargetReminderBeforeTargetDurationHours'),
+            afterWorkFollowUpTargetReminderBeforeTargetDurationMinutes: getNumericValue('afterWorkFollowUpTargetReminderBeforeTargetDurationMinutes'),
             afterWorkFollowUpTargetActivateAutoFill: getCheckboxValue('afterWorkFollowUpTargetActivateAutoFill')
         };
     }
@@ -378,7 +556,16 @@
     function setValue(id, value) {
         const element = document.getElementById(id);
         if (element) {
-            element.value = value || '';
+            // Check if this is a searchable dropdown
+            if (element._searchableDropdown) {
+                // Find the option with this value to get the label text
+                const option = Array.from(element.options).find(opt => opt.value == value);
+                if (option) {
+                    element._searchableDropdown.setValue(value, option.textContent, false);
+                }
+            } else {
+                element.value = value || '';
+            }
         }
     }
 
@@ -390,10 +577,10 @@
     }
 
     function showSuccess(message) {
-        alert(message);
+        showNotification(message, 'success', 'Success');
     }
 
     function showError(message) {
-        alert(message);
+        showNotification(message, 'error', 'Error');
     }
 })();

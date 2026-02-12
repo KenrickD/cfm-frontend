@@ -9,6 +9,6 @@ namespace cfm_frontend.Models.WorkRequest
         public int IdType { get; set; }
         public int? ParentTypeIdType { get; set; }
         public int? DisplayOrder { get; set; }
-        public string TypeName { get; set; }
+        public string TypeName { get; set; } = string.Empty;
     }
 }

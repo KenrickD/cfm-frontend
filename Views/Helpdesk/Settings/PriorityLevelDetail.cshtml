@@ -58,6 +58,10 @@
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
         }
 
+        [data-pc-theme="dark"] .detail-section {
+            background: #2d3748;
+        }
+
         .detail-section-title {
             font-size: 1rem;
             font-weight: 600;
@@ -65,6 +69,11 @@
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
             border-bottom: 2px solid #e9ecef;
+        }
+
+        [data-pc-theme="dark"] .detail-section-title {
+            color: #60a5fa;
+            border-bottom-color: #4a5568;
         }
 
         .detail-item {
@@ -78,9 +87,17 @@
             margin-bottom: 0.25rem;
         }
 
+        [data-pc-theme="dark"] .detail-value {
+            color: #e5e7eb;
+        }
+
         .detail-value-secondary {
             color: #6c757d;
             font-size: 0.875rem;
+        }
+
+        [data-pc-theme="dark"] .detail-value-secondary {
+            color: #9ca3af;
         }
 
         .checkbox-list {
@@ -95,6 +112,10 @@
             gap: 0.5rem;
             font-size: 0.85rem;
             color: #495057;
+        }
+
+        [data-pc-theme="dark"] .checkbox-item {
+            color: #d1d5db;
         }
 
         .checkbox-item i {
@@ -112,6 +133,11 @@
             margin-left: 0.5rem;
         }
 
+        [data-pc-theme="dark"] .within-office-hours-badge {
+            background-color: #1e3a5f;
+            color: #60a5fa;
+        }
+
         .edit-button {
             min-width: 200px;
         }
@@ -122,6 +148,11 @@
             background-color: #fff3cd;
             border-radius: 0.25rem;
             border-left: 3px solid #ffc107;
+        }
+
+        [data-pc-theme="dark"] .compliance-duration-display {
+            background-color: #3d3410;
+            border-left-color: #eab308;
         }
     </style>
 }

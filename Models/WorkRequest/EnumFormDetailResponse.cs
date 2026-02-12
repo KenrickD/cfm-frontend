@@ -9,6 +9,6 @@ namespace cfm_frontend.Models.WorkRequest
         public int IdEnum { get; set; }
         public int? ParentEnumIdEnum { get; set; }
         public int? DisplayOrder { get; set; }
-        public string EnumName { get; set; }
+        public string EnumName { get; set; } = string.Empty;
     }
 }

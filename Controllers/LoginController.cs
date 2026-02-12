@@ -1,4 +1,6 @@
 ﻿using cfm_frontend.Constants;
+using cfm_frontend.DTOs;
+using cfm_frontend.DTOs.Auth;
 using cfm_frontend.DTOs.Login;
 using cfm_frontend.DTOs.UserInfo;
 using cfm_frontend.Extensions;
@@ -241,5 +243,162 @@ namespace cfm_frontend.Controllers
 
             return RedirectToAction("Index", "Login");
         }
+
+        #region Forgot Password
+
+        /// <summary>
+        /// GET: Display forgot password form
+        /// </summary>
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// POST: Process forgot password request
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                // Use plain HttpClient (not "BackendAPI") - no auth required
+                var client = _httpClientFactory.CreateClient();
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var payload = new ForgotPasswordRequest { Email = model.Email };
+                var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.ForgotPassword}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (apiResponse?.Success == true)
+                    {
+                        _logger.LogInformation("Password reset email requested for {Email}", model.Email);
+                    }
+                }
+
+                // Always redirect to confirmation (prevent email enumeration)
+                return RedirectToAction("ForgotPasswordConfirmation");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing forgot password for {Email}", model.Email);
+                // Still redirect to confirmation (don't reveal errors)
+                return RedirectToAction("ForgotPasswordConfirmation");
+            }
+        }
+
+        /// <summary>
+        /// GET: Display forgot password confirmation (check your email)
+        /// </summary>
+        public IActionResult ForgotPasswordConfirmation()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// GET: Display reset password form
+        /// </summary>
+        public IActionResult ResetPassword(string? token, string? email)
+        {
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
+            {
+                return RedirectToAction("Index");
+            }
+
+            var model = new ResetPasswordViewModel
+            {
+                Token = token,
+                Email = email
+            };
+
+            return View(model);
+        }
+
+        /// <summary>
+        /// POST: Process password reset
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var payload = new ResetPasswordRequest
+                {
+                    Email = model.Email,
+                    Token = model.Token,
+                    NewPassword = model.Password
+                };
+
+                var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Auth.ResetPassword}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (apiResponse?.Success == true)
+                    {
+                        _logger.LogInformation("Password reset successful for {Email}", model.Email);
+                        return RedirectToAction("ResetPasswordConfirmation");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, apiResponse?.Message ?? "Failed to reset password");
+                    }
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid or expired reset token");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for {Email}", model.Email);
+                ModelState.AddModelError(string.Empty, "An error occurred while resetting your password");
+            }
+
+            return View(model);
+        }
+
+        /// <summary>
+        /// GET: Display password reset success message
+        /// </summary>
+        public IActionResult ResetPasswordConfirmation()
+        {
+            return View();
+        }
+
+        #endregion
     }
 }

@@ -4,8 +4,32 @@ using cfm_frontend.Middleware;
 using cfm_frontend.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog with conditional file logging
+var logConfig = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
+    .WriteTo.Console();
+
+// Only add file logging if enabled in config (default: true)
+if (builder.Configuration.GetValue<bool>("Logging:EnableFileLogging", true))
+{
+    var logsPath = builder.Configuration["Logging:FileLogger:Path"] ?? "Logs";
+    logConfig.WriteTo.File(
+        path: Path.Combine(AppContext.BaseDirectory, logsPath, "errors-.log"),
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error,
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{Level:u5}] {SourceContext} | {Message:lj}{NewLine}{Exception}");
+}
+
+Log.Logger = logConfig.CreateLogger();
+builder.Host.UseSerilog();
 
 // Add services to the container.
 // Register global exception filter for authentication errors

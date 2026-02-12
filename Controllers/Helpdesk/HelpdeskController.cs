@@ -1386,14 +1386,65 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// GET: Priority Level Settings page
+        /// GET: Priority Level Settings page with server-side pagination
         /// </summary>
-        public IActionResult PriorityLevel()
+        public async Task<IActionResult> PriorityLevel(int page = 1, string? search = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            if (accessCheck != null) return accessCheck;
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return RedirectToAction("SignIn", "Login");
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
+            {
+                return RedirectToAction("SignIn", "Login");
+            }
+
+            var idClient = userInfo.PreferredClientId;
+            var viewmodel = new ViewModels.PriorityLevelListViewModel
+            {
+                SearchKeyword = search,
+                IdClient = idClient
+            };
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            // Build query string for paginated API
+            var queryParams = $"?cid={idClient}&page={page}&limit=10";
+            if (!string.IsNullOrEmpty(search))
+            {
+                queryParams += $"&keyword={Uri.EscapeDataString(search)}";
+            }
+
+            var (success, data, message) = await SafeExecuteApiAsync<DTOs.PriorityLevel.PriorityLevelPagedResponse>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.List}{queryParams}"),
+                "Failed to load priority levels");
+
+            if (success && data != null)
+            {
+                viewmodel.PriorityLevels = data.Data;
+                if (data.Metadata != null)
+                {
+                    viewmodel.Paging = new Models.PagingInfo
+                    {
+                        CurrentPage = data.Metadata.CurrentPage,
+                        TotalPages = data.Metadata.TotalPages,
+                        PageSize = data.Metadata.PageSize,
+                        TotalCount = data.Metadata.TotalCount
+                    };
+                }
+            }
+
             ViewBag.Title = "Priority Level Management";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/PriorityLevel.cshtml");
+            return View("~/Views/Helpdesk/Settings/PriorityLevel.cshtml", viewmodel);
         }
 
         /// <summary>
@@ -1476,6 +1527,23 @@ namespace cfm_frontend.Controllers.Helpdesk
             var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
                 () => client.GetAsync($"{backendUrl}{endpoint}"),
                 "Failed to load feedback types");
+
+            return Json(new { success, data, message });
+        }
+
+        /// <summary>
+        /// API: Get enums by category - generic endpoint for dropdown population
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetEnumsByCategory(string category)
+        {
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = ApiEndpoints.Masters.GetEnums(category);
+            var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
+                $"Failed to load {category} options");
 
             return Json(new { success, data, message });
         }
@@ -1598,14 +1666,23 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// API: Get priority level by ID for target date calculation
-        /// Fetches all priority levels and filters to the requested ID
-        /// Optional idClient parameter for multi-tab session safety
+        /// GET: Priority Level Edit page
+        /// </summary>
+        public IActionResult PriorityLevelEdit(int id)
+        {
+            ViewBag.Title = "Edit Priority Level";
+            ViewBag.pTitle = "Priority Level Management";
+            ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
+            ViewBag.PriorityLevelId = id;
+            return View("~/Views/Helpdesk/Settings/PriorityLevelEdit.cshtml");
+        }
+
+        /// <summary>
+        /// API: Get priority level by ID using the new detail endpoint
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelById(int id, int? idClient = null)
         {
-            // Get user session for idClient
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -1618,29 +1695,122 @@ namespace cfm_frontend.Controllers.Helpdesk
                 return Json(new { success = false, message = "Session expired. Please login again." });
             }
 
-            // Use passed idClient if provided, otherwise fall back to session
             var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            // Fetch all priority levels and find the one with matching ID
-            var (success, allData, message) = await SafeExecuteApiAsync<List<Models.PriorityLevelModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.PriorityLevelDetail.List}?idClient={effectiveIdClient}"),
-                "Failed to load priority levels");
+            // Call the detail endpoint directly
+            var (success, data, message) = await SafeExecuteApiAsync<DTOs.PriorityLevel.PriorityLevelDetailsDto>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.GetById(id)}?cid={effectiveIdClient}"),
+                "Failed to load priority level");
 
-            if (!success || allData == null)
+            if (!success || data == null)
             {
-                return Json(new { success = false, message });
+                return Json(new { success = false, message = message ?? $"Priority level with ID {id} not found" });
             }
 
-            var priorityLevel = allData.FirstOrDefault(p => p.Id == id);
-            if (priorityLevel == null)
-            {
-                return Json(new { success = false, message = $"Priority level with ID {id} not found" });
-            }
+            // Transform nested DTO to flat response for JavaScript compatibility
+            var flatResponse = TransformToFlatResponse(data);
+            return Json(new { success = true, data = flatResponse });
+        }
 
-            return Json(new { success = true, data = priorityLevel });
+        /// <summary>
+        /// Transform nested PriorityLevelDetailsDto to flat response for JavaScript
+        /// </summary>
+        private object TransformToFlatResponse(DTOs.PriorityLevel.PriorityLevelDetailsDto dto)
+        {
+            return new
+            {
+                id = dto.IdPriorityLevel,
+                idClient = dto.IdClient,
+                name = dto.Name,
+                displayOrder = dto.DisplayOrder,
+                visualColor = dto.VisualColor?.TypeName,
+                visualColorId = dto.VisualColor?.IdType,
+
+                // Helpdesk Response Target
+                helpdeskResponseTargetDays = dto.HelpdeskResponseTarget?.Duration?.Days ?? 0,
+                helpdeskResponseTargetHours = dto.HelpdeskResponseTarget?.Duration?.Hours ?? 0,
+                helpdeskResponseTargetMinutes = dto.HelpdeskResponseTarget?.Duration?.Minutes ?? 0,
+                helpdeskResponseTargetWithinOfficeHours = dto.HelpdeskResponseTarget?.WithinOfficeHours ?? false,
+                helpdeskResponseTargetReference = dto.HelpdeskResponseTarget?.BaseTarget?.IdEnum.ToString(),
+                helpdeskResponseTargetReferenceName = dto.HelpdeskResponseTarget?.BaseTarget?.EnumName ?? "After Request Date",
+                helpdeskResponseTargetRequiredToFill = dto.HelpdeskResponseTarget?.RequiredToFillCompletion ?? false,
+                helpdeskResponseTargetActivateCompliance = dto.HelpdeskResponseTarget?.ComplianceTarget != null,
+                helpdeskResponseTargetComplianceDurationDays = dto.HelpdeskResponseTarget?.ComplianceTarget?.Days ?? 0,
+                helpdeskResponseTargetComplianceDurationHours = dto.HelpdeskResponseTarget?.ComplianceTarget?.Hours ?? 0,
+                helpdeskResponseTargetComplianceDurationMinutes = dto.HelpdeskResponseTarget?.ComplianceTarget?.Minutes ?? 0,
+                helpdeskResponseTargetAcknowledgeActual = dto.HelpdeskResponseTarget?.AcknowledgeWhenActualFilled ?? false,
+                helpdeskResponseTargetAcknowledgeTargetChanged = dto.HelpdeskResponseTarget?.AcknowledgeWhenTargetChanged ?? false,
+                helpdeskResponseTargetReminderBeforeTarget = dto.HelpdeskResponseTarget?.ReminderBeforeTarget != null,
+
+                // Initial Follow Up Target
+                initialFollowUpTargetDays = dto.InitialFollowUpTarget?.Duration?.Days ?? 0,
+                initialFollowUpTargetHours = dto.InitialFollowUpTarget?.Duration?.Hours ?? 0,
+                initialFollowUpTargetMinutes = dto.InitialFollowUpTarget?.Duration?.Minutes ?? 0,
+                initialFollowUpTargetWithinOfficeHours = dto.InitialFollowUpTarget?.WithinOfficeHours ?? false,
+                initialFollowUpTargetReference = dto.InitialFollowUpTarget?.BaseTarget?.IdEnum.ToString(),
+                initialFollowUpTargetReferenceName = dto.InitialFollowUpTarget?.BaseTarget?.EnumName,
+                initialFollowUpTargetRequiredToFill = dto.InitialFollowUpTarget?.RequiredToFillCompletion ?? false,
+                initialFollowUpTargetActivateCompliance = dto.InitialFollowUpTarget?.ComplianceTarget != null,
+                initialFollowUpTargetAcknowledgeActual = dto.InitialFollowUpTarget?.AcknowledgeWhenActualFilled ?? false,
+                initialFollowUpTargetAcknowledgeTargetChanged = dto.InitialFollowUpTarget?.AcknowledgeWhenTargetChanged ?? false,
+                initialFollowUpTargetReminderBeforeTarget = dto.InitialFollowUpTarget?.ReminderBeforeTarget != null,
+
+                // Quotation Submission Target
+                quotationSubmissionTargetDays = dto.QuotationSubmissionTarget?.Duration?.Days ?? 0,
+                quotationSubmissionTargetHours = dto.QuotationSubmissionTarget?.Duration?.Hours ?? 0,
+                quotationSubmissionTargetMinutes = dto.QuotationSubmissionTarget?.Duration?.Minutes ?? 0,
+                quotationSubmissionTargetWithinOfficeHours = dto.QuotationSubmissionTarget?.WithinOfficeHours ?? false,
+                quotationSubmissionTargetReference = dto.QuotationSubmissionTarget?.BaseTarget?.IdEnum.ToString(),
+                quotationSubmissionTargetReferenceName = dto.QuotationSubmissionTarget?.BaseTarget?.EnumName,
+                quotationSubmissionTargetRequiredToFill = dto.QuotationSubmissionTarget?.RequiredToFillCompletion ?? false,
+                quotationSubmissionTargetActivateCompliance = dto.QuotationSubmissionTarget?.ComplianceTarget != null,
+                quotationSubmissionTargetAcknowledgeActual = dto.QuotationSubmissionTarget?.AcknowledgeWhenActualFilled ?? false,
+                quotationSubmissionTargetAcknowledgeTargetChanged = dto.QuotationSubmissionTarget?.AcknowledgeWhenTargetChanged ?? false,
+                quotationSubmissionTargetReminderBeforeTarget = dto.QuotationSubmissionTarget?.ReminderBeforeTarget != null,
+
+                // Cost Approval Target
+                costApprovalTargetDays = dto.CostApprovalTarget?.Duration?.Days ?? 0,
+                costApprovalTargetHours = dto.CostApprovalTarget?.Duration?.Hours ?? 0,
+                costApprovalTargetMinutes = dto.CostApprovalTarget?.Duration?.Minutes ?? 0,
+                costApprovalTargetWithinOfficeHours = dto.CostApprovalTarget?.WithinOfficeHours ?? false,
+                costApprovalTargetReference = dto.CostApprovalTarget?.BaseTarget?.IdEnum.ToString(),
+                costApprovalTargetReferenceName = dto.CostApprovalTarget?.BaseTarget?.EnumName,
+                costApprovalTargetRequiredToFill = dto.CostApprovalTarget?.RequiredToFillCompletion ?? false,
+                costApprovalTargetActivateCompliance = dto.CostApprovalTarget?.ComplianceTarget != null,
+                costApprovalTargetAcknowledgeActual = dto.CostApprovalTarget?.AcknowledgeWhenActualFilled ?? false,
+                costApprovalTargetAcknowledgeTargetChanged = dto.CostApprovalTarget?.AcknowledgeWhenTargetChanged ?? false,
+                costApprovalTargetReminderBeforeTarget = dto.CostApprovalTarget?.ReminderBeforeTarget != null,
+
+                // Work Completion Target
+                workCompletionTargetDays = dto.WorkCompletionTarget?.Duration?.Days ?? 0,
+                workCompletionTargetHours = dto.WorkCompletionTarget?.Duration?.Hours ?? 0,
+                workCompletionTargetMinutes = dto.WorkCompletionTarget?.Duration?.Minutes ?? 0,
+                workCompletionTargetWithinOfficeHours = dto.WorkCompletionTarget?.WithinOfficeHours ?? false,
+                workCompletionTargetReference = dto.WorkCompletionTarget?.BaseTarget?.IdEnum.ToString(),
+                workCompletionTargetReferenceName = dto.WorkCompletionTarget?.BaseTarget?.EnumName,
+                workCompletionTargetRequiredToFill = dto.WorkCompletionTarget?.RequiredToFillCompletion ?? false,
+                workCompletionTargetActivateCompliance = dto.WorkCompletionTarget?.ComplianceTarget != null,
+                workCompletionTargetAcknowledgeActual = dto.WorkCompletionTarget?.AcknowledgeWhenActualFilled ?? false,
+                workCompletionTargetAcknowledgeTargetChanged = dto.WorkCompletionTarget?.AcknowledgeWhenTargetChanged ?? false,
+                workCompletionTargetReminderBeforeTarget = dto.WorkCompletionTarget?.ReminderBeforeTarget != null,
+
+                // After Work Follow Up Target
+                afterWorkFollowUpTargetDays = dto.AfterWorkFollowUpTarget?.Duration?.Days ?? 0,
+                afterWorkFollowUpTargetHours = dto.AfterWorkFollowUpTarget?.Duration?.Hours ?? 0,
+                afterWorkFollowUpTargetMinutes = dto.AfterWorkFollowUpTarget?.Duration?.Minutes ?? 0,
+                afterWorkFollowUpTargetWithinOfficeHours = dto.AfterWorkFollowUpTarget?.WithinOfficeHours ?? false,
+                afterWorkFollowUpTargetReference = dto.AfterWorkFollowUpTarget?.BaseTarget?.IdEnum.ToString(),
+                afterWorkFollowUpTargetReferenceName = dto.AfterWorkFollowUpTarget?.BaseTarget?.EnumName,
+                afterWorkFollowUpTargetRequiredToFill = dto.AfterWorkFollowUpTarget?.RequiredToFillCompletion ?? false,
+                afterWorkFollowUpTargetActivateCompliance = dto.AfterWorkFollowUpTarget?.ComplianceTarget != null,
+                afterWorkFollowUpTargetAcknowledgeActual = dto.AfterWorkFollowUpTarget?.AcknowledgeWhenActualFilled ?? false,
+                afterWorkFollowUpTargetAcknowledgeTargetChanged = dto.AfterWorkFollowUpTarget?.AcknowledgeWhenTargetChanged ?? false,
+                afterWorkFollowUpTargetReminderBeforeTarget = dto.AfterWorkFollowUpTarget?.ReminderBeforeTarget != null,
+                afterWorkFollowUpTargetActivateAutoFill = dto.AfterWorkFollowUpTarget?.IsAutoFill ?? false
+            };
         }
 
         /// <summary>
@@ -1662,13 +1832,13 @@ namespace cfm_frontend.Controllers.Helpdesk
 
         /// <summary>
         /// POST: Create new priority level
+        /// Transforms flat form data to nested PriorityLevelDetailsDto
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreatePriorityLevel([FromBody] dynamic priorityLevelData)
+        public async Task<IActionResult> CreatePriorityLevel([FromBody] JsonElement priorityLevelData)
         {
             try
             {
-                // Get user session for idClient
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
                 if (string.IsNullOrEmpty(userSessionJson))
                 {
@@ -1684,35 +1854,323 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                // Serialize the priority level data
-                var jsonPayload = JsonSerializer.Serialize(priorityLevelData, new JsonSerializerOptions
+                // Transform flat form data to nested DTO
+                var nestedDto = TransformToNestedDto(priorityLevelData, userInfo.PreferredClientId);
+
+                var jsonPayload = JsonSerializer.Serialize(nestedDto, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
 
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync(
-                    $"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.Create}",
-                    content
-                );
+                var (success, data, message) = await SafeExecuteApiAsync<int>(
+                    () => client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.Create}", content),
+                    "Failed to create priority level");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = true, message = "Priority level created successfully" });
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to create priority level. Status: {StatusCode}, Error: {Error}",
-                    response.StatusCode, errorContent);
-
-                return Json(new { success = false, message = "Failed to create priority level" });
+                return Json(new { success, message = success ? "Priority level created successfully" : message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating priority level");
                 return Json(new { success = false, message = "Error creating priority level" });
             }
+        }
+
+        /// <summary>
+        /// PUT: Update existing priority level
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdatePriorityLevel([FromBody] JsonElement priorityLevelData)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Get ID from request
+                int id = 0;
+                if (priorityLevelData.TryGetProperty("id", out var idElement))
+                {
+                    id = idElement.GetInt32();
+                }
+
+                // Transform flat form data to nested DTO
+                var nestedDto = TransformToNestedDto(priorityLevelData, userInfo.PreferredClientId, id);
+
+                var jsonPayload = JsonSerializer.Serialize(nestedDto, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var (success, data, message) = await SafeExecuteApiAsync<object>(
+                    () => client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.Update}", content),
+                    "Failed to update priority level");
+
+                return Json(new { success, message = success ? "Priority level updated successfully" : message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating priority level");
+                return Json(new { success = false, message = "Error updating priority level" });
+            }
+        }
+
+        /// <summary>
+        /// DELETE: Delete priority level by ID
+        /// </summary>
+        [HttpDelete]
+        public async Task<IActionResult> DeletePriorityLevel(int id)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var (success, data, message) = await SafeExecuteApiAsync<string>(
+                    () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.Delete(id)}?cid={userInfo.PreferredClientId}"),
+                    "Failed to delete priority level");
+
+                return Json(new { success, message = success ? "Priority level deleted successfully" : message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting priority level");
+                return Json(new { success = false, message = "Error deleting priority level" });
+            }
+        }
+
+        /// <summary>
+        /// POST: Move priority level up in display order
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> MovePriorityLevelUp(int id)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var (success, data, message) = await SafeExecuteApiAsync<object>(
+                    () => client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.MoveUp(id)}?cid={userInfo.PreferredClientId}", null),
+                    "Failed to move priority level up");
+
+                return Json(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error moving priority level up");
+                return Json(new { success = false, message = "Error moving priority level up" });
+            }
+        }
+
+        /// <summary>
+        /// POST: Move priority level down in display order
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> MovePriorityLevelDown(int id)
+        {
+            try
+            {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (userInfo == null)
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                var (success, data, message) = await SafeExecuteApiAsync<object>(
+                    () => client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.PriorityLevel.MoveDown(id)}?cid={userInfo.PreferredClientId}", null),
+                    "Failed to move priority level down");
+
+                return Json(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error moving priority level down");
+                return Json(new { success = false, message = "Error moving priority level down" });
+            }
+        }
+
+        /// <summary>
+        /// Transform flat form data to nested PriorityLevelDetailsDto
+        /// </summary>
+        private DTOs.PriorityLevel.PriorityLevelDetailsDto TransformToNestedDto(JsonElement flatData, int idClient, int idPriorityLevel = 0)
+        {
+            var dto = new DTOs.PriorityLevel.PriorityLevelDetailsDto
+            {
+                IdPriorityLevel = idPriorityLevel,
+                IdClient = idClient,
+                Name = GetStringValue(flatData, "name"),
+                HelpdeskResponseTarget = TransformToTargetDto(flatData, "helpdeskResponseTarget"),
+                InitialFollowUpTarget = TransformToTargetDto(flatData, "initialFollowUpTarget"),
+                QuotationSubmissionTarget = TransformToTargetDto(flatData, "quotationSubmissionTarget"),
+                CostApprovalTarget = TransformToTargetDto(flatData, "costApprovalTarget"),
+                WorkCompletionTarget = TransformToTargetDto(flatData, "workCompletionTarget"),
+                AfterWorkFollowUpTarget = TransformToTargetDto(flatData, "afterWorkFollowUpTarget")
+            };
+
+            // Handle visual color
+            var visualColorValue = GetStringValue(flatData, "visualColor");
+            if (!string.IsNullOrEmpty(visualColorValue) && int.TryParse(visualColorValue, out var visualColorId))
+            {
+                dto.VisualColor = new Models.WorkRequest.TypeFormDetailResponse { IdType = visualColorId };
+            }
+
+            return dto;
+        }
+
+        private DTOs.PriorityLevel.PriorityLevelTargetBaseDto TransformToTargetDto(JsonElement flatData, string prefix)
+        {
+            var target = new DTOs.PriorityLevel.PriorityLevelTargetBaseDto();
+
+            // Duration
+            var days = GetIntValue(flatData, $"{prefix}Days");
+            var hours = GetIntValue(flatData, $"{prefix}Hours");
+            var minutes = GetIntValue(flatData, $"{prefix}Minutes");
+            if (days > 0 || hours > 0 || minutes > 0)
+            {
+                target.Duration = new DTOs.PriorityLevel.PriorityLevelTargetDurationDto
+                {
+                    Days = days,
+                    Hours = hours,
+                    Minutes = minutes
+                };
+            }
+
+            target.WithinOfficeHours = GetBoolValue(flatData, $"{prefix}WithinOfficeHours");
+
+            // Reference (BaseTarget)
+            var referenceValue = GetStringValue(flatData, $"{prefix}Reference");
+            if (!string.IsNullOrEmpty(referenceValue) && int.TryParse(referenceValue, out var refId))
+            {
+                target.BaseTarget = new Models.WorkRequest.EnumFormDetailResponse { IdEnum = refId };
+            }
+
+            target.RequiredToFillCompletion = GetBoolValue(flatData, $"{prefix}RequiredToFill");
+            target.AcknowledgeWhenActualFilled = GetBoolValue(flatData, $"{prefix}AcknowledgeActual");
+            target.AcknowledgeWhenTargetChanged = GetBoolValue(flatData, $"{prefix}AcknowledgeTargetChanged");
+
+            // Compliance Duration
+            if (GetBoolValue(flatData, $"{prefix}ActivateCompliance"))
+            {
+                var compDays = GetIntValue(flatData, $"{prefix}ComplianceDurationDays");
+                var compHours = GetIntValue(flatData, $"{prefix}ComplianceDurationHours");
+                var compMinutes = GetIntValue(flatData, $"{prefix}ComplianceDurationMinutes");
+                target.ComplianceTarget = new DTOs.PriorityLevel.PriorityLevelTargetDurationDto
+                {
+                    Days = compDays,
+                    Hours = compHours,
+                    Minutes = compMinutes
+                };
+            }
+
+            // Reminder Before Target
+            if (GetBoolValue(flatData, $"{prefix}ReminderBeforeTarget"))
+            {
+                var remDays = GetIntValue(flatData, $"{prefix}ReminderBeforeTargetDurationDays");
+                var remHours = GetIntValue(flatData, $"{prefix}ReminderBeforeTargetDurationHours");
+                var remMinutes = GetIntValue(flatData, $"{prefix}ReminderBeforeTargetDurationMinutes");
+                target.ReminderBeforeTarget = new DTOs.PriorityLevel.PriorityLevelTargetDurationDto
+                {
+                    Days = remDays,
+                    Hours = remHours,
+                    Minutes = remMinutes
+                };
+            }
+
+            // Auto Fill (specific to AfterWorkFollowUp)
+            if (prefix == "afterWorkFollowUpTarget")
+            {
+                target.IsAutoFill = GetBoolValue(flatData, $"{prefix}ActivateAutoFill");
+            }
+
+            return target;
+        }
+
+        private string GetStringValue(JsonElement element, string propertyName)
+        {
+            if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String)
+            {
+                return prop.GetString() ?? string.Empty;
+            }
+            return string.Empty;
+        }
+
+        private int GetIntValue(JsonElement element, string propertyName)
+        {
+            if (element.TryGetProperty(propertyName, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.Number)
+                {
+                    return prop.GetInt32();
+                }
+                if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var val))
+                {
+                    return val;
+                }
+            }
+            return 0;
+        }
+
+        private bool GetBoolValue(JsonElement element, string propertyName)
+        {
+            if (element.TryGetProperty(propertyName, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.True) return true;
+                if (prop.ValueKind == JsonValueKind.False) return false;
+                if (prop.ValueKind == JsonValueKind.String)
+                {
+                    return prop.GetString()?.ToLower() == "true";
+                }
+            }
+            return false;
         }
 
 

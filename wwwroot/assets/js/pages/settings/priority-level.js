@@ -1,23 +1,20 @@
 // Priority Level List Page JavaScript
+// Data is now server-rendered, this file handles search, move, and delete actions
 (function () {
     'use strict';
 
-    // Configuration
-    const CONFIG = {
-        apiEndpoints: {
-            list: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
-            delete: MvcEndpoints.Helpdesk.DeletePriorityLevel
-        }
+    // Client context for multi-tab session safety
+    const clientContext = {
+        get idClient() { return window.PageContext?.idClient || 0; }
     };
 
-    let priorityLevels = [];
     let deleteModal;
     let currentDeleteId = null;
+    let currentDeleteName = '';
 
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', function () {
         initializeComponents();
-        loadPriorityLevels();
     });
 
     function initializeComponents() {
@@ -27,6 +24,27 @@
             deleteModal = new bootstrap.Modal(modalElement);
         }
 
+        // Search handling
+        const searchBtn = document.getElementById('searchBtn');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', handleSearch);
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    handleSearch();
+                }
+            });
+        }
+
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', clearSearch);
+        }
+
         // Confirm delete button
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         if (confirmDeleteBtn) {
@@ -34,167 +52,41 @@
         }
     }
 
-    async function loadPriorityLevels() {
-        try {
-            const response = await fetch(CONFIG.apiEndpoints.list);
-            const result = await response.json();
+    function handleSearch() {
+        const searchValue = document.getElementById('searchInput')?.value?.trim() || '';
+        const url = new URL(window.location.href);
 
-            if (result.success) {
-                priorityLevels = result.data || [];
-                renderPriorityLevels();
-                updateTotalCount();
-            } else {
-                showError('Failed to load priority levels: ' + (result.message || 'Unknown error'));
-            }
-        } catch (error) {
-            console.error('Error loading priority levels:', error);
-            showError('An error occurred while loading priority levels');
+        if (searchValue) {
+            url.searchParams.set('search', searchValue);
+        } else {
+            url.searchParams.delete('search');
         }
+        url.searchParams.set('page', '1');
+
+        window.location.href = url.toString();
     }
 
-    function renderPriorityLevels() {
-        const tbody = document.getElementById('priorityTableBody');
-        const emptyState = document.getElementById('emptyState');
-
-        if (priorityLevels.length === 0) {
-            emptyState.style.display = 'block';
-            return;
-        }
-
-        emptyState.style.display = 'none';
-
-        const html = priorityLevels.map((level, index) => {
-            const colorStyle = getColorStyle(level.visualColor);
-            return `
-                <div class="priority-row">
-                    <div class="row align-items-start">
-                        <div class="col-md-1 text-center">
-                            <div style="padding-top: 0.5rem;">
-                                <span class="priority-badge" style="background-color: ${colorStyle}"></span>
-                                ${index + 1}
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/Helpdesk/PriorityLevelDetail?id=${level.id}" class="priority-name">
-                                ${escapeHtml(level.name)}
-                            </a>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="target-info">
-                                ${formatDuration(level.helpdeskResponseTargetDays, level.helpdeskResponseTargetHours, level.helpdeskResponseTargetMinutes)}
-                                ${level.helpdeskResponseTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">After Request Date</div>
-                            ${level.helpdeskResponseTargetRequiredToFill ? '<div class="checkbox-info"><i class="ti ti-check"></i>Required to Fill on Work Request Completion</div>' : ''}
-                            ${level.helpdeskResponseTargetActivateCompliance ? '<div class="checkbox-info"><i class="ti ti-check"></i>Activate Compliance Duration</div>' : ''}
-                        </div>
-                        <div class="col-md-2">
-                            <div class="target-info">
-                                ${formatDuration(level.initialFollowUpTargetDays, level.initialFollowUpTargetHours, level.initialFollowUpTargetMinutes)}
-                                ${level.initialFollowUpTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">${formatReference(level.initialFollowUpTargetReference)}</div>
-                            ${level.initialFollowUpTargetRequiredToFill ? '<div class="checkbox-info"><i class="ti ti-check"></i>Required to Fill on Work Request Completion</div>' : ''}
-                        </div>
-                        <div class="col-md-2">
-                            <div class="target-info">
-                                ${formatDuration(level.quotationSubmissionTargetDays, level.quotationSubmissionTargetHours, level.quotationSubmissionTargetMinutes) || '-'}
-                                ${level.quotationSubmissionTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">${formatReference(level.quotationSubmissionTargetReference)}</div>
-                            ${level.quotationSubmissionTargetAcknowledgeActual ? '<div class="checkbox-info"><i class="ti ti-check"></i>Acknowledge Requestor when The Actual already filled</div>' : ''}
-                        </div>
-                        <div class="col-md-1">
-                            <div class="target-info">
-                                ${formatDuration(level.costApprovalTargetDays, level.costApprovalTargetHours, level.costApprovalTargetMinutes) || '-'}
-                                ${level.costApprovalTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">${formatReference(level.costApprovalTargetReference)}</div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="target-info">
-                                ${formatDuration(level.workCompletionTargetDays, level.workCompletionTargetHours, level.workCompletionTargetMinutes)}
-                                ${level.workCompletionTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">${formatReference(level.workCompletionTargetReference)}</div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="target-info">
-                                ${formatDuration(level.afterWorkFollowUpTargetDays, level.afterWorkFollowUpTargetHours, level.afterWorkFollowUpTargetMinutes)}
-                                ${level.afterWorkFollowUpTargetWithinOfficeHours ? '<span class="within-office-hours">Within Office Hours</span>' : ''}
-                            </div>
-                            <div class="target-info">${formatReference(level.afterWorkFollowUpTargetReference)}</div>
-                            ${level.afterWorkFollowUpTargetActivateAutoFill ? '<div class="checkbox-info"><i class="ti ti-check"></i>Activate Auto Fill After Work Follow Up</div>' : ''}
-                        </div>
-                        <div class="col-md-1">
-                            <div class="action-buttons">
-                                <button type="button" class="btn btn-view btn-action" onclick="viewPriorityLevel(${level.id})" title="View">
-                                    <i class="ti ti-eye"></i>
-                                </button>
-                                <button type="button" class="btn btn-edit btn-action" onclick="editPriorityLevel(${level.id})" title="Edit">
-                                    <i class="ti ti-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-delete btn-action" onclick="showDeleteModal(${level.id}, '${escapeHtml(level.name)}')" title="Delete">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        tbody.innerHTML = html;
+    function clearSearch() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('search');
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
     }
 
-    function formatDuration(days, hours, minutes) {
-        const parts = [];
-        if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
-        if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-        if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
-
-        if (parts.length === 0) return '-';
-        return parts.join(' ');
-    }
-
-    function formatReference(reference) {
-        if (!reference) return '-';
-        return reference.replace(/([A-Z])/g, ' $1').trim();
-    }
-
-    function getColorStyle(colorName) {
-        const colorMap = {
-            'Red': '#dc3545',
-            'Orange': '#fd7e14',
-            'Yellow': '#ffc107',
-            'Green': '#28a745',
-            'Blue': '#007bff',
-            'Purple': '#6f42c1',
-            'Pink': '#e83e8c',
-            'Cyan': '#17a2b8',
-            'Gray': '#6c757d',
-            'Brown': '#8b4513'
-        };
-        return colorMap[colorName] || '#6c757d';
-    }
-
-    function updateTotalCount() {
-        const totalCountElement = document.getElementById('totalCount');
-        if (totalCountElement) {
-            totalCountElement.textContent = priorityLevels.length;
-        }
-    }
-
+    // View priority level detail
     window.viewPriorityLevel = function (id) {
         window.location.href = `/Helpdesk/PriorityLevelDetail?id=${id}`;
     };
 
+    // Edit priority level
     window.editPriorityLevel = function (id) {
         window.location.href = `/Helpdesk/PriorityLevelEdit?id=${id}`;
     };
 
+    // Show delete modal
     window.showDeleteModal = function (id, name) {
         currentDeleteId = id;
+        currentDeleteName = name;
         const deleteNameElement = document.getElementById('deletePriorityName');
         if (deleteNameElement) {
             deleteNameElement.textContent = name;
@@ -204,49 +96,103 @@
         }
     };
 
-    async function handleDelete() {
-        if (!currentDeleteId) return;
+    // Move priority level up
+    window.movePriorityLevelUp = async function (id) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
         try {
-            const response = await fetch(CONFIG.apiEndpoints.delete, {
-                method: 'DELETE',
+            const response = await fetch(`${MvcEndpoints.Helpdesk.Settings.PriorityLevel.MoveUp}?id=${id}`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: currentDeleteId })
+                    'RequestVerificationToken': token
+                }
             });
 
             const result = await response.json();
 
             if (result.success) {
-                showSuccess('Priority level deleted successfully');
+                window.location.reload();
+            } else {
+                showNotification(result.message || 'Failed to move priority level up', 'error');
+            }
+        } catch (error) {
+            console.error('Error moving priority level up:', error);
+            showNotification('An error occurred while moving the priority level', 'error');
+        }
+    };
+
+    // Move priority level down
+    window.movePriorityLevelDown = async function (id) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        try {
+            const response = await fetch(`${MvcEndpoints.Helpdesk.Settings.PriorityLevel.MoveDown}?id=${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.reload();
+            } else {
+                showNotification(result.message || 'Failed to move priority level down', 'error');
+            }
+        } catch (error) {
+            console.error('Error moving priority level down:', error);
+            showNotification('An error occurred while moving the priority level', 'error');
+        }
+    };
+
+    // Handle delete confirmation
+    async function handleDelete() {
+        if (!currentDeleteId) return;
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+        // Show loading state
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
+        }
+
+        try {
+            const response = await fetch(`${MvcEndpoints.Helpdesk.Settings.PriorityLevel.Delete}?id=${currentDeleteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showNotification('Priority level deleted successfully', 'success');
                 if (deleteModal) {
                     deleteModal.hide();
                 }
-                await loadPriorityLevels();
+                // Reload the page to refresh the list
+                window.location.reload();
             } else {
-                showError('Failed to delete priority level: ' + (result.message || 'Unknown error'));
+                showNotification(result.message || 'Failed to delete priority level', 'error');
             }
         } catch (error) {
             console.error('Error deleting priority level:', error);
-            showError('An error occurred while deleting the priority level');
+            showNotification('An error occurred while deleting the priority level', 'error');
+        } finally {
+            // Reset button state
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Delete';
+            }
+            currentDeleteId = null;
+            currentDeleteName = '';
         }
-
-        currentDeleteId = null;
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function showSuccess(message) {
-        showNotification(message, 'success', 'Success');
-    }
-
-    function showError(message) {
-        showNotification(message, 'error', 'Error');
     }
 })();

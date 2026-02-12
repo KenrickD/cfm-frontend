@@ -1,0 +1,63 @@
+@{
+    ViewData["Title"] = "Email Verified";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>@ViewData["Title"] | CFM System</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link rel="icon" href="~/assets/images/favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="~/assets/fonts/inter/inter.css" id="main-font-link" />
+    <link rel="stylesheet" href="~/assets/fonts/tabler-icons.min.css" />
+    <link rel="stylesheet" href="~/assets/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="~/assets/css/style.css" id="main-style-link" />
+    <link rel="stylesheet" href="~/assets/css/style-preset.css" />
+</head>
+
+<body data-pc-preset="preset-1" data-pc-theme="dark">
+    <div class="auth-main v2">
+        <div class="bg-overlay bg-dark"></div>
+        <div class="auth-wrapper">
+            <div class="auth-sidecontent">
+                <div class="auth-sidefooter">
+                    <img src="~/assets/images/cfm-system-logo.png" class="w-25 mb-4 img-fluid" alt="CFM System Logo" />
+                    <hr class="mb-3 mt-4" />
+                    <div class="row">
+                        <div class="col my-1">
+                            <p class="m-0">
+                                Copyright &copy; 2024 <a href="https://colliers.id" target="_blank"> PT. Colliers International Indonesia</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-form">
+                <div class="card my-5 mx-3" style="background-color: #2d3035;">
+                    <div class="card-body text-center">
+                        <div class="mb-4">
+                            <i class="ti ti-circle-check text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="f-w-500 mb-3 text-white">Email Verified</h4>
+                        <p class="mb-4 text-muted">
+                            Your email has been verified. Your account is now active and you can sign in.
+                        </p>
+                        <div class="d-grid mt-4">
+                            <a href="@Url.Action("Index", "Login")" class="btn btn-primary">Sign In Now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/assets/js/plugins/popper.min.js"></script>
+    <script src="~/assets/js/plugins/bootstrap.min.js"></script>
+    <script src="~/assets/js/pcoded.js"></script>
+</body>
+</html>

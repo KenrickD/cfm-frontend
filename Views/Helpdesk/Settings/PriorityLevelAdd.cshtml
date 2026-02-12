@@ -72,6 +72,18 @@
             color: #495057;
         }
 
+        [data-pc-theme="dark"] .form-check-label {
+            color: #d1d5db;
+        }
+
+        [data-pc-theme="dark"] .form-label {
+            color: #d1d5db;
+        }
+
+        [data-pc-theme="dark"] .target-input label {
+            color: #9ca3af;
+        }
+
         .compliance-duration-group {
             margin-left: 1.5rem;
             margin-top: 0.5rem;
@@ -122,6 +134,7 @@
 
         <!-- Priority Level Form -->
         <form id="priorityLevelForm">
+            @Html.AntiForgeryToken()
             <!-- Basic Information -->
             <div class="form-section">
                 <h5 class="form-section-title">Basic Information</h5>
@@ -237,6 +250,23 @@
                             Reminder Before Target
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="helpdeskReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="helpdeskResponseTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -291,6 +321,23 @@
                             Activate Compliance Duration
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="initialFollowUpComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="initialFollowUpTargetAcknowledgeActual">
                         <label class="form-check-label" for="initialFollowUpTargetAcknowledgeActual">
@@ -308,6 +355,23 @@
                         <label class="form-check-label" for="initialFollowUpTargetReminderBeforeTarget">
                             Reminder Before Target
                         </label>
+                    </div>
+                    <div class="compliance-duration-group" id="initialFollowUpReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="initialFollowUpTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -363,6 +427,23 @@
                             Activate Compliance Duration
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="quotationSubmissionComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="quotationSubmissionTargetAcknowledgeActual">
                         <label class="form-check-label" for="quotationSubmissionTargetAcknowledgeActual">
@@ -380,6 +461,23 @@
                         <label class="form-check-label" for="quotationSubmissionTargetReminderBeforeTarget">
                             Reminder Before Target
                         </label>
+                    </div>
+                    <div class="compliance-duration-group" id="quotationSubmissionReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="quotationSubmissionTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -435,6 +533,23 @@
                             Activate Compliance Duration
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="costApprovalComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="costApprovalTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="costApprovalTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="costApprovalTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="costApprovalTargetAcknowledgeActual">
                         <label class="form-check-label" for="costApprovalTargetAcknowledgeActual">
@@ -452,6 +567,23 @@
                         <label class="form-check-label" for="costApprovalTargetReminderBeforeTarget">
                             Reminder Before Target
                         </label>
+                    </div>
+                    <div class="compliance-duration-group" id="costApprovalReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="costApprovalTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="costApprovalTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="costApprovalTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -507,6 +639,23 @@
                             Activate Compliance Duration
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="workCompletionComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="workCompletionTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="workCompletionTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="workCompletionTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="workCompletionTargetAcknowledgeActual">
                         <label class="form-check-label" for="workCompletionTargetAcknowledgeActual">
@@ -524,6 +673,23 @@
                         <label class="form-check-label" for="workCompletionTargetReminderBeforeTarget">
                             Reminder Before Target
                         </label>
+                    </div>
+                    <div class="compliance-duration-group" id="workCompletionReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="workCompletionTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="workCompletionTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="workCompletionTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -579,6 +745,23 @@
                             Activate Compliance Duration
                         </label>
                     </div>
+                    <div class="compliance-duration-group" id="afterWorkFollowUpComplianceDuration" style="display: none;">
+                        <label class="form-label">Compliance Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetComplianceDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetComplianceDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetComplianceDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetAcknowledgeActual">
                         <label class="form-check-label" for="afterWorkFollowUpTargetAcknowledgeActual">
@@ -596,6 +779,23 @@
                         <label class="form-check-label" for="afterWorkFollowUpTargetReminderBeforeTarget">
                             Reminder Before Target
                         </label>
+                    </div>
+                    <div class="compliance-duration-group" id="afterWorkFollowUpReminderDuration" style="display: none;">
+                        <label class="form-label">Reminder Duration</label>
+                        <div class="target-input-group">
+                            <div class="target-input">
+                                <label class="form-label">Days</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetReminderBeforeTargetDurationDays" value="0" min="0">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Hours</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetReminderBeforeTargetDurationHours" value="0" min="0" max="23">
+                            </div>
+                            <div class="target-input">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="afterWorkFollowUpTargetReminderBeforeTargetDurationMinutes" value="0" min="0" max="59">
+                            </div>
+                        </div>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="afterWorkFollowUpTargetActivateAutoFill">

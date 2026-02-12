@@ -76,8 +76,9 @@
 
         setText(`${prefix}Target`, duration + (withinOfficeHours ? ' Within Office Hours' : ''));
 
-        // Set reference
-        setText(`${prefix}Reference`, formatReference(data[`${camelPrefix}Reference`]));
+        // Set reference - use the ReferenceName field from the API response
+        const referenceName = data[`${camelPrefix}ReferenceName`] || '-';
+        setText(`${prefix}Reference`, referenceName);
 
         // Set checkboxes
         const checkboxContainer = document.getElementById(`${prefix}Checkboxes`);
