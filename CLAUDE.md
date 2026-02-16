@@ -159,6 +159,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddSession(...);
 ```
 
+## File Locations Quick Reference
+
+When creating new files, follow these conventions:
+
+| Type | Location | Naming | Example |
+|------|----------|--------|---------|
+| Controller | `Controllers/` | `{Feature}Controller.cs` | `HelpdeskController.cs` |
+| ViewModel | `ViewModels/` | `{Feature}ViewModel.cs` | `WorkCategoryViewModel.cs` |
+| DTO | `DTOs/{Feature}/` | `{Feature}{Operation}Dto.cs` | `WorkCategoryPayloadDto.cs` |
+| Model | `Models/{Feature}/` | `{Feature}Model.cs` | `WorkRequestFilterModel.cs` |
+| View | `Views/{Controller}/{Action}/` | `{Action}.cshtml` | `Settings/WorkCategory.cshtml` |
+| Page JS | `wwwroot/assets/js/pages/{area}/` | `{page-name}.js` | `settings/work-category.js` |
+| Component JS | `wwwroot/assets/js/components/` | `{component}.js` | `searchable-dropdown.js` |
+| Helper JS | `wwwroot/assets/js/helpers/` | `{helper}.js` | `client-session-monitor.js` |
+| CSS | `wwwroot/assets/css/components/` | `{component}.css` | `searchable-dropdown.css` |
+
 ## Common Patterns
 
 ### User Session
@@ -503,6 +519,131 @@ ViewBag.pTitleUrl = Url.Action("...");    // Optional
 ```
 Renders: `Home > Parent > Current Page`
 
+## Implementation Recipes
+
+### Recipe: New Settings CRUD Page (Inline Editing)
+
+For list-based settings pages like Work Category, Other Category, Priority Level.
+
+**Files to Create/Modify:**
+1. `ViewModels/{Feature}ViewModel.cs` - ViewModel with Items, Paging, IdClient
+2. `Controllers/HelpdeskController.cs` - GET + POST/PUT/DELETE actions
+3. `Constants/ApiEndpoints.cs` - Add endpoint constants
+4. `wwwroot/assets/js/mvc-endpoints.js` - Add JS endpoint definitions
+5. `Views/Helpdesk/Settings/{Feature}.cshtml` - View with PageContext
+6. `wwwroot/assets/js/pages/settings/{feature}.js` - CRUD JavaScript
+
+**ViewModel Pattern:**
+```csharp
+public class {Feature}ViewModel
+{
+    public List<TypeFormDetailResponse>? Items { get; set; }
+    public PagingInfo? Paging { get; set; }
+    public string? SearchKeyword { get; set; }
+    public int IdClient { get; set; }  // REQUIRED for multi-tab safety
+}
+```
+
+**Controller GET Action Pattern:**
+```csharp
+[Authorize]
+public async Task<IActionResult> {Feature}(int page = 1, string search = "")
+{
+    var check = this.CheckViewAccess("Helpdesk", "{Page Name}");
+    if (check != null) return check;
+
+    var viewmodel = new {Feature}ViewModel();
+    var client = _httpClientFactory.CreateClient("BackendAPI");
+    var userInfo = GetUserInfoFromSession();
+
+    var (success, data, message) = await SafeExecuteApiAsync<PaginatedResponse<ItemType>>(
+        () => client.GetAsync($"{backendUrl}{ApiEndpoints.{Feature}.List}?cid={userInfo.PreferredClientId}&keyword={search}&page={page}"),
+        "Failed to load items");
+
+    if (success && data != null)
+    {
+        viewmodel.Items = data.Data;
+        viewmodel.Paging = new PagingInfo { /* ... */ };
+    }
+    viewmodel.IdClient = userInfo.PreferredClientId;
+    return View("~/Views/Helpdesk/Settings/{Feature}.cshtml", viewmodel);
+}
+```
+
+**View PageContext Pattern:**
+```html
+@section scripts {
+    <script>
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+    </script>
+    <script src="~/assets/js/pages/settings/{feature}.js"></script>
+}
+```
+
+**JavaScript CRUD Pattern:**
+```javascript
+const CONFIG = {
+    apiEndpoints: {
+        create: MvcEndpoints.Helpdesk.Settings.{Feature}.Create,
+        update: MvcEndpoints.Helpdesk.Settings.{Feature}.Update,
+        delete: MvcEndpoints.Helpdesk.Settings.{Feature}.Delete
+    }
+};
+
+const clientContext = {
+    get idClient() { return window.PageContext?.idClient || 0; }
+};
+
+function createItem(data) {
+    const token = $('input[name="__RequestVerificationToken"]').val();
+    $.ajax({
+        url: CONFIG.apiEndpoints.create,
+        method: 'POST',
+        contentType: 'application/json',
+        headers: { 'RequestVerificationToken': token },
+        data: JSON.stringify({ ...data, idClient: clientContext.idClient }),
+        success: function(response) {
+            if (response.success) {
+                showNotification('Created', 'success');
+                window.location.reload();
+            }
+        }
+    });
+}
+```
+
+**Reference Implementation:** `Views/Helpdesk/Settings/WorkCategory.cshtml` and `wwwroot/assets/js/pages/settings/work-category.js`
+
+### Recipe: New Form Page with Cascading Dropdowns
+
+For pages like Work Request Add with dependent dropdowns.
+
+**Key Components:**
+1. ViewModel with all dropdown lists + IdClient
+2. Controller loading dropdowns in parallel (`Task.WhenAll`)
+3. View with PageContext + SearchableDropdown markup
+4. JavaScript initializing dropdowns with `onChange` cascade handlers
+
+**Cascade Pattern:**
+```javascript
+const locationDropdown = new SearchableDropdown('#locationSelect', {
+    onChange: (value) => {
+        floorsDropdown.clear();
+        floorsDropdown.disable();
+        if (value) {
+            loadFloors(value).then(floors => {
+                floorsDropdown.loadOptions(floors);
+                floorsDropdown.enable();
+            });
+        }
+    }
+});
+```
+
+**Reference:** Work Request Add/Edit pages
+
 ## Privilege Management
 
 **Session-based.** Loaded at login, auto-refreshed in background if >30min old.
@@ -749,6 +890,75 @@ Results: 10 succeeded, 1 failed out of 11 total
 - **Theme:** Light Able Bootstrap 5
 - **Design:** Follow industry standard best practices
 - **Comments:** Only for documentation/warnings, not overly verbose
+
+## Common Mistakes to Avoid
+
+### DO NOT:
+
+1. **Use "BackendAPI" HttpClient during login**
+   - WRONG: `_httpClientFactory.CreateClient("BackendAPI")` before `SignInAsync`
+   - RIGHT: Use plain `HttpClient` + manual Authorization header
+
+2. **Hardcode client ID as 0**
+   - WRONG: `idClient: 0` in AJAX payload
+   - RIGHT: `idClient: clientContext.idClient` from PageContext
+
+3. **Forget multi-tab session safety**
+   - WRONG: Forms without IdClient in ViewModel
+   - RIGHT: Capture IdClient at page load, validate on submit
+
+4. **Use alert() for notifications**
+   - WRONG: `alert('Error!')`
+   - RIGHT: `showNotification('Error message', 'error')`
+
+5. **Skip privilege checks**
+   - WRONG: Controller action without `CheckViewAccess()`
+   - RIGHT: Always check permissions first in every action
+
+6. **Return raw exceptions to browser**
+   - WRONG: `throw new Exception("Error")`
+   - RIGHT: Use `SafeExecuteApiAsync` pattern
+
+7. **Forget CSRF tokens in AJAX**
+   - WRONG: POST without RequestVerificationToken header
+   - RIGHT: `headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() }`
+
+8. **Use BackendModels directly**
+   - WRONG: `using cfm_frontend.BackendModels;` in frontend code
+   - RIGHT: Create new DTOs in `DTOs/` folder referencing BackendModels structure
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| 401 Unauthorized | Using BackendAPI before auth | Use plain HttpClient during login |
+| success:false in AJAX | Backend returned error | Check `response.message` for details |
+| Session lost after redirect | Middleware order wrong | Ensure Session before Auth in Program.cs |
+| Privilege denied unexpectedly | Case-sensitive name mismatch | Check exact module/page name spelling |
+| JS not loading | Script path incorrect | Check `@section scripts` in View |
+| AJAX not sending CSRF | Missing token header | Add RequestVerificationToken to headers |
+| Token refresh loop | Both tokens expired | User needs to re-login |
+| Empty dropdown data | IdClient not passed | Add `?cid={idClient}` to API endpoint |
+
+### Debug Checklist
+
+**For API Errors:**
+1. Check browser Network tab for response body
+2. Look in `Logs/` folder for server-side errors
+3. Verify client ID is passed in request
+4. Check if endpoint exists in `ApiEndpoints.cs`
+
+**For JavaScript Errors:**
+1. Check browser Console for errors
+2. Verify `window.PageContext` is set before JS runs
+3. Check if MvcEndpoints has the endpoint defined
+4. Ensure jQuery is loaded before page scripts
+
+**For Authentication Issues:**
+1. Check if session cookie exists
+2. Verify token not expired via JWT debugger
+3. Check AuthTokenHandler logs for refresh attempts
+4. Ensure correct middleware order in Program.cs
 
 ## Important Notes
 

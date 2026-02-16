@@ -5,7 +5,16 @@
       "Bash(wc:*)",
       "Bash(dotnet build:*)",
       "Bash(find:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(netstat:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(curl:*)",
+      "Bash(dotnet test:*)",
+      "Bash(cmd /c \"tasklist | findstr cfm-frontend\")",
+      "Bash(dotnet run:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

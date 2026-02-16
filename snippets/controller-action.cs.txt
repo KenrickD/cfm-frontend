@@ -1,0 +1,163 @@
+// =============================================================================
+// SNIPPET: Standard GET Action for Settings Page
+// =============================================================================
+// Copy and modify for new settings pages with list/pagination
+
+[Authorize]
+public async Task<IActionResult> {FeatureName}(int page = 1, string search = "")
+{
+    // 1. Check permissions
+    var accessCheck = this.CheckViewAccess("Helpdesk", "{Page Name}");
+    if (accessCheck != null) return accessCheck;
+
+    // 2. Initialize viewmodel
+    var viewmodel = new {FeatureName}ViewModel();
+
+    try
+    {
+        var client = _httpClientFactory.CreateClient("BackendAPI");
+        var backendUrl = _configuration["BackendBaseUrl"];
+
+        // 3. Get user session
+        var userSessionJson = HttpContext.Session.GetString("UserSession");
+        if (string.IsNullOrEmpty(userSessionJson))
+            return RedirectToAction("Index", "Login");
+
+        var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var idClient = userInfo.PreferredClientId;
+
+        // 4. Call API with SafeExecuteApiAsync
+        var url = $"{backendUrl}{ApiEndpoints.{Feature}.List}?cid={idClient}&keyword={Uri.EscapeDataString(search)}&page={page}";
+        var (success, data, message) = await SafeExecuteApiAsync<PaginatedResponse<{ItemType}>>(
+            () => client.GetAsync(url),
+            "Failed to load items");
+
+        if (success && data != null)
+        {
+            viewmodel.Items = data.Data;
+            viewmodel.Paging = new PagingInfo
+            {
+                CurrentPage = data.CurrentPage,
+                TotalPages = data.TotalPages,
+                PageSize = data.PageSize,
+                TotalCount = data.TotalCount
+            };
+        }
+
+        // 5. Capture client context for multi-tab safety
+        viewmodel.IdClient = idClient;
+        viewmodel.SearchKeyword = search;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error loading {FeatureName} page");
+    }
+
+    return View("~/Views/Helpdesk/Settings/{FeatureName}.cshtml", viewmodel);
+}
+
+
+// =============================================================================
+// SNIPPET: POST Action for Create
+// =============================================================================
+
+[HttpPost]
+[Authorize]
+public async Task<IActionResult> Create{Feature}([FromBody] {Feature}PayloadDto model)
+{
+    var accessCheck = this.CheckAddAccess("Helpdesk", "{Page Name}");
+    if (accessCheck != null)
+        return Json(new { success = false, message = "Access denied" });
+
+    try
+    {
+        var client = _httpClientFactory.CreateClient("BackendAPI");
+        var backendUrl = _configuration["BackendBaseUrl"];
+
+        var json = JsonSerializer.Serialize(model, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var (success, data, message) = await SafeExecuteApiAsync<object>(
+            () => client.PostAsync($"{backendUrl}{ApiEndpoints.{Feature}.Create}", content),
+            "Failed to create item");
+
+        return Json(new { success, message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error creating {Feature}");
+        return Json(new { success = false, message = "An error occurred" });
+    }
+}
+
+
+// =============================================================================
+// SNIPPET: PUT Action for Update
+// =============================================================================
+
+[HttpPut]
+[Authorize]
+public async Task<IActionResult> Update{Feature}([FromBody] {Feature}PayloadDto model)
+{
+    var accessCheck = this.CheckEditAccess("Helpdesk", "{Page Name}");
+    if (accessCheck != null)
+        return Json(new { success = false, message = "Access denied" });
+
+    try
+    {
+        var client = _httpClientFactory.CreateClient("BackendAPI");
+        var backendUrl = _configuration["BackendBaseUrl"];
+
+        var json = JsonSerializer.Serialize(model, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var (success, data, message) = await SafeExecuteApiAsync<object>(
+            () => client.PutAsync($"{backendUrl}{ApiEndpoints.{Feature}.Update}", content),
+            "Failed to update item");
+
+        return Json(new { success, message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error updating {Feature}");
+        return Json(new { success = false, message = "An error occurred" });
+    }
+}
+
+
+// =============================================================================
+// SNIPPET: DELETE Action
+// =============================================================================
+
+[HttpDelete]
+[Authorize]
+public async Task<IActionResult> Delete{Feature}(int id)
+{
+    var accessCheck = this.CheckDeleteAccess("Helpdesk", "{Page Name}");
+    if (accessCheck != null)
+        return Json(new { success = false, message = "Access denied" });
+
+    try
+    {
+        var client = _httpClientFactory.CreateClient("BackendAPI");
+        var backendUrl = _configuration["BackendBaseUrl"];
+
+        var (success, data, message) = await SafeExecuteApiAsync<object>(
+            () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.{Feature}.Delete}?id={id}"),
+            "Failed to delete item");
+
+        return Json(new { success, message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error deleting {Feature}");
+        return Json(new { success = false, message = "An error occurred" });
+    }
+}
