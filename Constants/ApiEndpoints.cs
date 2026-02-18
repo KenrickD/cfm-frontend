@@ -1017,6 +1017,12 @@ namespace cfm_frontend.Constants
             public static string GetEnums(string category) => $"{Base}/enums/{category}";
 
             /// <summary>
+            /// GET: Search company contacts by name prefix
+            /// Query params: cid (client id), prefix (search term)
+            /// </summary>
+            public const string CompanyContacts = Base + "/company-contacts";
+
+            /// <summary>
             /// Category type constants for Masters API
             /// </summary>
             public static class CategoryTypes
@@ -1031,6 +1037,7 @@ namespace cfm_frontend.Constants
                 public const string Currency = "currency";
                 public const string MeasurementUnit = "measurementUnit";
                 public const string MaterialLabel = "materialLabel";
+                public const string WorkRequestDocument = "workRequestDocument";
 
                 // Priority Level reference types
                 public const string PriorityLevelInitialFollowUp = "priorityLevelInitialFollowUp";
@@ -1047,46 +1054,30 @@ namespace cfm_frontend.Constants
         #region Email Distribution
 
         /// <summary>
-        /// Email distribution list management endpoints
+        /// Email distribution list management endpoints.
+        /// Backend: /api/v1/work-request/email-distributions
         /// </summary>
         public static class EmailDistribution
         {
-            private const string Base = ApiBase + "/EmailDistribution";
+            private const string Base = ApiBase + "/work-request/email-distributions";
 
             /// <summary>
-            /// GET: Get all email distribution page references with status
-            /// Returns list of distribution types with hasDistributionList flag
+            /// GET: Paged list of email distribution types with setup status.
+            /// Query params: cid, page, limit, keyword
             /// </summary>
-            public const string GetPageReferences = Base + "/GetPageReferences";
+            public const string List = Base;
 
             /// <summary>
-            /// GET: Get email distribution by ID
-            /// Path params: {id}
+            /// GET: Get email distribution detail by enum ID.
+            /// Query params: cid
             /// </summary>
-            /// <param name="id">Email distribution list ID</param>
-            /// <returns>Get by ID endpoint URL</returns>
-            public static string GetById(int id) => $"{Base}/GetById/{id}";
+            public static string GetById(int idEnum) => $"{Base}/{idEnum}";
 
             /// <summary>
-            /// POST: Create new email distribution
+            /// PUT: Save (upsert) email distribution configuration.
+            /// Handles both setup (new) and edit (existing) based on idEnum + idClient.
             /// </summary>
-            public const string Create = Base + "/Create";
-
-            /// <summary>
-            /// PUT: Update email distribution
-            /// Path params: {id}
-            /// </summary>
-            /// <param name="id">Email distribution list ID</param>
-            /// <returns>Update endpoint URL</returns>
-            public static string Update(int id) => $"{Base}/Update/{id}";
-
-            /// <summary>
-            /// DELETE: Delete email distribution by ID
-            /// Path params: {id}
-            /// </summary>
-            /// <param name="id">Email distribution list ID</param>
-            /// <returns>Delete endpoint URL</returns>
-            public static string Delete(int id) => $"{Base}/Delete/{id}";
+            public const string Save = Base;
         }
 
         #endregion

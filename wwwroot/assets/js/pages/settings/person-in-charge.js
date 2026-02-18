@@ -12,7 +12,7 @@
             create: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Create,
             update: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Update,
             delete: MvcEndpoints.Helpdesk.Settings.PersonInCharge.Delete,
-            searchEmployees: MvcEndpoints.Helpdesk.Search.Requestors
+            searchEmployees: MvcEndpoints.Helpdesk.Search.CompanyContacts
         }
     };
 
@@ -198,9 +198,9 @@
 
                     if (response.success && response.data && response.data.length > 0) {
                         $.each(response.data, function (index, employee) {
-                            var name = employee.fullName || employee.FullName || '';
+                            var name = employee.employeeName || employee.EmployeeName || '';
                             var title = employee.title || employee.Title || '';
-                            var department = employee.departmentName || employee.DepartmentName || '';
+                            var department = employee.department || employee.Department || '';
 
                             var $item = $('<div></div>')
                                 .addClass('employee-search-item')
@@ -217,8 +217,8 @@
                                         fullName: name,
                                         title: title,
                                         departmentName: department,
-                                        emailAddress: employee.emailAddress || employee.EmailAddress || '',
-                                        phoneNumber: employee.phoneNumber || employee.PhoneNumber || ''
+                                        emailAddress: employee.email || employee.Email || '',
+                                        phoneNumber: employee.phone || employee.Phone || ''
                                     });
                                 });
                             $results.append($item);

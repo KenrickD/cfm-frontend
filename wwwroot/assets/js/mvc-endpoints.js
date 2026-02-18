@@ -66,6 +66,7 @@
              */
             Search: {
                 Requestors: '/Helpdesk/SearchRequestors',
+                CompanyContacts: '/Helpdesk/SearchCompanyContacts',
                 WorkersByCompany: '/Helpdesk/SearchWorkersByCompany',
                 WorkersByServiceProvider: '/Helpdesk/SearchWorkersByServiceProvider',
                 JobCode: '/Helpdesk/SearchJobCode',
@@ -82,6 +83,7 @@
                 GetCurrencies: '/Helpdesk/GetCurrencies',
                 GetMeasurementUnits: '/Helpdesk/GetMeasurementUnits',
                 GetLaborMaterialLabels: '/Helpdesk/GetLaborMaterialLabels',
+                GetDocumentLabels: '/Helpdesk/GetDocumentLabels',
                 GetOfficeHours: '/Helpdesk/GetOfficeHours',
                 GetPublicHolidays: '/Helpdesk/GetPublicHolidays'
             },
@@ -223,9 +225,7 @@
                     GetById: '/Helpdesk/GetEmailDistributionById',
                     Setup: '/Helpdesk/EmailDistributionListSetup',
                     Edit: '/Helpdesk/EmailDistributionListEdit',
-                    Create: '/Helpdesk/CreateEmailDistribution',
-                    Update: '/Helpdesk/UpdateEmailDistribution',
-                    Delete: '/Helpdesk/DeleteEmailDistribution'
+                    Save: '/Helpdesk/SaveEmailDistribution'
                 }
             }
         }

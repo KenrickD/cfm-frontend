@@ -1,17 +1,27 @@
 namespace cfm_frontend.DTOs.EmailDistribution
 {
     /// <summary>
-    /// DTO for email distribution detail (setup/edit)
+    /// Payload DTO for email distribution setup/edit.
+    /// Matches backend EmailDistributionPayloadDto.
     /// </summary>
-    public class EmailDistributionDetailModel
+    public class EmailDistributionPayloadDto
     {
-        public int? IdEmailDistributionList { get; set; }
-        public string PageReference { get; set; } = string.Empty;
-        public string SubjectType { get; set; } = "default";
-        public string? CustomSubject { get; set; }
-        public string FromType { get; set; } = "default";
-        public string? FromName { get; set; }
-        public string? FromEmail { get; set; }
-        public List<EmailRecipientModel> Recipients { get; set; } = new();
+        public int IdEnum { get; set; }
+        public int IdClient { get; set; }
+        public string? PageReference { get; set; }
+        public EmailSubjectPayloadDto? Subject { get; set; }
+        public EmailRecipientPayloadDto? From { get; set; }
+        public List<EmailRecipientPayloadDto>? To { get; set; }
+        public List<EmailRecipientPayloadDto>? Cc { get; set; }
+        public List<EmailRecipientPayloadDto>? Bcc { get; set; }
+    }
+
+    /// <summary>
+    /// Subject configuration for email distribution.
+    /// </summary>
+    public class EmailSubjectPayloadDto
+    {
+        public int? Id { get; set; }
+        public string? Text { get; set; }
     }
 }

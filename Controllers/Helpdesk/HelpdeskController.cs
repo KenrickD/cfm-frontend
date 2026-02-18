@@ -6,6 +6,7 @@ using cfm_frontend.DTOs.PriorityLevel;
 using cfm_frontend.DTOs.ServiceProvider;
 using cfm_frontend.DTOs.TypeSettings;
 using cfm_frontend.DTOs.WorkCategory;
+using cfm_frontend.DTOs.Masters;
 using cfm_frontend.DTOs.WorkRequest;
 using cfm_frontend.Extensions;
 using cfm_frontend.Models;
@@ -1191,6 +1192,34 @@ namespace cfm_frontend.Controllers.Helpdesk
             return Json(new { success, data, message });
         }
 
+        /// <summary>
+        /// API: Search company contacts by name prefix (used for Person in Charge selection)
+        /// Optional idClient for multi-tab session safety
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SearchCompanyContacts(string term, int? idClient = null)
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+                return Json(new { success = false, message = "Session expired. Please login again." });
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
+                return Json(new { success = false, message = "Session expired. Please login again." });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<List<CompanyContactInfoDto>>(
+                () => client.GetAsync(
+                    $"{backendUrl}{ApiEndpoints.Masters.CompanyContacts}?cid={effectiveIdClient}&prefix={Uri.EscapeDataString(term ?? "")}"),
+                "Error searching company contacts");
+
+            return Json(new { success, data, message });
+        }
+
 
         /// <summary>
         /// API: Get service providers
@@ -1390,7 +1419,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// </summary>
         public async Task<IActionResult> PriorityLevel(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Priority Level Management");
             if (accessCheck != null) return accessCheck;
 
             var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1647,6 +1676,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// </summary>
         public IActionResult PriorityLevelAdd()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Add New Priority Level";
             ViewBag.pTitle = "Priority Level Management";
             ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
@@ -1658,6 +1690,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// </summary>
         public IActionResult PriorityLevelDetail(int id)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Priority Level Detail";
             ViewBag.pTitle = "Priority Level Management";
             ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
@@ -1670,6 +1705,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         /// </summary>
         public IActionResult PriorityLevelEdit(int id)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Edit Priority Level";
             ViewBag.pTitle = "Priority Level Management";
             ViewBag.pTitleUrl = Url.Action("PriorityLevel", "Helpdesk");
@@ -1683,6 +1721,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelById(int id, int? idClient = null)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -1820,6 +1861,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPriorityLevelDropdownOptions(string type)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -1837,6 +1881,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreatePriorityLevel([FromBody] JsonElement priorityLevelData)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             try
             {
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1883,6 +1930,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdatePriorityLevel([FromBody] JsonElement priorityLevelData)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             try
             {
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1936,6 +1986,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeletePriorityLevel(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             try
             {
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -1972,6 +2025,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> MovePriorityLevelUp(int id)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             try
             {
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -2008,6 +2064,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> MovePriorityLevelDown(int id)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Priority Level Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             try
             {
                 var userSessionJson = HttpContext.Session.GetString("UserSession");
@@ -2248,6 +2307,33 @@ namespace cfm_frontend.Controllers.Helpdesk
             var (success, data, message) = await SafeExecuteApiAsync<List<EnumFormDetailResponse>>(
                 () => client.GetAsync($"{backendUrl}{endpoint}"),
                 "Failed to load labor/material labels");
+
+            return Json(new { success, data, message });
+        }
+
+        /// <summary>
+        /// API: Get document labels for Related Documents dropdown
+        /// Uses Masters.GetTypes with workRequestDocument category
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDocumentLabels()
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired" });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = $"{ApiEndpoints.Masters.GetTypes(ApiEndpoints.Masters.CategoryTypes.WorkRequestDocument)}?idClient={userInfo.PreferredClientId}";
+            var (success, data, message) = await SafeExecuteApiAsync<List<TypeFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}"),
+                "Failed to load document labels");
 
             return Json(new { success, data, message });
         }
@@ -2692,7 +2778,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> WorkCategory(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Category List");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Work Category";
@@ -2806,6 +2892,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetWorkCategories(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -2851,6 +2940,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateWorkCategory([FromBody] WorkCategoryPayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Work Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             if (string.IsNullOrWhiteSpace(model.Text))
             {
                 return Json(new { success = false, message = "Category name is required" });
@@ -2895,6 +2987,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateWorkCategory([FromBody] WorkCategoryPayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Work Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             if (model.IdType <= 0)
             {
                 return Json(new { success = false, message = "Invalid category ID" });
@@ -2944,6 +3039,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteWorkCategory(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Work Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             if (id <= 0)
             {
                 return Json(new { success = false, message = "Invalid category ID" });
@@ -2982,7 +3080,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> OtherCategory(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Other Category List");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Other Category";
@@ -3049,6 +3147,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetOtherCategoriesPaged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Other Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.OtherCategoryV2.List, "other categories");
         }
 
@@ -3058,6 +3159,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateOtherCategoryV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Other Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.OtherCategoryV2.Create, "Other category");
         }
 
@@ -3067,6 +3171,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateOtherCategoryV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Other Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.OtherCategoryV2.Update, "Other category");
         }
 
@@ -3076,6 +3183,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteOtherCategoryV2(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Other Category List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.OtherCategoryV2.Delete(id), "Other category");
         }
 
@@ -3089,7 +3199,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> OtherCategory2(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Other Category 2 List");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Other Category 2";
@@ -3156,6 +3266,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetOtherCategories2Paged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Other Category 2 List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.OtherCategory2V2.List, "other categories 2");
         }
 
@@ -3165,6 +3278,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateOtherCategory2V2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Other Category 2 List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.OtherCategory2V2.Create, "Other category 2");
         }
 
@@ -3174,6 +3290,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateOtherCategory2V2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Other Category 2 List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.OtherCategory2V2.Update, "Other category 2");
         }
 
@@ -3183,6 +3302,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteOtherCategory2V2(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Other Category 2 List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.OtherCategory2V2.Delete(id), "Other category 2");
         }
 
@@ -3434,7 +3556,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> JobCodeGroup(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Job Code Group List");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Job Code Group";
@@ -3501,6 +3623,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetJobCodeGroupsPaged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Job Code Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.JobCodeGroup.List, "job code groups");
         }
 
@@ -3510,6 +3635,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateJobCodeGroupV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Job Code Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.JobCodeGroup.Create, "Job code group");
         }
 
@@ -3519,6 +3647,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateJobCodeGroupV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Job Code Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.JobCodeGroup.Update, "Job code group");
         }
 
@@ -3528,6 +3659,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteJobCodeGroupV2(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Job Code Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.JobCodeGroup.Delete(id), "Job code group");
         }
 
@@ -3541,7 +3675,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> MaterialType(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Material Type List");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Material Type";
@@ -3608,6 +3742,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetMaterialTypesPaged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Material Type List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.MaterialType.List, "material types");
         }
 
@@ -3617,6 +3754,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateMaterialTypeV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Material Type List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.MaterialType.Create, "Material type");
         }
 
@@ -3626,6 +3766,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateMaterialTypeV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Material Type List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.MaterialType.Update, "Material type");
         }
 
@@ -3635,6 +3778,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteMaterialTypeV2(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Material Type List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.MaterialType.Delete(id), "Material type");
         }
 
@@ -3648,7 +3794,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> ImportantChecklist(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Important Checklist Management");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Important Checklist";
@@ -3715,30 +3861,44 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetImportantChecklistsPaged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Important Checklist Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.ImportantChecklist.List, "important checklist items");
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateImportantChecklist([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Important Checklist Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.ImportantChecklist.Create, "Important checklist item");
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateImportantChecklist([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Important Checklist Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.ImportantChecklist.Update, "Important checklist item");
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteImportantChecklist(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Important Checklist Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.ImportantChecklist.Delete(id), "Important checklist item");
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateImportantChecklistOrder([FromBody] TypeCategoryUpdateOrderRequest request)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Important Checklist Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
             if (request.Items == null || !request.Items.Any())
             {
                 return Json(new { success = false, message = "No items to update" });
@@ -3770,7 +3930,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> RelatedDocument(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Related Document List");
             if (accessCheck != null) return accessCheck;
 
             var viewmodel = new TypeCategoryViewModel
@@ -3833,6 +3993,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetDocumentLabelsPaged(int page = 1, string? keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Related Document List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await GetTypeCategoriesAjax(page, keyword, ApiEndpoints.DocumentLabelV2.List, "document labels");
         }
 
@@ -3842,6 +4005,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateDocumentLabelV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Related Document List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await CreateTypeCategoryAsync(model, ApiEndpoints.DocumentLabelV2.Create, "Document label");
         }
 
@@ -3851,6 +4017,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdateDocumentLabelV2([FromBody] TypePayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Related Document List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await UpdateTypeCategoryAsync(model, ApiEndpoints.DocumentLabelV2.Update, "Document label");
         }
 
@@ -3860,6 +4029,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteDocumentLabelV2(int id)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Related Document List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             return await DeleteTypeCategoryAsync(id, ApiEndpoints.DocumentLabelV2.Delete(id), "Document label");
         }
 
@@ -3942,7 +4114,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public async Task<IActionResult> PersonInCharge(int page = 1, string? search = "")
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "PIC Management");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Person in Charge";
@@ -4056,6 +4228,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPersonsInChargePaged(int page = 1, string? keyword = "", int? idClient = null)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -4086,6 +4261,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetPicDetails(int employeeId, int? idClient = null)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -4111,6 +4289,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetProperties()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -4136,6 +4317,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreatePersonInCharge([FromBody] PicPropertyPayloadDto model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -4159,6 +4343,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPut]
         public async Task<IActionResult> UpdatePersonInCharge([FromBody] PicPropertyPayloadDto model)
         {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -4182,6 +4369,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeletePersonInCharge(int employeeId, int? idClient = null)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "PIC Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -4196,7 +4386,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, _, message) = await SafeExecuteApiAsync<bool>(
+            var (success, _, message) = await SafeExecuteApiAsync<object>(
                 () => client.DeleteAsync(
                     $"{backendUrl}{ApiEndpoints.Settings.PersonInCharge.Delete(employeeId)}?cid={effectiveIdClient}"),
                 "Failed to delete person in charge");
@@ -4210,6 +4400,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public IActionResult CostApprover()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Cost Approver Group";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
@@ -4218,6 +4411,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public IActionResult CostApproverAdd()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return accessCheck;
+
             ViewBag.Title = "Add Cost Approver Group";
             ViewBag.pTitle = "Cost Approver Group";
             ViewBag.pTitleUrl = Url.Action("CostApprover", "Helpdesk");
@@ -4227,6 +4423,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpGet]
         public async Task<IActionResult> GetCostApproverGroups()
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var userSessionJson = HttpContext.Session.GetString("UserSession");
             if (string.IsNullOrEmpty(userSessionJson))
             {
@@ -4249,6 +4448,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpPost]
         public async Task<IActionResult> CreateCostApproverGroup([FromBody] dynamic model)
         {
+            var accessCheck = this.CheckAddAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -4269,6 +4471,9 @@ namespace cfm_frontend.Controllers.Helpdesk
         [HttpDelete]
         public async Task<IActionResult> DeleteCostApproverGroup([FromBody] dynamic model)
         {
+            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
@@ -4290,142 +4495,150 @@ namespace cfm_frontend.Controllers.Helpdesk
         [Authorize]
         public IActionResult EmailDistributionList()
         {
-            var accessCheck = this.CheckViewAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Email Distribution List Management");
             if (accessCheck != null) return accessCheck;
 
             ViewBag.Title = "Email Distribution List Management";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
 
-            return View("~/Views/Helpdesk/Settings/EmailDistributionList.cshtml");
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var viewmodel = new ViewModels.EmailDistributionViewModel
+            {
+                IdClient = userInfo?.PreferredClientId ?? 0
+            };
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionList.cshtml", viewmodel);
         }
 
         /// <summary>
-        /// API: Get all email distribution page references with status
+        /// API: Get paged list of email distribution types with setup status
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetEmailDistributionList()
+        public async Task<IActionResult> GetEmailDistributionList(int page = 1, string keyword = "")
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Email Distribution List Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo?.PreferredClientId ?? 0;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<cfm_frontend.DTOs.EmailDistribution.EmailDistributionReferenceModel>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetPageReferences}"),
+            var (success, data, message) = await SafeExecuteApiAsync<DTOs.EmailDistribution.EmailDistributionPagedResponse>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.List}?cid={idClient}&page={page}&keyword={Uri.EscapeDataString(keyword)}"),
                 "Failed to load email distribution list");
 
             return Json(new { success, data, message });
         }
 
         /// <summary>
-        /// GET: Setup new email distribution list page
+        /// GET: Setup new email distribution configuration page
         /// </summary>
         [HttpGet]
         [Authorize]
-        public IActionResult EmailDistributionListSetup(string pageReference)
+        public IActionResult EmailDistributionListSetup(int idEnum, string pageReference = "")
         {
-            var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Email Distribution List Management");
             if (accessCheck != null) return accessCheck;
 
-            if (string.IsNullOrWhiteSpace(pageReference))
+            if (idEnum == 0)
             {
-                TempData["ErrorMessage"] = "Invalid page reference";
+                TempData["ErrorMessage"] = "Invalid distribution type";
                 return RedirectToAction("EmailDistributionList");
             }
 
-            ViewBag.Title = "Set Up Email Distribution";
-            ViewBag.pTitle = "Email Distribution List Management";
-            ViewBag.pTitleUrl = Url.Action("EmailDistributionList", "Helpdesk");
-            ViewBag.PageReference = pageReference;
-            ViewBag.Mode = "setup";
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml");
+            var viewmodel = new ViewModels.EmailDistributionDetailViewModel
+            {
+                IdEnum = idEnum,
+                PageReference = pageReference,
+                Mode = "setup",
+                IdClient = userInfo?.PreferredClientId ?? 0
+            };
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml", viewmodel);
         }
 
         /// <summary>
-        /// GET: Edit existing email distribution list page
+        /// GET: Edit existing email distribution configuration page
         /// </summary>
         [HttpGet]
         [Authorize]
-        public IActionResult EmailDistributionListEdit(int id)
+        public IActionResult EmailDistributionListEdit(int idEnum, string pageReference = "")
         {
-            var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Email Distribution List Management");
             if (accessCheck != null) return accessCheck;
 
-            ViewBag.Title = "Edit Email Distribution";
-            ViewBag.pTitle = "Email Distribution List Management";
-            ViewBag.pTitleUrl = Url.Action("EmailDistributionList", "Helpdesk");
-            ViewBag.DistributionListId = id;
-            ViewBag.Mode = "edit";
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml");
+            var viewmodel = new ViewModels.EmailDistributionDetailViewModel
+            {
+                IdEnum = idEnum,
+                PageReference = pageReference,
+                Mode = "edit",
+                IdClient = userInfo?.PreferredClientId ?? 0
+            };
+
+            return View("~/Views/Helpdesk/Settings/EmailDistributionListDetail.cshtml", viewmodel);
         }
 
         /// <summary>
-        /// API: Get email distribution by ID
+        /// API: Get email distribution detail by enum ID
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetEmailDistributionById(int id)
+        public async Task<IActionResult> GetEmailDistributionById(int idEnum)
         {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Email Distribution List Management");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo?.PreferredClientId ?? 0;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetById(id)}"),
+            var (success, data, message) = await SafeExecuteApiAsync<DTOs.EmailDistribution.EmailDistributionPayloadDto>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.GetById(idEnum)}?cid={idClient}"),
                 "Failed to load email distribution details");
 
             return Json(new { success, data, message });
         }
 
         /// <summary>
-        /// API: Create new email distribution
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> CreateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model)
-        {
-            var accessCheck = this.CheckAddAccess("Helpdesk", "Settings");
-            if (accessCheck != null)
-                return Json(new { success = false, message = "You do not have permission to create" });
-
-            if (string.IsNullOrWhiteSpace(model.PageReference))
-            {
-                return Json(new { success = false, message = "Page reference is required" });
-            }
-
-            if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
-            {
-                return Json(new { success = false, message = "At least one 'To' recipient is required" });
-            }
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PostAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Create}", content),
-                "Failed to create email distribution");
-
-            return Json(new { success, message = success ? "Email distribution created successfully" : message });
-        }
-
-        /// <summary>
-        /// API: Update email distribution
+        /// API: Save (upsert) email distribution configuration. Handles both setup and edit.
         /// </summary>
         [HttpPut]
-        public async Task<IActionResult> UpdateEmailDistribution([FromBody] cfm_frontend.DTOs.EmailDistribution.EmailDistributionDetailModel model, int id)
+        public async Task<IActionResult> SaveEmailDistribution([FromBody] DTOs.EmailDistribution.EmailDistributionPayloadDto model)
         {
-            var accessCheck = this.CheckEditAccess("Helpdesk", "Settings");
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Email Distribution List Management");
             if (accessCheck != null)
-                return Json(new { success = false, message = "You do not have permission to update" });
+                return Json(new { success = false, message = "You do not have permission to save" });
 
-            if (model.Recipients == null || !model.Recipients.Any(r => r.Type == "TO"))
-            {
+            if (model == null)
+                return Json(new { success = false, message = "Invalid request data" });
+
+            if (model.To == null || model.To.Count == 0)
                 return Json(new { success = false, message = "At least one 'To' recipient is required" });
-            }
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson ?? string.Empty,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            model.IdClient = userInfo?.PreferredClientId ?? 0;
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -4437,32 +4650,10 @@ namespace cfm_frontend.Controllers.Helpdesk
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
             var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PutAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Update(id)}", content),
-                "Failed to update email distribution");
+                () => client.PutAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Save}", content),
+                "Failed to save email distribution");
 
-            return Json(new { success, message = success ? "Email distribution updated successfully" : message });
-        }
-
-        /// <summary>
-        /// API: Delete email distribution
-        /// </summary>
-        [HttpDelete]
-        public async Task<IActionResult> DeleteEmailDistribution([FromBody] dynamic model)
-        {
-            var accessCheck = this.CheckDeleteAccess("Helpdesk", "Settings");
-            if (accessCheck != null)
-                return Json(new { success = false, message = "You do not have permission to delete" });
-
-            var client = _httpClientFactory.CreateClient("BackendAPI");
-            var backendUrl = _configuration["BackendBaseUrl"];
-
-            var id = ((JsonElement)model.GetProperty("id")).GetInt32();
-
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.EmailDistribution.Delete(id)}"),
-                "Failed to delete email distribution");
-
-            return Json(new { success, message = success ? "Email distribution deleted successfully" : message });
+            return Json(new { success, message = success ? "Email distribution saved successfully" : message });
         }
 
         #endregion

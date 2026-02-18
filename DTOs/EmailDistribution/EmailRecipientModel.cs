@@ -1,12 +1,13 @@
 namespace cfm_frontend.DTOs.EmailDistribution
 {
     /// <summary>
-    /// DTO for email recipient
+    /// Recipient DTO for email distribution.
+    /// Matches backend EmailRecipientPayloadtDTO.
     /// </summary>
-    public class EmailRecipientModel
+    public class EmailRecipientPayloadDto
     {
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Type { get; set; } = "TO"; // TO, CC, BCC
+        public int? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Email { get; set; }
     }
 }

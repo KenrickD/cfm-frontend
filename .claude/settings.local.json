@@ -14,7 +14,13 @@
       "Bash(dotnet test:*)",
       "Bash(cmd /c \"tasklist | findstr cfm-frontend\")",
       "Bash(dotnet run:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(dir \"C:\\\\Users\\\\kenri\\\\.claude\"\" -Recurse -Force)",
+      "Bash(dir:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"Get-ClaudeDailyCost.ps1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& { .\\\\Get-ClaudeDailyCost.ps1 -Date \\(Get-Date ''2026-02-16''\\) }\")",
+      "Bash(powershell:*)",
+      "Bash(ls:*)"
     ]
   }
 }

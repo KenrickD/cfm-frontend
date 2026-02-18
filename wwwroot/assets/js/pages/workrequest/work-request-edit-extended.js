@@ -13,6 +13,7 @@
             getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
             getMeasurementUnits: MvcEndpoints.Helpdesk.Extended.GetMeasurementUnits,
             getLaborMaterialLabels: MvcEndpoints.Helpdesk.Extended.GetLaborMaterialLabels,
+            getDocumentLabels: MvcEndpoints.Helpdesk.Extended.GetDocumentLabels,
             searchAsset: MvcEndpoints.Helpdesk.Search.Asset,
             searchAssetGroup: MvcEndpoints.Helpdesk.Search.AssetGroup
         },
@@ -36,6 +37,7 @@
         laborMaterialLabels: [],
         currencies: [],
         measurementUnits: [],
+        documentLabels: [],
         editingItemIndex: null,
         editingItemType: null
     };
@@ -177,6 +179,20 @@
             },
             error: function(xhr, status, error) {
                 console.error('Error loading labor/material labels:', error);
+            }
+        });
+
+        // Load document labels for Related Documents dropdown
+        $.ajax({
+            url: EXTENDED_CONFIG.apiEndpoints.getDocumentLabels,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    extendedState.documentLabels = response.data;
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading document labels:', error);
             }
         });
     }
@@ -1250,13 +1266,18 @@
             fileSize: fileSize
         });
 
+        // Build document label dropdown options
+        const labelOptions = extendedState.documentLabels.map(label =>
+            `<option value="${label.idType}" data-type-name="${escapeHtml(label.typeName)}">${escapeHtml(label.typeName)}</option>`
+        ).join('');
+
         const row = `
             <tr data-document-id="${documentId}">
                 <td>
-                    <input type="text"
-                           class="form-control form-control-sm document-label"
-                           value="${escapeHtml(file.name)}"
-                           placeholder="Enter document label">
+                    <select class="form-select form-select-sm document-label">
+                        <option value="">Select Document Label</option>
+                        ${labelOptions}
+                    </select>
                 </td>
                 <td>
                     <span class="text-muted">${escapeHtml(file.name)}</span>
@@ -1391,9 +1412,10 @@
      */
     async function convertDocumentsToBase64() {
         const documentPromises = extendedState.relatedDocuments.map(async (doc) => {
-            // Get updated label from table input
+            // Get selected document label from dropdown
             const $row = $(`tr[data-document-id="${doc.id}"]`);
-            const label = $row.find('.document-label').val() || doc.fileName;
+            const $select = $row.find('.document-label');
+            const label = $select.find('option:selected').data('type-name') || doc.fileName;
 
             // Read file as base64
             const base64Content = await readFileAsBase64(doc.file);

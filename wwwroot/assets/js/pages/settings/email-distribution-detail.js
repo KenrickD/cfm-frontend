@@ -4,8 +4,7 @@
     const CONFIG = {
         apiEndpoints: {
             getById: MvcEndpoints.Helpdesk.Settings.EmailDistribution.GetById,
-            create: MvcEndpoints.Helpdesk.Settings.EmailDistribution.Create,
-            update: MvcEndpoints.Helpdesk.Settings.EmailDistribution.Update
+            save: MvcEndpoints.Helpdesk.Settings.EmailDistribution.Save
         },
         subjectVariables: {
             'companyName': '$companyName$',
@@ -19,6 +18,10 @@
         }
     };
 
+    const clientContext = {
+        get idClient() { return window.PageContext?.idClient || 0; }
+    };
+
     let recipients = {
         to: [],
         cc: [],
@@ -27,16 +30,17 @@
 
     let subjectType = 'default';
     let fromType = 'default';
+    let loadedPageReference = '';
+    let subjectId = null;
+    let fromId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
         initializeForm();
         initializeSubjectTags();
         initializeRadioButtons();
 
-        if (mode === 'edit' && distributionListId) {
+        if (mode === 'edit' && idEnum) {
             loadDistributionDetails();
-        } else {
-            document.getElementById('pageReferenceName').textContent = pageReference;
         }
     });
 
@@ -158,11 +162,7 @@
             return;
         }
 
-        recipients[type].push({
-            name: name,
-            email: email,
-            type: type.toUpperCase()
-        });
+        recipients[type].push({ name, email });
 
         nameInput.value = '';
         emailInput.value = '';
@@ -213,11 +213,11 @@
 
     async function loadDistributionDetails() {
         try {
-            const url = `${CONFIG.apiEndpoints.getById}?id=${distributionListId}`;
+            const url = `${CONFIG.apiEndpoints.getById}?idEnum=${idEnum}`;
             const response = await fetch(url);
             const result = await response.json();
 
-            if (result.success) {
+            if (result.success && result.data) {
                 populateForm(result.data);
             } else {
                 showNotification(result.message || 'Failed to load details', 'error');
@@ -229,33 +229,37 @@
     }
 
     function populateForm(data) {
-        document.getElementById('pageReferenceName').textContent = data.pageReference || pageReference;
+        loadedPageReference = data.pageReference || '';
+        document.getElementById('pageReferenceName').textContent = loadedPageReference;
 
-        if (data.subjectType === 'custom' && data.customSubject) {
+        // Subject configuration
+        if (data.subject && data.subject.text) {
+            subjectId = data.subject.id || null;
             document.getElementById('subjectCustom').checked = true;
             document.getElementById('customSubjectOptions').classList.add('show');
-            document.getElementById('customSubjectText').value = data.customSubject;
+            document.getElementById('customSubjectText').value = data.subject.text;
             updateSubjectPreview();
             subjectType = 'custom';
         }
 
-        if (data.fromType === 'custom' && data.fromName && data.fromEmail) {
+        // From configuration
+        if (data.from && data.from.name) {
+            fromId = data.from.id || null;
             document.getElementById('fromCustom').checked = true;
             document.getElementById('customFromFields').classList.add('show');
-            document.getElementById('fromName').value = data.fromName;
-            document.getElementById('fromEmail').value = data.fromEmail;
+            document.getElementById('fromName').value = data.from.name || '';
+            document.getElementById('fromEmail').value = data.from.email || '';
             fromType = 'custom';
         }
 
-        if (data.recipients && Array.isArray(data.recipients)) {
-            recipients.to = data.recipients.filter(r => r.type === 'TO');
-            recipients.cc = data.recipients.filter(r => r.type === 'CC');
-            recipients.bcc = data.recipients.filter(r => r.type === 'BCC');
+        // Recipients - preserve id for upsert
+        recipients.to = (data.to || []).map(r => ({ id: r.id || null, name: r.name || '', email: r.email || '' }));
+        recipients.cc = (data.cc || []).map(r => ({ id: r.id || null, name: r.name || '', email: r.email || '' }));
+        recipients.bcc = (data.bcc || []).map(r => ({ id: r.id || null, name: r.name || '', email: r.email || '' }));
 
-            renderRecipients('to');
-            renderRecipients('cc');
-            renderRecipients('bcc');
-        }
+        renderRecipients('to');
+        renderRecipients('cc');
+        renderRecipients('bcc');
     }
 
     async function handleSubmit(e) {
@@ -275,71 +279,63 @@
         }
 
         if (fromType === 'custom') {
-            const fromName = document.getElementById('fromName').value.trim();
-            const fromEmail = document.getElementById('fromEmail').value.trim();
+            const fromNameVal = document.getElementById('fromName').value.trim();
+            const fromEmailVal = document.getElementById('fromEmail').value.trim();
 
-            if (!fromName) {
+            if (!fromNameVal) {
                 showNotification('From name is required when using custom from', 'error');
                 return;
             }
 
-            if (!fromEmail) {
+            if (!fromEmailVal) {
                 showNotification('From email is required when using custom from', 'error');
                 return;
             }
 
-            if (!validateEmail(fromEmail)) {
+            if (!validateEmail(fromEmailVal)) {
                 showNotification('Please enter a valid from email address', 'error');
                 return;
             }
         }
 
-        const allRecipients = [
-            ...recipients.to.map(r => ({ ...r, type: 'TO' })),
-            ...recipients.cc.map(r => ({ ...r, type: 'CC' })),
-            ...recipients.bcc.map(r => ({ ...r, type: 'BCC' }))
-        ];
+        const customSubjectText = document.getElementById('customSubjectText').value.trim();
+        const fromNameVal = document.getElementById('fromName').value.trim();
+        const fromEmailVal = document.getElementById('fromEmail').value.trim();
 
         const payload = {
-            pageReference: pageReference,
-            subjectType: subjectType,
-            customSubject: subjectType === 'custom' ? document.getElementById('customSubjectText').value : null,
-            fromType: fromType,
-            fromName: fromType === 'custom' ? document.getElementById('fromName').value : null,
-            fromEmail: fromType === 'custom' ? document.getElementById('fromEmail').value : null,
-            recipients: allRecipients
+            idEnum: idEnum,
+            pageReference: loadedPageReference,
+            subject: subjectType === 'custom' ? { id: subjectId, text: customSubjectText } : null,
+            from: fromType === 'custom' ? { id: fromId, name: fromNameVal, email: fromEmailVal } : null,
+            to: recipients.to.map(r => ({ id: r.id || null, name: r.name, email: r.email })),
+            cc: recipients.cc.map(r => ({ id: r.id || null, name: r.name, email: r.email })),
+            bcc: recipients.bcc.map(r => ({ id: r.id || null, name: r.name, email: r.email }))
         };
+
+        const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
 
         try {
-            let url, method;
-
-            if (mode === 'edit') {
-                url = `${CONFIG.apiEndpoints.update}?id=${distributionListId}`;
-                method = 'PUT';
-            } else {
-                url = CONFIG.apiEndpoints.create;
-                method = 'POST';
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (csrfToken) {
+                headers['RequestVerificationToken'] = csrfToken.value;
             }
 
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+            const response = await fetch(CONFIG.apiEndpoints.save, {
+                method: 'PUT',
+                headers: headers,
                 body: JSON.stringify(payload)
             });
 
             const result = await response.json();
 
             if (result.success) {
-                showNotification(
-                    mode === 'edit' ? 'Email distribution updated successfully' : 'Email distribution created successfully',
-                    'success'
-                );
+                showNotification('Email distribution saved successfully', 'success');
                 setTimeout(() => {
                     window.location.href = '/Helpdesk/EmailDistributionList';
                 }, 1500);
@@ -367,6 +363,6 @@
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return String(text).replace(/[&<>"']/g, m => map[m]);
     }
 })();

@@ -16,6 +16,7 @@ namespace cfm_frontend.DTOs.WorkCategory
 
         public string? Category { get; set; }
         public int? DisplayOrder { get; set; }
+        public int? PreviousOrder { get; set; }
 
         [Required(ErrorMessage = "Text is required")]
         public string Text { get; set; } = string.Empty;
