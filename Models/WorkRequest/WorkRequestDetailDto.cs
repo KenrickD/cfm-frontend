@@ -205,6 +205,7 @@ namespace cfm_frontend.Models.WorkRequest
         public string? DocumentName { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string DocumentUrl { get; set; } = string.Empty;
+        public string? Base64 { get; set; }
     }
 
     public class WorkRequestWorkUpdateEmail

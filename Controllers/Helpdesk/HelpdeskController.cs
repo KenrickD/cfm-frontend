@@ -504,6 +504,175 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
+        /// PUT: Update existing Work Request
+        /// Accepts JSON body from AJAX submission
+        /// </summary>
+        [HttpPut]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> WorkRequestUpdate([FromBody] WorkRequestUpdateRequest model)
+        {
+            // Check if user has permission to edit Work Requests
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null)
+            {
+                return Json(new { success = false, message = "You do not have permission to edit work requests." });
+            }
+
+            // Get user session
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (userInfo == null)
+            {
+                return Json(new { success = false, message = "Session expired. Please login again." });
+            }
+
+            var idClient = userInfo.PreferredClientId;
+
+            // Validate model
+            if (model == null || model.idWorkRequest <= 0)
+            {
+                return Json(new { success = false, message = "Invalid request data." });
+            }
+
+            // Check for client mismatch (multi-tab session safety)
+            if (model.Client_idClient != idClient)
+            {
+                _logger.LogWarning(
+                    "Work request update submitted with client mismatch. SubmittedClientId: {SubmittedClientId}, SessionClientId: {SessionClientId}, UserId: {UserId}",
+                    model.Client_idClient, idClient, userInfo.IdWebUser);
+
+                return Json(new
+                {
+                    success = false,
+                    message = "Client context has changed. You may have switched clients in another tab. Please refresh the page and try again.",
+                    clientMismatch = true
+                });
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Set system fields from session
+                model.IdEmployee = userInfo.IdWebUser;
+                model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
+
+                // Log the payload for debugging
+                _logger.LogInformation("Updating work request: Id={Id}, Title={Title}, Property={Property}",
+                    model.idWorkRequest, model.workTitle, model.Property_idProperty);
+
+                // Serialize and send to backend
+                var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                    WriteIndented = true
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                _logger.LogDebug("Work request update payload: {Payload}", jsonPayload);
+                _fileLogger.LogInfo("Work request update payload: {Payload}", jsonPayload);
+
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Update}", content);
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                ApiResponseDto<WorkRequestCreateData> apiResponse = null;
+                string rawErrorMessage = null;
+
+                try
+                {
+                    apiResponse = JsonSerializer.Deserialize<ApiResponseDto<WorkRequestCreateData>>(
+                        responseBody,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                }
+                catch (JsonException)
+                {
+                    // Backend returned a non-ApiResponseDto format (e.g., ProblemDetails for validation errors)
+                    // Try to extract a meaningful error message from the ProblemDetails structure
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(responseBody);
+                        var root = doc.RootElement;
+
+                        if (root.TryGetProperty("title", out var title))
+                            rawErrorMessage = title.GetString();
+
+                        if (root.TryGetProperty("errors", out var errors))
+                        {
+                            var errorMessages = new List<string>();
+                            foreach (var prop in errors.EnumerateObject())
+                            {
+                                if (prop.Value.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var err in prop.Value.EnumerateArray())
+                                        errorMessages.Add(err.GetString());
+                                }
+                                else if (prop.Value.ValueKind == JsonValueKind.String)
+                                {
+                                    errorMessages.Add(prop.Value.GetString());
+                                }
+                            }
+                            if (errorMessages.Count > 0)
+                                rawErrorMessage = string.Join("; ", errorMessages);
+                        }
+                    }
+                    catch
+                    {
+                        rawErrorMessage = null;
+                    }
+
+                    _logger.LogWarning("Work request update: backend returned non-standard response. Status: {StatusCode}, Body: {Body}",
+                        response.StatusCode, responseBody);
+                }
+
+                if (apiResponse?.Success == true)
+                {
+                    _logger.LogInformation("Work request updated successfully. IdWorkRequest: {IdWorkRequest}",
+                        model.idWorkRequest);
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Work Request updated successfully!",
+                        redirectUrl = $"/Helpdesk/WorkRequestDetail/{model.idWorkRequest}",
+                        idWorkRequest = model.idWorkRequest
+                    });
+                }
+                else
+                {
+                    var errorMessage = apiResponse?.Message
+                        ?? rawErrorMessage
+                        ?? "Failed to update work request";
+
+                    var errorDetails = apiResponse?.Errors != null && apiResponse.Errors.Count > 0
+                        ? string.Join("; ", apiResponse.Errors)
+                        : string.Empty;
+
+                    _logger.LogWarning("Work request update failed. Status: {StatusCode}, Message: {Message}, Errors: {Errors}",
+                        response.StatusCode, errorMessage, errorDetails);
+
+                    var userMessage = !string.IsNullOrEmpty(errorDetails)
+                        ? $"{errorMessage}: {errorDetails}"
+                        : errorMessage;
+
+                    return Json(new { success = false, message = userMessage });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating work request");
+                return Json(new { success = false, message = "An error occurred while updating the work request." });
+            }
+        }
+
+        /// <summary>
         /// POST: Create Ad-hoc Job Code
         /// </summary>
         [HttpPost]
@@ -930,6 +1099,31 @@ namespace cfm_frontend.Controllers.Helpdesk
                         if (apiResponse?.Success == true && apiResponse.Data != null)
                         {
                             viewmodel.WorkRequestData = apiResponse.Data;
+
+                            // Fetch base64 for existing documents server-side to avoid browser CORS restrictions
+                            if (viewmodel.WorkRequestData.RelatedDocuments != null && viewmodel.WorkRequestData.RelatedDocuments.Any())
+                            {
+                                var blobClient = _httpClientFactory.CreateClient();
+                                var docTasks = viewmodel.WorkRequestData.RelatedDocuments
+                                    .Where(doc => !string.IsNullOrEmpty(doc.DocumentUrl))
+                                    .Select(async doc =>
+                                    {
+                                        try
+                                        {
+                                            var blobResponse = await blobClient.GetAsync(doc.DocumentUrl);
+                                            if (blobResponse.IsSuccessStatusCode)
+                                            {
+                                                var bytes = await blobResponse.Content.ReadAsByteArrayAsync();
+                                                doc.Base64 = Convert.ToBase64String(bytes);
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.LogWarning(ex, "Failed to fetch base64 for document {IdDocument}", doc.IdDocument);
+                                        }
+                                    });
+                                await Task.WhenAll(docTasks);
+                            }
                         }
                     }
                 }

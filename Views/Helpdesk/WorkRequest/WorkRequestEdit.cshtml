@@ -410,7 +410,7 @@
             </div>
         </div>
 
-        <form id="workRequestForm" method="post" action="/Helpdesk/WorkRequestEdit">
+        <form id="workRequestForm" method="post" action="/Helpdesk/WorkRequestEdit" novalidate>
             @Html.AntiForgeryToken()
             <input type="hidden" id="idWorkRequest" name="IdWorkRequest" value="@Model.IdWorkRequest" />
 

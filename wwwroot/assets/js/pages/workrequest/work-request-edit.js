@@ -826,7 +826,15 @@
             if (floorId && state.selectedLocation) {
                 loadRooms(state.selectedLocation, floorId);
             } else {
-                $roomSelect.empty().append('<option value="">Select Room/Area/Zone</option>');
+                $roomSelect.prop('disabled', false)
+                    .empty()
+                    .append('<option value="">Select Room/Area/Zone</option>')
+                    .append('<option value="-1">Not Specified</option>');
+                const roomElement = document.getElementById('roomSelect');
+                if (roomElement && roomElement._searchableDropdown) {
+                    roomElement._searchableDropdown.loadFromSelect();
+                    roomElement._searchableDropdown.enable();
+                }
             }
         });
 
@@ -855,6 +863,10 @@
                     .append('<option value="">Select Floor</option>')
                     .append('<option value="-1">Not Specified</option>');
 
+                // Enable dropdown and refresh searchable component
+                $floorSelect.prop('disabled', false);
+                const selectElement = document.getElementById('floorSelect');
+
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, floor) {
                         $floorSelect.append(
@@ -863,10 +875,8 @@
                                 .text(floor.floorUnitName)
                         );
                     });
-                    $floorSelect.prop('disabled', false);
 
                     // Refresh and enable the searchable dropdown component
-                    const selectElement = document.getElementById('floorSelect');
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
@@ -889,7 +899,20 @@
                         }
                     }
                 } else {
-                    $floorSelect.append('<option value="">No floors available</option>');
+                    // No floors available - default to "Not Specified"
+                    $floorSelect.val('-1');
+                    state.selectedFloor = '-1';
+
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                        selectElement._searchableDropdown.setValue('-1', 'Not Specified', true);
+                    }
+
+                    // Trigger change to cascade to rooms with "Not Specified"
+                    if (!state.isLoadingEditData) {
+                        $floorSelect.trigger('change');
+                    }
                 }
             },
             error: function (xhr, status, error) {
@@ -928,6 +951,10 @@
                     .append('<option value="">Select Room/Area/Zone</option>')
                     .append('<option value="-1">Not Specified</option>');
 
+                // Enable dropdown and refresh searchable component
+                $roomSelect.prop('disabled', false);
+                const selectElement = document.getElementById('roomSelect');
+
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, room) {
                         $roomSelect.append(
@@ -936,10 +963,8 @@
                                 .text(room.roomZoneName)
                         );
                     });
-                    $roomSelect.prop('disabled', false);
 
                     // Refresh and enable the searchable dropdown component
-                    const selectElement = document.getElementById('roomSelect');
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
@@ -959,7 +984,15 @@
                         }
                     }
                 } else {
-                    $roomSelect.append('<option value="">No room zones available</option>');
+                    // No rooms available - default to "Not Specified"
+                    $roomSelect.val('-1');
+                    state.selectedRoom = '-1';
+
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                        selectElement._searchableDropdown.setValue('-1', 'Not Specified', true);
+                    }
                 }
             },
             error: function (xhr, status, error) {
@@ -1894,6 +1927,18 @@
     }
 
     /**
+     * Validates if a date string represents a valid date (year > 1)
+     * Mirrors the C# IsValidDate check to filter out 0001-01-01 sentinel values
+     * @param {string|Date} dateValue - Date string or Date object to validate
+     * @returns {boolean} - True if date has year > 1, false otherwise
+     */
+    function isValidDate(dateValue) {
+        if (!dateValue) return false;
+        const dt = dateValue instanceof Date ? dateValue : new Date(dateValue);
+        return !isNaN(dt.getTime()) && dt.getFullYear() > 1;
+    }
+
+    /**
      * Initialize target override functionality
      */
     function initializeTargetOverrides() {
@@ -2726,8 +2771,8 @@
     function validateRequiredFieldsAsArray() {
         const requiredFields = [
             { selector: '#locationSelect', name: 'Location' },
-            { selector: '#floorSelect', name: 'Floor' },
-            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#floorSelect', name: 'Floor', allowNotSpecified: true },
+            { selector: '#roomSelect', name: 'Room/Area/Zone', allowNotSpecified: true },
             { selector: '#requestorId', name: 'Requestor', isHidden: true },
             { selector: '#workTitle', name: 'Work Title' },
             { selector: '#requestDetail', name: 'Request Detail' },
@@ -2753,7 +2798,10 @@
                     missingFields.push(field.name);
                 }
             } else {
-                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                const val = $element.val();
+                const isEmpty = !val || val === '';
+                const isNotSpecifiedInvalid = val === '-1' && !field.allowNotSpecified;
+                if (isEmpty || isNotSpecifiedInvalid) {
                     missingFields.push(field.name);
                 }
             }
@@ -2772,8 +2820,8 @@
     function validateRequiredFields() {
         const requiredFields = [
             { selector: '#locationSelect', name: 'Location' },
-            { selector: '#floorSelect', name: 'Floor' },
-            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#floorSelect', name: 'Floor', allowNotSpecified: true },
+            { selector: '#roomSelect', name: 'Room/Area/Zone', allowNotSpecified: true },
             { selector: '#requestorId', name: 'Requestor', isHidden: true },
             { selector: '#workTitle', name: 'Work Title' },
             { selector: '#requestDetail', name: 'Request Detail' },
@@ -2799,7 +2847,10 @@
                     missingFields.push(field.name);
                 }
             } else {
-                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                const val = $element.val();
+                const isEmpty = !val || val === '';
+                const isNotSpecifiedInvalid = val === '-1' && !field.allowNotSpecified;
+                if (isEmpty || isNotSpecifiedInvalid) {
                     missingFields.push(field.name);
                 }
             }
@@ -2860,19 +2911,23 @@
             });
         });
 
-        // Build workers array with correct property names
+        // Build workers array with correct property names and isActiveData flag
         const workers = state.workers.map(worker => ({
             Employee_idEmployee: worker.Employee_idEmployee,
             side_Enum_idEnum: worker.side_Enum_idEnum,
-            isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false
+            isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false,
+            isActiveData: true
         }));
 
         // Build the payload
         const payload = {
+            // Work Request ID (for update mode)
+            idWorkRequest: window.WorkRequestContext?.idWorkRequest || 0,
+
             // Location Details
             Property_idProperty: parseInt($('#locationSelect').val()) || 0,
-            PropertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
-            RoomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
+            PropertyFloor_idPropertyFloor: (() => { const v = parseInt($('#floorSelect').val()); return (v && v > 0) ? v : null; })(),
+            RoomZone_idRoomZone: (() => { const v = parseInt($('#roomSelect').val()); return (v && v > 0) ? v : null; })(),
 
             // Requestor and Work Details
             requestor_Employee_idEmployee: parseInt($('#requestorId').val()) || 0,
@@ -2956,14 +3011,22 @@
 
     /**
      * Submit work request via AJAX
+     * Uses PUT method and update endpoint when in edit mode, POST and create endpoint otherwise
      */
     function submitWorkRequest(payload) {
         // Get CSRF token
         const token = $('input[name="__RequestVerificationToken"]').val();
 
+        // Determine endpoint and HTTP method based on edit mode
+        const isEditMode = window.WorkRequestContext?.isEditMode === true;
+        const endpoint = isEditMode
+            ? (MvcEndpoints.Helpdesk.WorkRequestCrud?.Update || '/Helpdesk/WorkRequestUpdate')
+            : (MvcEndpoints.Helpdesk.WorkRequestCrud?.Create || '/Helpdesk/WorkRequestAdd');
+        const httpMethod = isEditMode ? 'PUT' : 'POST';
+
         $.ajax({
-            url: '/Helpdesk/WorkRequestAdd',
-            type: 'POST',
+            url: endpoint,
+            type: httpMethod,
             contentType: 'application/json',
             headers: {
                 'RequestVerificationToken': token
@@ -2973,19 +3036,28 @@
                 hideLoadingOverlay();
 
                 if (response.success) {
-                    showNotification(response.message || 'Work Request created successfully!', 'success');
+                    const successMsg = isEditMode
+                        ? 'Work Request updated successfully!'
+                        : 'Work Request created successfully!';
+                    showNotification(response.message || successMsg, 'success');
                     // Redirect after brief delay
                     setTimeout(function () {
                         window.location.href = response.redirectUrl || '/Helpdesk/Index';
                     }, 1500);
                 } else {
-                    showNotification(response.message || 'Failed to create work request', 'error');
+                    const failMsg = isEditMode
+                        ? 'Failed to update work request'
+                        : 'Failed to create work request';
+                    showNotification(response.message || failMsg, 'error');
                 }
             },
             error: function (xhr, status, error) {
                 hideLoadingOverlay();
                 console.error('Error submitting work request:', error);
-                showNotification('An error occurred while creating the work request. Please try again.', 'error');
+                const errorMsg = isEditMode
+                    ? 'An error occurred while updating the work request. Please try again.'
+                    : 'An error occurred while creating the work request. Please try again.';
+                showNotification(errorMsg, 'error');
             }
         });
     }
@@ -3181,6 +3253,11 @@
                 window.populateRelatedAssetsFromData(data.relatesAssets);
             }
 
+            // 13. RELATED DOCUMENTS (from extended file)
+            if (window.populateRelatedDocumentsFromData) {
+                window.populateRelatedDocumentsFromData(data.relatedDocuments);
+            }
+
             console.log('Edit mode data population complete');
         } catch (error) {
             console.error('Error populating edit mode data:', error);
@@ -3208,22 +3285,19 @@
         setDropdownValue('locationSelect', propertyId);
         state.selectedLocation = propertyId;
 
-        // Step 2: Load floors and wait for completion, then set Floor
+        // Step 2: Always load floors, then set Floor (or default to "Not Specified")
+        await loadFloors(propertyId, true);
+
+        // Small delay to ensure searchable dropdown is fully updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const $floorSelect = $('#floorSelect');
+        let matchedFloorId = floorId;
+
         if (floorId || floorName) {
-            await loadFloors(propertyId, true);
-
-            // Small delay to ensure searchable dropdown is fully updated
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Try to set floor by ID first
-            const $floorSelect = $('#floorSelect');
-            let matchedFloorId = floorId;
-
-            // Check if the floor ID exists in the dropdown
             const floorExists = $floorSelect.find(`option[value="${floorId}"]`).length > 0;
 
             if (!floorExists && floorName) {
-                // Try to find floor by name (case-insensitive)
                 const $matchedOption = $floorSelect.find('option').filter(function() {
                     return $(this).text().trim().toLowerCase() === floorName.toLowerCase();
                 });
@@ -3232,46 +3306,50 @@
                     matchedFloorId = $matchedOption.val();
                 } else {
                     console.warn('Could not find floor by ID or name:', floorId, floorName);
+                    matchedFloorId = '-1';
                 }
             }
 
-            if (matchedFloorId) {
-                setDropdownValue('floorSelect', matchedFloorId);
-                state.selectedFloor = matchedFloorId;
-            }
+            setDropdownValue('floorSelect', matchedFloorId);
+            state.selectedFloor = matchedFloorId;
+        } else {
+            // No floor data - select "Not Specified"
+            matchedFloorId = '-1';
+            setDropdownValue('floorSelect', '-1');
+            state.selectedFloor = '-1';
+        }
 
-            // Step 3: Load rooms and wait for completion, then set Room
-            if (roomId || roomName) {
-                await loadRooms(propertyId, matchedFloorId, true);
+        // Step 3: Always load rooms, then set Room (or default to "Not Specified")
+        await loadRooms(propertyId, matchedFloorId, true);
 
-                // Small delay to ensure searchable dropdown is fully updated
-                await new Promise(resolve => setTimeout(resolve, 100));
+        // Small delay to ensure searchable dropdown is fully updated
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-                // Try to set room by ID first
-                const $roomSelect = $('#roomSelect');
-                let matchedRoomId = roomId;
+        if (roomId || roomName) {
+            const $roomSelect = $('#roomSelect');
+            let matchedRoomId = roomId;
 
-                // Check if the room ID exists in the dropdown
-                const roomExists = $roomSelect.find(`option[value="${roomId}"]`).length > 0;
+            const roomExists = $roomSelect.find(`option[value="${roomId}"]`).length > 0;
 
-                if (!roomExists && roomName) {
-                    // Try to find room by name (case-insensitive)
-                    const $matchedRoomOption = $roomSelect.find('option').filter(function() {
-                        return $(this).text().trim().toLowerCase() === roomName.toLowerCase();
-                    });
+            if (!roomExists && roomName) {
+                const $matchedRoomOption = $roomSelect.find('option').filter(function() {
+                    return $(this).text().trim().toLowerCase() === roomName.toLowerCase();
+                });
 
-                    if ($matchedRoomOption.length > 0) {
-                        matchedRoomId = $matchedRoomOption.val();
-                    } else {
-                        console.warn('Could not find room by ID or name:', roomId, roomName);
-                    }
-                }
-
-                if (matchedRoomId) {
-                    setDropdownValue('roomSelect', matchedRoomId);
-                    state.selectedRoom = matchedRoomId;
+                if ($matchedRoomOption.length > 0) {
+                    matchedRoomId = $matchedRoomOption.val();
+                } else {
+                    console.warn('Could not find room by ID or name:', roomId, roomName);
+                    matchedRoomId = '-1';
                 }
             }
+
+            setDropdownValue('roomSelect', matchedRoomId);
+            state.selectedRoom = matchedRoomId;
+        } else {
+            // No room data - select "Not Specified"
+            setDropdownValue('roomSelect', '-1');
+            state.selectedRoom = '-1';
         }
     }
 
@@ -3337,15 +3415,15 @@
         ];
 
         timelineMapping.forEach(item => {
-            // Populate actual dates
-            if (item.data?.actualDate) {
+            // Populate actual dates (validate year > 1 to filter out 0001-01-01 sentinel values)
+            if (item.data?.actualDate && isValidDate(item.data.actualDate)) {
                 const dt = new Date(item.data.actualDate);
                 $(`#${item.dateId}`).val(dt.toISOString().split('T')[0]);
                 $(`#${item.timeId}`).val(dt.toTimeString().substring(0, 5));
             }
 
-            // Populate target dates
-            if (item.data?.targetDate) {
+            // Populate target dates (validate year > 1 to filter out 0001-01-01 sentinel values)
+            if (item.data?.targetDate && isValidDate(item.data.targetDate)) {
                 const targetDt = new Date(item.data.targetDate);
                 const formattedDate = formatDateTime(targetDt);
                 $(`#${item.targetType}Target .target-date`).text(formattedDate);
@@ -3356,8 +3434,8 @@
                     $(`#${item.targetType}Target`).attr('title', `Target manually changed: ${item.data.targetChangeNote}`);
                 }
             } else {
-                // No target date saved
-                $(`#${item.targetType}Target .target-date`).text('No Target');
+                // No target date saved or invalid date
+                $(`#${item.targetType}Target .target-date`).text('-');
                 $(`#${item.targetType}Target`).show();
             }
         });

@@ -20,7 +20,12 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \"Get-ClaudeDailyCost.ps1\")",
       "Bash(powershell -ExecutionPolicy Bypass -Command \"& { .\\\\Get-ClaudeDailyCost.ps1 -Date \\(Get-Date ''2026-02-16''\\) }\")",
       "Bash(powershell:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(Get-ChildItem \"c:\\\\Repos\\\\CFM Frontend\\\\Logs\")",
+      "Bash(Sort-Object LastWriteTime -Descending)",
+      "Bash(Select-Object -First 3)",
+      "Bash(ForEach-Object { Write-Output $_FullName)",
+      "Bash(Get-Content $_FullName -Tail 50 })"
     ]
   }
 }

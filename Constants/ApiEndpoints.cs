@@ -114,6 +114,12 @@ namespace cfm_frontend.Constants
             public const string Create = Base;
 
             /// <summary>
+            /// PUT: Update existing work request
+            /// Endpoint: PUT /api/v1/work-request
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
             /// POST: Get work request list with filters
             /// </summary>
             public const string List = Base + "/list";

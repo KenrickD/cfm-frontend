@@ -807,7 +807,15 @@
             if (floorId && state.selectedLocation) {
                 loadRooms(state.selectedLocation, floorId);
             } else {
-                $roomSelect.empty().append('<option value="">Select Room/Area/Zone</option>');
+                $roomSelect.prop('disabled', false)
+                    .empty()
+                    .append('<option value="">Select Room/Area/Zone</option>')
+                    .append('<option value="-1">Not Specified</option>');
+                const roomElement = document.getElementById('roomSelect');
+                if (roomElement && roomElement._searchableDropdown) {
+                    roomElement._searchableDropdown.loadFromSelect();
+                    roomElement._searchableDropdown.enable();
+                }
             }
         });
 
@@ -835,6 +843,10 @@
                     .append('<option value="">Select Floor</option>')
                     .append('<option value="-1">Not Specified</option>');
 
+                // Enable dropdown and refresh searchable component
+                $floorSelect.prop('disabled', false);
+                const selectElement = document.getElementById('floorSelect');
+
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, floor) {
                         $floorSelect.append(
@@ -843,10 +855,8 @@
                                 .text(floor.floorUnitName)
                         );
                     });
-                    $floorSelect.prop('disabled', false);
 
                     // Refresh and enable the searchable dropdown component
-                    const selectElement = document.getElementById('floorSelect');
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
@@ -867,7 +877,18 @@
                         $floorSelect.trigger('change');
                     }
                 } else {
-                    $floorSelect.append('<option value="">No floors available</option>');
+                    // No floors available - default to "Not Specified"
+                    $floorSelect.val('-1');
+                    state.selectedFloor = '-1';
+
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                        selectElement._searchableDropdown.setValue('-1', 'Not Specified', true);
+                    }
+
+                    // Trigger change to cascade to rooms with "Not Specified"
+                    $floorSelect.trigger('change');
                 }
             },
             error: function (xhr, status, error) {
@@ -900,6 +921,10 @@
                     .append('<option value="">Select Room/Area/Zone</option>')
                     .append('<option value="-1">Not Specified</option>');
 
+                // Enable dropdown and refresh searchable component
+                $roomSelect.prop('disabled', false);
+                const selectElement = document.getElementById('roomSelect');
+
                 if (response.success && response.data && response.data.length > 0) {
                     $.each(response.data, function (index, room) {
                         $roomSelect.append(
@@ -908,10 +933,8 @@
                                 .text(room.roomZoneName)
                         );
                     });
-                    $roomSelect.prop('disabled', false);
 
                     // Refresh and enable the searchable dropdown component
-                    const selectElement = document.getElementById('roomSelect');
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
@@ -929,7 +952,15 @@
                         }
                     }
                 } else {
-                    $roomSelect.append('<option value="">No room zones available</option>');
+                    // No rooms available - default to "Not Specified"
+                    $roomSelect.val('-1');
+                    state.selectedRoom = '-1';
+
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
+                        selectElement._searchableDropdown.enable();
+                        selectElement._searchableDropdown.setValue('-1', 'Not Specified', true);
+                    }
                 }
             },
             error: function (xhr, status, error) {
@@ -2686,8 +2717,8 @@
     function validateRequiredFieldsAsArray() {
         const requiredFields = [
             { selector: '#locationSelect', name: 'Location' },
-            { selector: '#floorSelect', name: 'Floor' },
-            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#floorSelect', name: 'Floor', allowNotSpecified: true },
+            { selector: '#roomSelect', name: 'Room/Area/Zone', allowNotSpecified: true },
             { selector: '#requestorId', name: 'Requestor', isHidden: true },
             { selector: '#workTitle', name: 'Work Title' },
             { selector: '#requestDetail', name: 'Request Detail' },
@@ -2713,7 +2744,10 @@
                     missingFields.push(field.name);
                 }
             } else {
-                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                const val = $element.val();
+                const isEmpty = !val || val === '';
+                const isNotSpecifiedInvalid = val === '-1' && !field.allowNotSpecified;
+                if (isEmpty || isNotSpecifiedInvalid) {
                     missingFields.push(field.name);
                 }
             }
@@ -2732,8 +2766,8 @@
     function validateRequiredFields() {
         const requiredFields = [
             { selector: '#locationSelect', name: 'Location' },
-            { selector: '#floorSelect', name: 'Floor' },
-            { selector: '#roomSelect', name: 'Room/Area/Zone' },
+            { selector: '#floorSelect', name: 'Floor', allowNotSpecified: true },
+            { selector: '#roomSelect', name: 'Room/Area/Zone', allowNotSpecified: true },
             { selector: '#requestorId', name: 'Requestor', isHidden: true },
             { selector: '#workTitle', name: 'Work Title' },
             { selector: '#requestDetail', name: 'Request Detail' },
@@ -2759,7 +2793,10 @@
                     missingFields.push(field.name);
                 }
             } else {
-                if (!$element.val() || $element.val() === '' || $element.val() === '-1') {
+                const val = $element.val();
+                const isEmpty = !val || val === '';
+                const isNotSpecifiedInvalid = val === '-1' && !field.allowNotSpecified;
+                if (isEmpty || isNotSpecifiedInvalid) {
                     missingFields.push(field.name);
                 }
             }
@@ -2831,8 +2868,8 @@
         const payload = {
             // Location Details
             Property_idProperty: parseInt($('#locationSelect').val()) || 0,
-            PropertyFloor_idPropertyFloor: parseInt($('#floorSelect').val()) || null,
-            RoomZone_idRoomZone: parseInt($('#roomSelect').val()) || null,
+            PropertyFloor_idPropertyFloor: (() => { const v = parseInt($('#floorSelect').val()); return (v && v > 0) ? v : null; })(),
+            RoomZone_idRoomZone: (() => { const v = parseInt($('#roomSelect').val()); return (v && v > 0) ? v : null; })(),
 
             // Requestor and Work Details
             requestor_Employee_idEmployee: parseInt($('#requestorId').val()) || 0,

@@ -34,6 +34,15 @@
          */
         Helpdesk: {
             /**
+             * Work Request CRUD Operations
+             * Create and Update work requests
+             */
+            WorkRequestCrud: {
+                Create: '/Helpdesk/WorkRequestAdd',
+                Update: '/Helpdesk/WorkRequestUpdate'
+            },
+
+            /**
              * Location Cascade
              * Property hierarchy navigation (Location -> Floor -> Room)
              */

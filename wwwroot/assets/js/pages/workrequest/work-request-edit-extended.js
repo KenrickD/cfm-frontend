@@ -31,7 +31,15 @@
             individual: [],
             groups: []
         },
-        relatedDocuments: [],
+        relatedDocuments: [],       // New documents to be uploaded
+        existingDocuments: [],      // Existing documents from the database
+        deletedDocuments: [],       // Documents marked for deletion
+        // Deletion tracking for update mode
+        deletedLaborMaterials: {
+            jobCode: [],            // Deleted job code items (for isActiveData: false)
+            adHoc: []               // Deleted ad-hoc items (for isActiveData: false)
+        },
+        deletedAssets: [],          // Deleted assets (for isActiveData: false)
         currentJobCodeSelection: null,
         currentAssetSelection: null,
         laborMaterialLabels: [],
@@ -611,11 +619,35 @@
 
     /**
      * Remove Labor/Material row (global function)
+     * For update mode: tracks deletions with isActiveData: false
      */
     window.removeLaborMaterialRow = function(button) {
         const $row = $(button).closest('tr');
         const type = $row.data('labor-type');
         const index = $row.data('labor-index');
+
+        // Get the item being removed
+        let removedItem;
+        if (type === 'jobCode') {
+            removedItem = extendedState.laborMaterialItems.jobCode[index];
+        } else {
+            removedItem = extendedState.laborMaterialItems.adHoc[index];
+        }
+
+        // Track deletion if this is an existing item (for update mode)
+        if (removedItem?.isExisting) {
+            if (type === 'jobCode' && removedItem.idJobCode) {
+                extendedState.deletedLaborMaterials.jobCode.push({
+                    idJobCode: removedItem.idJobCode,
+                    isActiveData: false
+                });
+            } else if (type === 'adHoc' && removedItem.idWorkRequest_AdHocLaborAndMaterial) {
+                extendedState.deletedLaborMaterials.adHoc.push({
+                    idWorkRequest_AdHocLaborAndMaterial: removedItem.idWorkRequest_AdHocLaborAndMaterial,
+                    isActiveData: false
+                });
+            }
+        }
 
         // Remove from state arrays
         if (type === 'jobCode') {
@@ -1180,10 +1212,22 @@
 
     /**
      * Remove Asset row (global function)
+     * For update mode: tracks deletions with isActiveData: false
      */
     window.removeAssetRow = function(button) {
         const $row = $(button).closest('tr');
         const assetId = $row.data('asset-id');
+
+        // Find the asset being removed
+        const removedAsset = extendedState.relatedAssets.individual.find(a => a.idAsset === assetId);
+
+        // Track deletion if this is an existing asset (for update mode)
+        if (removedAsset?.isExisting) {
+            extendedState.deletedAssets.push({
+                idAsset: assetId,
+                isActiveData: false
+            });
+        }
 
         // Remove from state
         extendedState.relatedAssets.individual = extendedState.relatedAssets.individual.filter(a => a.idAsset !== assetId);
@@ -1346,7 +1390,8 @@
 
     /**
      * Extend form submission to include labor/material, assets, and documents
-     * Integrates with the main form submission in work-request-add.js
+     * Integrates with the main form submission in work-request-edit.js
+     * Handles update mode with isActiveData flags for deletions
      */
     function extendFormSubmission() {
         const $form = $('#workRequestForm');
@@ -1359,46 +1404,142 @@
         window.buildWorkRequestPayload = function() {
             // Get the base payload from original function
             const payload = originalBuildPayload();
+            const isEditMode = window.WorkRequestContext?.isEditMode === true;
 
-            // Add Material_Jobcode array
-            payload.Material_Jobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
+            // Build Material_Jobcode array with isActiveData flag
+            const activeJobCodes = extendedState.laborMaterialItems.jobCode.map(item => ({
                 idJobCode: item.idJobCode,
-                jobCode: item.name || '', // Include job code name
+                jobCode: item.name || '',
                 quantity: item.quantity,
-                unitPrice: item.unitPrice || 0
+                unitPrice: item.unitPrice || 0,
+                inventoryTransactionDate: item.inventoryTransactionDate || null,
+                isActiveData: true
             }));
 
-            // Add Material_Adhoc array
-            payload.Material_Adhoc = extendedState.laborMaterialItems.adHoc.map(item => ({
+            // In edit mode, include deleted job codes
+            const deletedJobCodes = isEditMode
+                ? extendedState.deletedLaborMaterials.jobCode.map(item => ({
+                    idJobCode: item.idJobCode,
+                    jobCode: '',
+                    quantity: 0,
+                    unitPrice: 0,
+                    isActiveData: false
+                }))
+                : [];
+
+            payload.Material_Jobcode = [...activeJobCodes, ...deletedJobCodes];
+
+            // Build Material_Adhoc array with idWorkRequest_AdHocLaborAndMaterial and isActiveData
+            const activeAdHoc = extendedState.laborMaterialItems.adHoc.map(item => ({
+                idWorkRequest_AdHocLaborAndMaterial: item.idWorkRequest_AdHocLaborAndMaterial || 0,
                 name: item.name,
-                label_Enum_idEnum: item.label_Enum_idEnum,
-                unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum,
+                label_Enum_idEnum: item.label_Enum_idEnum || item.labelEnumId || 0,
+                unitPriceCurrency_Enum_idEnum: item.unitPriceCurrency_Enum_idEnum || item.currencyEnumId || 0,
                 unitPrice: item.unitPrice,
                 quantity: item.quantity,
-                measurementUnit_Enum_idEnum: item.measurementUnit_Enum_idEnum
+                measurementUnit_Enum_idEnum: item.measurementUnit_Enum_idEnum || item.unitEnumId || 0,
+                isActiveData: true
             }));
 
-            // Add Assets array
-            payload.Assets = extendedState.relatedAssets.individual.map(asset => ({
+            // In edit mode, include deleted ad-hoc items
+            const deletedAdHoc = isEditMode
+                ? extendedState.deletedLaborMaterials.adHoc.map(item => ({
+                    idWorkRequest_AdHocLaborAndMaterial: item.idWorkRequest_AdHocLaborAndMaterial,
+                    name: '',
+                    label_Enum_idEnum: 0,
+                    unitPriceCurrency_Enum_idEnum: 0,
+                    unitPrice: 0,
+                    quantity: 0,
+                    measurementUnit_Enum_idEnum: 0,
+                    isActiveData: false
+                }))
+                : [];
+
+            payload.Material_Adhoc = [...activeAdHoc, ...deletedAdHoc];
+
+            // Build Assets array with isActiveData flag
+            const activeAssets = extendedState.relatedAssets.individual.map(asset => ({
                 idAsset: asset.idAsset,
-                asset: asset.label || asset.name || '' // Include asset label/name
+                asset: asset.label || asset.name || '',
+                isActiveData: true
             }));
+
+            // In edit mode, include deleted assets
+            const deletedAssets = isEditMode
+                ? extendedState.deletedAssets.map(asset => ({
+                    idAsset: asset.idAsset,
+                    asset: '',
+                    isActiveData: false
+                }))
+                : [];
+
+            payload.Assets = [...activeAssets, ...deletedAssets];
 
             return payload;
         };
 
         // Override submitWorkRequest to handle document conversion
         window.submitWorkRequest = async function(payload) {
-            // If there are documents, convert them to base64 first
+            const isEditMode = window.WorkRequestContext?.isEditMode === true;
+
+            // Convert new documents to base64 and add to payload
             if (extendedState.relatedDocuments.length > 0) {
                 try {
-                    payload.RelatedDocuments = await convertDocumentsToBase64();
+                    const newDocs = await convertDocumentsToBase64();
+                    // Add isActiveData to new documents
+                    payload.RelatedDocuments = newDocs.map(doc => ({
+                        ...doc,
+                        isActiveData: true
+                    }));
                 } catch (error) {
                     console.error('Error converting documents:', error);
                     showNotification('Error processing documents. Please try again.', 'error');
                     hideLoadingOverlay();
                     return;
                 }
+            } else {
+                payload.RelatedDocuments = [];
+            }
+
+            // In edit mode, send all documents: existing (kept + deleted) + new.
+            // Max 10 documents is a business rule enforced by the backend.
+            if (isEditMode) {
+                const activeDocCount = extendedState.existingDocuments.length - extendedState.deletedDocuments.length + extendedState.relatedDocuments.length;
+                if (activeDocCount > 10) {
+                    showNotification('Maximum of 10 documents are allowed per work request.', 'error');
+                    hideLoadingOverlay();
+                    return;
+                }
+
+                const keepDocs = extendedState.existingDocuments.map(doc => ({
+                    idDocument: doc.idDocument,
+                    documentName: doc.documentName || doc.label || '',
+                    fileName: doc.fileName || '',
+                    fileSize: 0,
+                    extension: '',
+                    documentUrl: doc.documentUrl || '',
+                    base64: doc.base64 || '',
+                    documentType: '',
+                    isActiveData: true
+                }));
+
+                const deletedDocs = extendedState.deletedDocuments.map(doc => ({
+                    idDocument: doc.idDocument,
+                    documentName: '',
+                    fileName: doc.fileName || '',
+                    fileSize: 0,
+                    extension: '',
+                    documentUrl: '',
+                    base64: doc.base64 || '',
+                    documentType: '',
+                    isActiveData: false
+                }));
+
+                payload.RelatedDocuments = [
+                    ...keepDocs,
+                    ...deletedDocs,
+                    ...payload.RelatedDocuments   // new documents (base64 content)
+                ];
             }
 
             // Call original submit function
@@ -1467,6 +1608,119 @@
     }
 
     // ========================================
+    // Existing Documents Management (Edit Mode)
+    // ========================================
+
+    /**
+     * Add existing document to the table (for edit mode)
+     * @param {Object} doc - Document object from API
+     */
+    function addExistingDocumentToTable(doc) {
+        const $tbody = $('#relatedDocumentsTable tbody');
+
+        // Remove empty message if present
+        if ($tbody.find('td[colspan]').length > 0) {
+            $tbody.empty();
+        }
+
+        // Escape HTML for safety
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        };
+
+        const row = `
+            <tr data-existing-document-id="${doc.idWorkRequest_Document}" data-document-id="${doc.idDocument}">
+                <td>
+                    <span class="text-muted">${escapeHtml(doc.documentName || '-')}</span>
+                </td>
+                <td>
+                    <a href="${escapeHtml(doc.documentUrl)}" target="_blank" class="text-primary">
+                        <i class="ti ti-file me-1"></i>${escapeHtml(doc.fileName)}
+                    </a>
+                </td>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-danger"
+                            onclick="window.removeExistingDocumentRow(this)"
+                            title="Remove this document">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $tbody.append(row);
+    }
+
+    /**
+     * Remove existing document row (marks for deletion)
+     */
+    window.removeExistingDocumentRow = function(button) {
+        const $row = $(button).closest('tr');
+        const existingDocId = $row.data('existing-document-id');
+        const documentId = $row.data('document-id');
+
+        // Add to deleted documents list (to be sent to backend)
+        if (existingDocId) {
+            const existingDoc = extendedState.existingDocuments.find(
+                doc => doc.idWorkRequest_Document === existingDocId
+            );
+            extendedState.deletedDocuments.push({
+                idWorkRequest_Document: existingDocId,
+                idDocument: documentId,
+                fileName: existingDoc?.fileName || '',
+                base64: existingDoc?.base64 || ''
+            });
+        }
+
+        // Remove from existing documents state
+        extendedState.existingDocuments = extendedState.existingDocuments.filter(
+            doc => doc.idWorkRequest_Document !== existingDocId
+        );
+
+        // Remove row
+        $row.remove();
+
+        // Check if table is empty
+        if ($('#relatedDocumentsTable tbody tr').length === 0) {
+            $('#relatedDocumentsTable tbody').html(`
+                <tr>
+                    <td colspan="3" class="text-center text-muted">
+                        <em>No File</em>
+                    </td>
+                </tr>
+            `);
+        }
+
+        showNotification('Document removed', 'info', 'Info');
+    };
+
+    /**
+     * Populate related documents table from existing work request data
+     * @param {Array} relatedDocuments - Array of WorkRequestDocumentViewDto objects
+     */
+    window.populateRelatedDocumentsFromData = function(relatedDocuments) {
+        if (!relatedDocuments || !Array.isArray(relatedDocuments)) return;
+
+        relatedDocuments.forEach(doc => {
+            extendedState.existingDocuments.push({
+                idWorkRequest_Document: doc.idWorkRequest_Document,
+                idDocument: doc.idDocument,
+                documentName: doc.documentName,
+                fileName: doc.fileName,
+                documentUrl: doc.documentUrl,
+                base64: doc.base64 || ''
+            });
+
+            addExistingDocumentToTable(doc);
+        });
+
+        console.log(`Populated ${relatedDocuments.length} related documents`);
+    };
+
+    // ========================================
     // Edit Mode Data Population Functions
     // ========================================
 
@@ -1487,8 +1741,17 @@
                 currencyCode: item.priceCurrency || 'IDR',
                 idJobCode: item.idJobCode,
                 labelEnumId: item.label_idEnum,
+                label_Enum_idEnum: item.label_idEnum,
                 currencyEnumId: item.priceCurrency_idEnum,
-                unitEnumId: item.measurementUnit_idEnum
+                unitPriceCurrency_Enum_idEnum: item.priceCurrency_idEnum,
+                unitEnumId: item.measurementUnit_idEnum,
+                measurementUnit_Enum_idEnum: item.measurementUnit_idEnum,
+                // Track original ID for ad-hoc items (for update)
+                idWorkRequest_AdHocLaborAndMaterial: item.idWorkRequestLaborMaterial || 0,
+                // Track transaction date for job codes
+                inventoryTransactionDate: item.inventoryTransactionDate || null,
+                // Flag to identify existing items (for update mode deletion tracking)
+                isExisting: true
             };
 
             // Add to state
@@ -1517,7 +1780,9 @@
                 idAsset: item.idAsset,
                 label: item.label,
                 name: item.name,
-                otherCode: item.otherCode
+                otherCode: item.otherCode,
+                // Flag to identify existing items (for update mode deletion tracking)
+                isExisting: true
             };
 
             // Add to state
