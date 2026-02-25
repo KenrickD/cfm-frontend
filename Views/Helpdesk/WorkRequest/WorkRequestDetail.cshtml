@@ -494,23 +494,53 @@
                                 {
                                     @foreach (var worker in wr.WorkerFromCompany)
                                     {
-                                        <div class="col-md-4">
+                                        <div class="col-md-6 col-lg-4">
                                             <div class="worker-card worker-company">
-                                                <div class="d-flex align-items-center">
+                                                <div class="d-flex align-items-start">
                                                     <div class="worker-avatar me-2" style="background-color: @GetAvatarColor(worker.FullName)">
                                                         @GetInitials(worker.FullName)
                                                     </div>
-                                                    <div class="flex-grow-1">
-                                                        <div class="worker-name">@worker.FullName</div>
-                                                        <div class="d-flex align-items-center gap-1 mt-1">
-                                                            <span class="worker-source-badge badge-company">Company</span>
-                                                            @if (worker.IsJoinToExternalChatRoom)
+                                                    <div class="flex-grow-1 min-width-0">
+                                                        <div class="worker-name text-truncate mb-1">@worker.FullName</div>
+                                                        <div class="worker-details mb-2">
+                                                            @if (!string.IsNullOrEmpty(worker.Title) || !string.IsNullOrEmpty(worker.DepartmentName) || !string.IsNullOrEmpty(worker.EmailAddress) || !string.IsNullOrEmpty(worker.PhoneNumber))
                                                             {
-                                                                <span class="worker-chat-badge">
-                                                                    <i class="ti ti-message-circle"></i> Chat
-                                                                </span>
+                                                                @if (!string.IsNullOrEmpty(worker.Title))
+                                                                {
+                                                                    <div><i class="ti ti-briefcase me-1"></i>@worker.Title</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.DepartmentName))
+                                                                {
+                                                                    <div><i class="ti ti-building me-1"></i>@worker.DepartmentName</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.EmailAddress))
+                                                                {
+                                                                    <div><i class="ti ti-mail me-1"></i>@worker.EmailAddress</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.PhoneNumber))
+                                                                {
+                                                                    <div><i class="ti ti-phone me-1"></i>@worker.PhoneNumber</div>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="text-muted fst-italic">No details available</div>
                                                             }
                                                         </div>
+                                                        <div class="d-flex flex-wrap gap-1">
+                                                            <span class="worker-source-badge badge-company">
+                                                                <i class="ti ti-building-community me-1"></i>Company
+                                                            </span>
+                                                        </div>
+                                                        @if (worker.IsJoinToExternalChatRoom)
+                                                        {
+                                                            <div class="form-check mt-2">
+                                                                <input class="form-check-input" type="checkbox" checked disabled>
+                                                                <label class="form-check-label small">
+                                                                    <i class="ti ti-message-circle me-1"></i>Allow to connect with requestor
+                                                                </label>
+                                                            </div>
+                                                        }
                                                     </div>
                                                 </div>
                                             </div>
@@ -521,23 +551,53 @@
                                 {
                                     @foreach (var worker in wr.WorkerFromServiceProvider)
                                     {
-                                        <div class="col-md-4">
+                                        <div class="col-md-6 col-lg-4">
                                             <div class="worker-card worker-provider">
-                                                <div class="d-flex align-items-center">
+                                                <div class="d-flex align-items-start">
                                                     <div class="worker-avatar me-2" style="background-color: @GetAvatarColor(worker.FullName)">
                                                         @GetInitials(worker.FullName)
                                                     </div>
-                                                    <div class="flex-grow-1">
-                                                        <div class="worker-name">@worker.FullName</div>
-                                                        <div class="d-flex align-items-center gap-1 mt-1">
-                                                            <span class="worker-source-badge badge-provider">Service Provider</span>
-                                                            @if (worker.IsJoinToExternalChatRoom)
+                                                    <div class="flex-grow-1 min-width-0">
+                                                        <div class="worker-name text-truncate mb-1">@worker.FullName</div>
+                                                        <div class="worker-details mb-2">
+                                                            @if (!string.IsNullOrEmpty(worker.Title) || !string.IsNullOrEmpty(worker.DepartmentName) || !string.IsNullOrEmpty(worker.EmailAddress) || !string.IsNullOrEmpty(worker.PhoneNumber))
                                                             {
-                                                                <span class="worker-chat-badge">
-                                                                    <i class="ti ti-message-circle"></i> Chat
-                                                                </span>
+                                                                @if (!string.IsNullOrEmpty(worker.Title))
+                                                                {
+                                                                    <div><i class="ti ti-briefcase me-1"></i>@worker.Title</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.DepartmentName))
+                                                                {
+                                                                    <div><i class="ti ti-building me-1"></i>@worker.DepartmentName</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.EmailAddress))
+                                                                {
+                                                                    <div><i class="ti ti-mail me-1"></i>@worker.EmailAddress</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(worker.PhoneNumber))
+                                                                {
+                                                                    <div><i class="ti ti-phone me-1"></i>@worker.PhoneNumber</div>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="text-muted fst-italic">No details available</div>
                                                             }
                                                         </div>
+                                                        <div class="d-flex flex-wrap gap-1">
+                                                            <span class="worker-source-badge badge-provider">
+                                                                <i class="ti ti-truck-delivery me-1"></i>Service Provider
+                                                            </span>
+                                                        </div>
+                                                        @if (worker.IsJoinToExternalChatRoom)
+                                                        {
+                                                            <div class="form-check mt-2">
+                                                                <input class="form-check-input" type="checkbox" checked disabled>
+                                                                <label class="form-check-label small">
+                                                                    <i class="ti ti-message-circle me-1"></i>Allow to connect with requestor
+                                                                </label>
+                                                            </div>
+                                                        }
                                                     </div>
                                                 </div>
                                             </div>

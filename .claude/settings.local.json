@@ -1,31 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd:*)",
-      "Bash(wc:*)",
-      "Bash(dotnet build:*)",
-      "Bash(find:*)",
-      "Bash(echo:*)",
-      "Bash(tasklist:*)",
-      "Bash(findstr:*)",
-      "Bash(netstat:*)",
-      "Bash(powershell -Command:*)",
-      "Bash(curl:*)",
-      "Bash(dotnet test:*)",
-      "Bash(cmd /c \"tasklist | findstr cfm-frontend\")",
-      "Bash(dotnet run:*)",
-      "Bash(timeout:*)",
-      "Bash(dir \"C:\\\\Users\\\\kenri\\\\.claude\"\" -Recurse -Force)",
-      "Bash(dir:*)",
-      "Bash(powershell -ExecutionPolicy Bypass -File \"Get-ClaudeDailyCost.ps1\")",
-      "Bash(powershell -ExecutionPolicy Bypass -Command \"& { .\\\\Get-ClaudeDailyCost.ps1 -Date \\(Get-Date ''2026-02-16''\\) }\")",
-      "Bash(powershell:*)",
-      "Bash(ls:*)",
-      "Bash(Get-ChildItem \"c:\\\\Repos\\\\CFM Frontend\\\\Logs\")",
-      "Bash(Sort-Object LastWriteTime -Descending)",
-      "Bash(Select-Object -First 3)",
-      "Bash(ForEach-Object { Write-Output $_FullName)",
-      "Bash(Get-Content $_FullName -Tail 50 })"
-    ]
+      "Bash(dir \"C:\\Users\\kenri\\.claude\" -Recurse -Force)",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\Users\\kenri\\.claude'' -Recurse -Force | Select-Object FullName\")"
+    ],
+    "deny": [],
+    "ask": []
   }
 }

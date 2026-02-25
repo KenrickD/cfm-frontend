@@ -2062,15 +2062,10 @@
                             detailsHtml += '</small>';
                         }
 
-                        // Add access badge
-                        const accessBadge = hasAccess
-                            ? '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">Has Access</span>'
-                            : '<span class="badge bg-secondary ms-2" style="font-size: 0.65rem;">No Access</span>';
-
                         $dropdown.append(
                             $('<div></div>')
                                 .addClass('typeahead-item')
-                                .html(`<strong>${name}</strong>${accessBadge}${detailsHtml ? '<br>' + detailsHtml : ''}`)
+                                .html(`<strong>${name}</strong>${detailsHtml ? '<br>' + detailsHtml : ''}`)
                                 .on('click', () => selectWorkerForModal(worker, source))
                         );
                     });
@@ -2225,20 +2220,16 @@
                                     <i class="ti ${isCompany ? 'ti-building-community' : 'ti-truck-delivery'} me-1"></i>
                                     ${worker.source}
                                 </span>
-                                ${worker.hasAccess ? `
-                                    <span class="badge bg-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                                        <i class="ti ti-check me-1"></i>Has Access
-                                    </span>
-                                ` : `
-                                    <span class="badge bg-secondary" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                                        <i class="ti ti-lock me-1"></i>No Access
-                                    </span>
-                                `}
-                                ${worker.isJoinToExternalChatRoom ? `
-                                    <span class="worker-chat-badge">
-                                        <i class="ti ti-message-circle me-1"></i>Chat
-                                    </span>
-                                ` : ''}
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input worker-chat-checkbox"
+                                       type="checkbox"
+                                       id="workerChat${index}"
+                                       data-worker-index="${index}"
+                                       ${worker.isJoinToExternalChatRoom ? 'checked' : ''}>
+                                <label class="form-check-label small" for="workerChat${index}">
+                                    <i class="ti ti-message-circle me-1"></i>Allow to connect with requestor
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -2248,6 +2239,20 @@
 
         $('#workersCardList').append(cardHtml);
     }
+
+    /**
+     * Handle worker chat checkbox changes
+     * Uses event delegation for dynamically added cards
+     */
+    $(document).on('change', '.worker-chat-checkbox', function () {
+        const index = $(this).data('worker-index');
+        const isChecked = $(this).is(':checked');
+
+        if (state.workers[index]) {
+            state.workers[index].isJoinToExternalChatRoom = isChecked;
+            console.log(`Worker ${index} chat room status updated to: ${isChecked}`);
+        }
+    });
 
     /**
      * Remove worker card

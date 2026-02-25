@@ -104,6 +104,7 @@
         public string JobCode { get; set; }
         public float quantity { get; set; }
         public float unitPrice { get; set; }
+        public DateOnly? inventoryTransactionDate { get; set; }
     }
 
     public class MaterialAdhocDto

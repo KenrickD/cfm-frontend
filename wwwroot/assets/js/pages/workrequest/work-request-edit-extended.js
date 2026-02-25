@@ -457,12 +457,15 @@
         const unitPrice = selection.UnitPrice ?? selection.unitPrice ?? 0;
         const currencyCode = selection.UnitPriceCurrency || selection.unitPriceCurrency || 'IDR';
 
+        // Format transaction date as date-only (YYYY-MM-DD)
+        const formattedDate = transactionDate ? new Date(transactionDate).toISOString().split('T')[0] : null;
+
         const item = {
             type: 'jobCode',
             idJobCode: selection.IdJobCode ?? selection.idJobCode,
             name: selection.Name || selection.name,
             description: selection.Description || selection.description || '',
-            transactionDate: transactionDate,
+            inventoryTransactionDate: formattedDate,
             quantity: quantity,
             unitPrice: unitPrice,
             unit: selection.LaborMaterialMeasurementUnit || selection.laborMaterialMeasurementUnit || 'PCS',
@@ -639,6 +642,7 @@
             if (type === 'jobCode' && removedItem.idJobCode) {
                 extendedState.deletedLaborMaterials.jobCode.push({
                     idJobCode: removedItem.idJobCode,
+                    inventoryTransactionDate: removedItem.inventoryTransactionDate || null,
                     isActiveData: false
                 });
             } else if (type === 'adHoc' && removedItem.idWorkRequest_AdHocLaborAndMaterial) {
@@ -1406,25 +1410,52 @@
             const payload = originalBuildPayload();
             const isEditMode = window.WorkRequestContext?.isEditMode === true;
 
+            // Helper to format date as date-only (YYYY-MM-DD)
+            const formatDateOnly = (dateValue) => {
+                if (!dateValue) return null;
+                // If already in YYYY-MM-DD format, return as-is
+                if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                    return dateValue;
+                }
+                // Extract date part from ISO datetime string (e.g., "2026-02-23T00:00:00")
+                if (typeof dateValue === 'string' && dateValue.includes('T')) {
+                    return dateValue.split('T')[0];
+                }
+                // Fallback: try to parse and format using local date
+                const date = new Date(dateValue);
+                if (isNaN(date.getTime())) return null;
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
             // Build Material_Jobcode array with isActiveData flag
             const activeJobCodes = extendedState.laborMaterialItems.jobCode.map(item => ({
                 idJobCode: item.idJobCode,
                 jobCode: item.name || '',
                 quantity: item.quantity,
                 unitPrice: item.unitPrice || 0,
-                inventoryTransactionDate: item.inventoryTransactionDate || null,
+                inventoryTransactionDate: formatDateOnly(item.inventoryTransactionDate),
                 isActiveData: true
             }));
 
             // In edit mode, include deleted job codes
             const deletedJobCodes = isEditMode
-                ? extendedState.deletedLaborMaterials.jobCode.map(item => ({
-                    idJobCode: item.idJobCode,
-                    jobCode: '',
-                    quantity: 0,
-                    unitPrice: 0,
-                    isActiveData: false
-                }))
+                ? extendedState.deletedLaborMaterials.jobCode.map(item => {
+                    // Backend requires non-nullable DateOnly, use today's date as default for deleted items
+                    const today = new Date();
+                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+                    return {
+                        idJobCode: item.idJobCode,
+                        jobCode: '',
+                        quantity: 0,
+                        unitPrice: 0,
+                        inventoryTransactionDate: formatDateOnly(item.inventoryTransactionDate) || todayStr,
+                        isActiveData: false
+                    };
+                })
                 : [];
 
             payload.Material_Jobcode = [...activeJobCodes, ...deletedJobCodes];

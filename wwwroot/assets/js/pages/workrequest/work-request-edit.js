@@ -53,6 +53,7 @@
         laborMaterialItems: [],
         targetOverrides: {},
         workers: [],
+        deletedWorkers: [], // Track deleted workers for soft-delete (isActiveData: false)
         importantChecklistData: [],
         priorityLevelsCache: {}, // Cache full priority level data by ID
         isLoadingEditData: false // Flag to prevent auto-calculation during edit mode data load
@@ -2116,15 +2117,10 @@
                             detailsHtml += '</small>';
                         }
 
-                        // Add access badge
-                        const accessBadge = hasAccess
-                            ? '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">Has Access</span>'
-                            : '<span class="badge bg-secondary ms-2" style="font-size: 0.65rem;">No Access</span>';
-
                         $dropdown.append(
                             $('<div></div>')
                                 .addClass('typeahead-item')
-                                .html(`<strong>${name}</strong>${accessBadge}${detailsHtml ? '<br>' + detailsHtml : ''}`)
+                                .html(`<strong>${name}</strong>${detailsHtml ? '<br>' + detailsHtml : ''}`)
                                 .on('click', () => selectWorkerForModal(worker, source))
                         );
                     });
@@ -2279,20 +2275,16 @@
                                     <i class="ti ${isCompany ? 'ti-building-community' : 'ti-truck-delivery'} me-1"></i>
                                     ${worker.source}
                                 </span>
-                                ${worker.hasAccess ? `
-                                    <span class="badge bg-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                                        <i class="ti ti-check me-1"></i>Has Access
-                                    </span>
-                                ` : `
-                                    <span class="badge bg-secondary" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                                        <i class="ti ti-lock me-1"></i>No Access
-                                    </span>
-                                `}
-                                ${worker.isJoinToExternalChatRoom ? `
-                                    <span class="worker-chat-badge">
-                                        <i class="ti ti-message-circle me-1"></i>Chat
-                                    </span>
-                                ` : ''}
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input worker-chat-checkbox"
+                                       type="checkbox"
+                                       id="workerChat${index}"
+                                       data-worker-index="${index}"
+                                       ${worker.isJoinToExternalChatRoom ? 'checked' : ''}>
+                                <label class="form-check-label small" for="workerChat${index}">
+                                    <i class="ti ti-message-circle me-1"></i>Allow to connect with requestor
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -2304,10 +2296,37 @@
     }
 
     /**
+     * Handle worker chat checkbox changes
+     * Uses event delegation for dynamically added cards
+     */
+    $(document).on('change', '.worker-chat-checkbox', function () {
+        const index = $(this).data('worker-index');
+        const isChecked = $(this).is(':checked');
+
+        if (state.workers[index]) {
+            state.workers[index].isJoinToExternalChatRoom = isChecked;
+            console.log(`Worker ${index} chat room status updated to: ${isChecked}`);
+        }
+    });
+
+    /**
      * Remove worker card
      */
     window.removeWorkerCard = function (index) {
-        // Remove from state
+        const worker = state.workers[index];
+
+        // If this was an originally loaded worker, move to deletedWorkers for soft-delete
+        if (worker.isOriginal) {
+            state.deletedWorkers.push({
+                Employee_idEmployee: worker.Employee_idEmployee,
+                side_Enum_idEnum: worker.side_Enum_idEnum,
+                isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false,
+                HasAccess: worker.HasAccess || false,
+                isActiveData: false
+            });
+        }
+
+        // Remove from active workers
         state.workers.splice(index, 1);
 
         // Rebuild cards
@@ -2569,7 +2588,11 @@
             const targetName = targetNames[targetType] || targetType;
 
             if (override?.newTarget) {
-                // If target is manually set, remark is required
+                // Skip validation for targets loaded from server (not user-modified)
+                if (override.isLoaded) {
+                    return;
+                }
+                // If target is manually set by user, remark is required
                 if (!override.remark || override.remark.trim() === '') {
                     errors.push(`Write the reason of changing target in ${targetName} New Target`);
                 }
@@ -2912,12 +2935,16 @@
         });
 
         // Build workers array with correct property names and isActiveData flag
-        const workers = state.workers.map(worker => ({
+        // Combine active workers (isActiveData: true) and deleted workers (isActiveData: false)
+        const activeWorkers = state.workers.map(worker => ({
             Employee_idEmployee: worker.Employee_idEmployee,
             side_Enum_idEnum: worker.side_Enum_idEnum,
             isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom || false,
+            HasAccess: worker.HasAccess || false,
             isActiveData: true
         }));
+
+        const workers = [...activeWorkers, ...state.deletedWorkers];
 
         // Build the payload
         const payload = {
@@ -3429,6 +3456,14 @@
                 $(`#${item.targetType}Target .target-date`).text(formattedDate);
                 $(`#${item.targetType}Target`).show();
 
+                // Store existing target date in state so it's preserved in payload
+                // isLoaded flag indicates this is from server data, not user modification
+                state.targetOverrides[item.targetType] = {
+                    newTarget: targetDt.toISOString(),
+                    remark: item.data.targetChangeNote || null,
+                    isLoaded: true
+                };
+
                 // If there's a target change note, add it to the title
                 if (item.data.targetChangeNote) {
                     $(`#${item.targetType}Target`).attr('title', `Target manually changed: ${item.data.targetChangeNote}`);
@@ -3458,8 +3493,9 @@
      * Populate workers from both company and service provider
      */
     function populateWorkers(companyWorkers, providerWorkers) {
-        // Clear existing workers
+        // Clear existing workers and deleted workers
         state.workers = [];
+        state.deletedWorkers = [];
         $('#workersCardList').empty();
 
         // Add company workers
@@ -3474,7 +3510,8 @@
                     phoneNumber: worker.phoneNumber,
                     side_Enum_idEnum: worker.side_idEnum || 272, // Company side
                     source: 'Company',
-                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom
+                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom,
+                    isOriginal: true // Mark as originally loaded for soft-delete tracking
                 };
                 state.workers.push(workerObj);
                 addWorkerCard(workerObj, state.workers.length - 1);
@@ -3493,7 +3530,8 @@
                     phoneNumber: worker.phoneNumber,
                     side_Enum_idEnum: worker.side_idEnum || 273, // Provider side
                     source: 'Service Provider',
-                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom
+                    isJoinToExternalChatRoom: worker.isJoinToExternalChatRoom,
+                    isOriginal: true // Mark as originally loaded for soft-delete tracking
                 };
                 state.workers.push(workerObj);
                 addWorkerCard(workerObj, state.workers.length - 1);

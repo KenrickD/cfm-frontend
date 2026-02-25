@@ -449,12 +449,15 @@
         const unitPrice = selection.UnitPrice ?? selection.unitPrice ?? 0;
         const currencyCode = selection.UnitPriceCurrency || selection.unitPriceCurrency || 'IDR';
 
+        // Format transaction date as date-only (YYYY-MM-DD)
+        const formattedDate = transactionDate ? new Date(transactionDate).toISOString().split('T')[0] : null;
+
         const item = {
             type: 'jobCode',
             idJobCode: selection.IdJobCode ?? selection.idJobCode,
             name: selection.Name || selection.name,
             description: selection.Description || selection.description || '',
-            transactionDate: transactionDate,
+            inventoryTransactionDate: formattedDate,
             quantity: quantity,
             unitPrice: unitPrice,
             unit: selection.LaborMaterialMeasurementUnit || selection.laborMaterialMeasurementUnit || 'PCS',
@@ -687,7 +690,7 @@
         $('#removeJobCodeBtn').hide();
 
         // Set editable fields (only date and quantity)
-        $('#jobCodeTransactionDate').val(itemData.transactionDate || new Date().toISOString().split('T')[0]);
+        $('#jobCodeTransactionDate').val(itemData.inventoryTransactionDate || new Date().toISOString().split('T')[0]);
         $('#jobCodeQuantity').val(itemData.quantity || 1);
 
         // Store the job code selection for update (including UnitPrice and UnitPriceCurrency)
@@ -1360,12 +1363,30 @@
             // Get the base payload from original function
             const payload = originalBuildPayload();
 
+            // Helper to format date as date-only (YYYY-MM-DD)
+            const formatDateOnly = (dateValue) => {
+                if (!dateValue) return null;
+                if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                    return dateValue;
+                }
+                if (typeof dateValue === 'string' && dateValue.includes('T')) {
+                    return dateValue.split('T')[0];
+                }
+                const date = new Date(dateValue);
+                if (isNaN(date.getTime())) return null;
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
             // Add Material_Jobcode array
             payload.Material_Jobcode = extendedState.laborMaterialItems.jobCode.map(item => ({
                 idJobCode: item.idJobCode,
                 jobCode: item.name || '', // Include job code name
                 quantity: item.quantity,
-                unitPrice: item.unitPrice || 0
+                unitPrice: item.unitPrice || 0,
+                inventoryTransactionDate: formatDateOnly(item.inventoryTransactionDate)
             }));
 
             // Add Material_Adhoc array

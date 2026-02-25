@@ -195,6 +195,7 @@ namespace cfm_frontend.Models.WorkRequest
         public double Quantity { get; set; }
         public int? MeasurementUnit_idEnum { get; set; }
         public string? MeasurementUnit { get; set; }
+        public DateOnly? InventoryTransactionDate { get; set; }
     }
 
     public class WorkRequestDocumentViewDto

@@ -114,7 +114,7 @@ namespace cfm_frontend.DTOs.WorkRequest
         public string JobCode { get; set; }
         public float quantity { get; set; }
         public float unitPrice { get; set; }
-        public DateTime? inventoryTransactionDate { get; set; }
+        public DateOnly? inventoryTransactionDate { get; set; }
         public bool isActiveData { get; set; } = true;
     }
 
