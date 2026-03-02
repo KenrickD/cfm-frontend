@@ -84,7 +84,6 @@ namespace cfm_frontend.DTOs.WorkRequest
 
         // System fields
         public int Client_idClient { get; set; }
-        public int IdEmployee { get; set; }
 
         // Labor/Material collections with isActiveData support
         public List<MaterialJobCodeUpdateDto> Material_Jobcode { get; set; } = new List<MaterialJobCodeUpdateDto>();

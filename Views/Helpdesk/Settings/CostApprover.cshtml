@@ -1,3 +1,4 @@
+@model cfm_frontend.ViewModels.CostApproverGroupViewModel
 @{
     ViewBag.Title = "Cost Approver Group Management";
     ViewBag.pTitle = "Settings";
@@ -262,7 +263,16 @@
                 </div>
             </div>
             <div class="approver-table-body" id="approverTableBody">
-                <div class="empty-state" id="emptyState">
+                <div class="loading-spinner text-center py-5" id="loadingSpinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading cost approver groups...</p>
+                </div>
+                <div id="dataContent" style="display: none;">
+                    <!-- Cost approver groups will be rendered here -->
+                </div>
+                <div class="empty-state" id="emptyState" style="display: none;">
                     <i class="ti ti-users-off"></i>
                     <p>No cost approver groups found</p>
                 </div>
@@ -298,5 +308,10 @@
 </div>
 
 @section scripts {
+    <script>
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+    </script>
     <script src="~/assets/js/pages/settings/cost-approver.js"></script>
 }

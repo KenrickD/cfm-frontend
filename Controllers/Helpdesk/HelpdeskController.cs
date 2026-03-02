@@ -1,5 +1,6 @@
 using cfm_frontend.Constants;
 using cfm_frontend.DTOs;
+using cfm_frontend.DTOs.CostApproverGroup;
 using cfm_frontend.DTOs.Employee;
 using cfm_frontend.DTOs.PIC;
 using cfm_frontend.DTOs.PriorityLevel;
@@ -429,7 +430,6 @@ namespace cfm_frontend.Controllers.Helpdesk
 
                 // Set system fields from session
                 // Note: Client_idClient is already set from page load (for multi-tab safety validation)
-                model.IdEmployee = userInfo.IdWebUser;
                 model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
 
                 // Log the payload for debugging
@@ -560,7 +560,6 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var backendUrl = _configuration["BackendBaseUrl"];
 
                 // Set system fields from session
-                model.IdEmployee = userInfo.IdWebUser;
                 model.TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone;
 
                 // Log the payload for debugging
@@ -804,7 +803,6 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var workRequest = new WorkRequestCreateRequest
                 {
                     Client_idClient = userInfo.PreferredClientId,
-                    IdEmployee = userInfo.IdWebUser,
                     Property_idProperty = IdLocation,
                     PropertyFloor_idPropertyFloor = IdFloor,
                     RoomZone_idRoomZone = IdRoom,
@@ -4597,25 +4595,82 @@ namespace cfm_frontend.Controllers.Helpdesk
             var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
             if (accessCheck != null) return accessCheck;
 
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var viewmodel = new CostApproverGroupViewModel
+            {
+                IdClient = userInfo.PreferredClientId
+            };
+
             ViewBag.Title = "Cost Approver Group";
             ViewBag.pTitle = "Settings";
             ViewBag.pTitleUrl = Url.Action("Settings", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/CostApprover.cshtml");
+            return View("~/Views/Helpdesk/Settings/CostApprover.cshtml", viewmodel);
         }
+
         [Authorize]
-        public IActionResult CostApproverAdd()
+        public IActionResult CostApproverAdd(int? id)
         {
             var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
             if (accessCheck != null) return accessCheck;
 
-            ViewBag.Title = "Add Cost Approver Group";
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var viewmodel = new CostApproverGroupAddViewModel
+            {
+                IdClient = userInfo.PreferredClientId,
+                IdCostApproverGroup = id
+            };
+
+            ViewBag.Title = id.HasValue ? "Edit Cost Approver Group" : "Add Cost Approver Group";
             ViewBag.pTitle = "Cost Approver Group";
             ViewBag.pTitleUrl = Url.Action("CostApprover", "Helpdesk");
-            return View("~/Views/Helpdesk/Settings/CostApproverAdd.cshtml");
+            return View("~/Views/Helpdesk/Settings/CostApproverAdd.cshtml", viewmodel);
+        }
+
+        [Authorize]
+        public IActionResult CostApproverEdit(int id)
+        {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return accessCheck;
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var viewmodel = new CostApproverGroupAddViewModel
+            {
+                IdClient = userInfo.PreferredClientId,
+                IdCostApproverGroup = id
+            };
+
+            ViewBag.Title = "Edit Cost Approver Group";
+            ViewBag.pTitle = "Cost Approver Group";
+            ViewBag.pTitleUrl = Url.Action("CostApprover", "Helpdesk");
+            return View("~/Views/Helpdesk/Settings/CostApproverAdd.cshtml", viewmodel);
+        }
+
+        [Authorize]
+        public IActionResult CostApproverDetails(int id)
+        {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return accessCheck;
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var viewmodel = new CostApproverGroupAddViewModel
+            {
+                IdClient = userInfo.PreferredClientId,
+                IdCostApproverGroup = id
+            };
+
+            return View("~/Views/Helpdesk/Settings/CostApproverDetails.cshtml", viewmodel);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCostApproverGroups()
+        public async Task<IActionResult> GetCostApproverGroups(int page = 1, int limit = 50, string keyword = "")
         {
             var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
             if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
@@ -4632,18 +4687,49 @@ namespace cfm_frontend.Controllers.Helpdesk
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
-            var (success, data, message) = await SafeExecuteApiAsync<List<object>>(
-                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.List}?idClient={idClient}"),
+            var (success, data, message) = await SafeExecuteApiAsync<CostApproverGroupPagedResponse>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.List}?cid={idClient}&page={page}&limit={limit}&keyword={keyword}"),
                 "Failed to load cost approver groups");
 
             return Json(new { success, data, message });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetCostApproverGroupById(int id)
+        {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            if (string.IsNullOrEmpty(userSessionJson))
+            {
+                return Json(new { success = false, message = "Session expired" });
+            }
+
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<CostApproverGroupDetailsDto>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.GetById(id)}?cid={idClient}"),
+                "Failed to load cost approver group details");
+
+            return Json(new { success, data, message });
+        }
+
         [HttpPost]
-        public async Task<IActionResult> CreateCostApproverGroup([FromBody] dynamic model)
+        public async Task<IActionResult> CreateCostApproverGroup([FromBody] CostApproverGroupPayloadDto model)
         {
             var accessCheck = this.CheckAddAccess("Helpdesk", "Cost Approver Group List");
             if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return Json(new { success = false, message = "Validation failed", errors });
+            }
 
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
@@ -4655,11 +4741,106 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Create}", content),
-                "Failed to create cost approver group");
+            try
+            {
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Create}", content);
 
-            return Json(new { success, message = success ? "Cost approver group created successfully" : message });
+                if (response.IsSuccessStatusCode)
+                {
+                    using var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (apiResponse?.Success == true)
+                    {
+                        return Json(new { success = true, data = apiResponse.Data, message = "Cost approver group created successfully" });
+                    }
+
+                    return Json(new { success = false, message = apiResponse?.Message ?? "Failed to create cost approver group", errors = apiResponse?.Errors });
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    using var errorStream = await response.Content.ReadAsStreamAsync();
+                    var errorResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        errorStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    return Json(new { success = false, message = errorResponse?.Message ?? "Failed to create cost approver group", errors = errorResponse?.Errors });
+                }
+                else
+                {
+                    _logger.LogError("API HTTP Error {StatusCode}: {Content}", response.StatusCode, await response.Content.ReadAsStringAsync());
+                    return Json(new { success = false, message = "Failed to create cost approver group" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during CreateCostApproverGroup");
+                return Json(new { success = false, message = "An error occurred while creating cost approver group" });
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateCostApproverGroup([FromBody] CostApproverGroupPayloadDto model)
+        {
+            var accessCheck = this.CheckEditAccess("Helpdesk", "Cost Approver Group List");
+            if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return Json(new { success = false, message = "Validation failed", errors });
+            }
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var jsonPayload = JsonSerializer.Serialize(model, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            try
+            {
+                var response = await client.PutAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Update}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    using var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (apiResponse?.Success == true)
+                    {
+                        return Json(new { success = true, data = apiResponse.Data, message = "Cost approver group updated successfully" });
+                    }
+
+                    return Json(new { success = false, message = apiResponse?.Message ?? "Failed to update cost approver group", errors = apiResponse?.Errors });
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    using var errorStream = await response.Content.ReadAsStreamAsync();
+                    var errorResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<object>>(
+                        errorStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    return Json(new { success = false, message = errorResponse?.Message ?? "Failed to update cost approver group", errors = errorResponse?.Errors });
+                }
+                else
+                {
+                    _logger.LogError("API HTTP Error {StatusCode}: {Content}", response.StatusCode, await response.Content.ReadAsStringAsync());
+                    return Json(new { success = false, message = "Failed to update cost approver group" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during UpdateCostApproverGroup");
+                return Json(new { success = false, message = "An error occurred while updating cost approver group" });
+            }
         }
 
         [HttpDelete]
@@ -4668,17 +4849,59 @@ namespace cfm_frontend.Controllers.Helpdesk
             var accessCheck = this.CheckDeleteAccess("Helpdesk", "Cost Approver Group List");
             if (accessCheck != null) return Json(new { success = false, message = "Access denied." });
 
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var idClient = userInfo.PreferredClientId;
+
             var client = _httpClientFactory.CreateClient("BackendAPI");
             var backendUrl = _configuration["BackendBaseUrl"];
 
             var id = ((JsonElement)model.GetProperty("id")).GetInt32();
 
             var (success, _, message) = await SafeExecuteApiAsync<object>(
-                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Delete(id)}"),
+                () => client.DeleteAsync($"{backendUrl}{ApiEndpoints.Settings.CostApproverGroup.Delete(id)}?cid={idClient}"),
                 "Failed to delete cost approver group");
 
             return Json(new { success, message = success ? "Cost approver group deleted successfully" : message });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCompanyUsers(string prefix = "", int? idClient = null)
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var (success, data, message) = await SafeExecuteApiAsync<IEnumerable<CompanyContactInfoDto>>(
+                () => client.GetAsync($"{backendUrl}{ApiEndpoints.Masters.CompanyUsers}?cid={effectiveIdClient}&prefix={prefix}"),
+                "Failed to load company contacts");
+
+            return Json(new { success, data, message });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWorkCategoriesForSettings(int? idClient = null)
+        {
+            var userSessionJson = HttpContext.Session.GetString("UserSession");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userSessionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var effectiveIdClient = idClient ?? userInfo.PreferredClientId;
+
+            var client = _httpClientFactory.CreateClient("BackendAPI");
+            var backendUrl = _configuration["BackendBaseUrl"];
+
+            var endpoint = ApiEndpoints.Masters.GetTypes("WorkCategory");
+            var (success, data, message) = await SafeExecuteApiAsync<IEnumerable<TypeFormDetailResponse>>(
+                () => client.GetAsync($"{backendUrl}{endpoint}?idClient={effectiveIdClient}"),
+                "Failed to load work categories");
+
+            return Json(new { success, data, message });
+        }
+        #endregion
 
         #region Email Distribution List Management
 
@@ -4849,8 +5072,6 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             return Json(new { success, message = success ? "Email distribution saved successfully" : message });
         }
-
-        #endregion
 
         #endregion
 

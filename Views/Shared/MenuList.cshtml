@@ -9,7 +9,7 @@
     <li class="pc-item pc-hasmenu">
         <a href="#!" class="pc-link">
             <span class="pc-micon">
-                <i class="ph-duotone ph-gauge"></i>
+                <i class="ph-duotone ph-headset"></i>
             </span>
             <span class="pc-mtext">Helpdesk</span>
             <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
@@ -43,7 +43,7 @@
     <li class="pc-item pc-hasmenu">
         <a href="#!" class="pc-link">
             <span class="pc-micon">
-                <i class="ph-duotone ph-gauge"></i>
+                <i class="ph-duotone ph-address-book"></i>
             </span>
             <span class="pc-mtext">Contact Library</span>
             <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
@@ -51,23 +51,28 @@
         <ul class="pc-submenu">
             @if (Context.Session.CanView("Contact Library", "Company Contact List"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/sendnewworkrequest">Company Contact List</a></li>
+                @* TODO: Create ContactLibraryController with CompanyContacts action *@
+                <li class="pc-item"><a class="pc-link" href="/contactlibrary/companycontacts">Company Contact List</a></li>
             }
             @if (Context.Session.CanView("Contact Library", "Service Provider Contact List"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/index">Service Provider Contact List</a></li>
+                @* TODO: Create ContactLibraryController with ServiceProviderContacts action *@
+                <li class="pc-item"><a class="pc-link" href="/contactlibrary/serviceprovidercontacts">Service Provider Contact List</a></li>
             }
             @if (Context.Session.CanView("Contact Library", "Cross-Company Contact List"))
             {
-                <li class="pc-item"><a class="pc-link" href="/inventory/index">Cross-Company Contact List</a></li>
+                @* TODO: Create ContactLibraryController with CrossCompanyContacts action *@
+                <li class="pc-item"><a class="pc-link" href="/contactlibrary/crosscompanycontacts">Cross-Company Contact List</a></li>
             }
             @if (Context.Session.CanView("Contact Library", "Exodus"))
             {
-                <li class="pc-item"><a class="pc-link" href="/jobcode/index">Exodus</a></li>
+                @* TODO: Create ContactLibraryController with Exodus action *@
+                <li class="pc-item"><a class="pc-link" href="/contactlibrary/exodus">Exodus</a></li>
             }
             @if (Context.Session.CanView("Contact Library", "Settings"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/settings">Settings</a></li>
+                @* TODO: Create ContactLibraryController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/contactlibrary/settings">Settings</a></li>
             }
         </ul>
     </li>
@@ -77,7 +82,7 @@
     <li class="pc-item pc-hasmenu">
         <a href="#!" class="pc-link">
             <span class="pc-micon">
-                <i class="ph-duotone ph-gauge"></i>
+                <i class="ph-duotone ph-buildings"></i>
             </span>
             <span class="pc-mtext">Property Portfolio</span>
             <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
@@ -85,25 +90,180 @@
         <ul class="pc-submenu">
             @if (Context.Session.CanView("Property Portfolio", "Property List"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/sendnewworkrequest">Property List</a></li>
+                @* TODO: Create PropertyPortfolioController with PropertyList action *@
+                <li class="pc-item"><a class="pc-link" href="/propertyportfolio/propertylist">Property List</a></li>
             }
             @if (Context.Session.CanView("Property Portfolio", "Exodus"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/index">Exodus</a></li>
+                @* TODO: Create PropertyPortfolioController with Exodus action *@
+                <li class="pc-item"><a class="pc-link" href="/propertyportfolio/exodus">Exodus</a></li>
             }
             @if (Context.Session.CanView("Property Portfolio", "Exodus Room Zone"))
             {
-                <li class="pc-item"><a class="pc-link" href="/jobcode/index">Exodus Room Zone</a></li>
+                @* TODO: Create PropertyPortfolioController with ExodusRoomZone action *@
+                <li class="pc-item"><a class="pc-link" href="/propertyportfolio/exodusroomzone">Exodus Room Zone</a></li>
             }
             @if (Context.Session.CanView("Property Portfolio", "Report"))
             {
-                <li class="pc-item"><a class="pc-link" href="/jobcode/index">Report</a></li>
+                @* TODO: Create PropertyPortfolioController with Report action *@
+                <li class="pc-item"><a class="pc-link" href="/propertyportfolio/report">Report</a></li>
             }
             @if (Context.Session.CanView("Property Portfolio", "Settings"))
             {
-                <li class="pc-item"><a class="pc-link" href="/helpdesk/settings">Settings</a></li>
+                @* TODO: Create PropertyPortfolioController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/propertyportfolio/settings">Settings</a></li>
             }
         </ul>
     </li>
 }
-
+@if (Context.Session.HasModuleAccess("Preventive Maintenance"))
+{
+    <li class="pc-item pc-hasmenu">
+        <a href="#!" class="pc-link">
+            <span class="pc-micon">
+                <i class="ph-duotone ph-wrench"></i>
+            </span>
+            <span class="pc-mtext">Preventive Maintenance</span>
+            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+        </a>
+        <ul class="pc-submenu">
+            @if (Context.Session.CanView("Preventive Maintenance", "Maintenance Management"))
+            {
+                @* TODO: Create PreventiveMaintenanceController with MaintenanceManagement action *@
+                <li class="pc-item"><a class="pc-link" href="/preventivemaintenance/maintenancemanagement">Maintenance Management</a></li>
+            }
+            @if (Context.Session.CanView("Preventive Maintenance", "Exodus"))
+            {
+                @* TODO: Create PreventiveMaintenanceController with Exodus action *@
+                <li class="pc-item"><a class="pc-link" href="/preventivemaintenance/exodus">Exodus</a></li>
+            }
+            @if (Context.Session.CanView("Preventive Maintenance", "Report"))
+            {
+                @* TODO: Create PreventiveMaintenanceController with Report action *@
+                <li class="pc-item"><a class="pc-link" href="/preventivemaintenance/report">Report</a></li>
+            }
+            @if (Context.Session.CanView("Preventive Maintenance", "Settings"))
+            {
+                @* TODO: Create PreventiveMaintenanceController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/preventivemaintenance/settings">Settings</a></li>
+            }
+        </ul>
+    </li>
+}
+@if (Context.Session.HasModuleAccess("Supply Chain Management"))
+{
+    <li class="pc-item pc-hasmenu">
+        <a href="#!" class="pc-link">
+            <span class="pc-micon">
+                <i class="ph-duotone ph-truck"></i>
+            </span>
+            <span class="pc-mtext">Supply Chain Management</span>
+            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+        </a>
+        <ul class="pc-submenu">
+            @if (Context.Session.CanView("Supply Chain Management", "Service Provider List"))
+            {
+                @* TODO: Create SupplyChainManagementController with ServiceProviderList action *@
+                <li class="pc-item"><a class="pc-link" href="/supplychainmanagement/serviceproviderlist">Service Provider List</a></li>
+            }
+            @if (Context.Session.CanView("Supply Chain Management", "Report"))
+            {
+                @* TODO: Create SupplyChainManagementController with Report action *@
+                <li class="pc-item"><a class="pc-link" href="/supplychainmanagement/report">Report</a></li>
+            }
+            @if (Context.Session.CanView("Supply Chain Management", "Settings"))
+            {
+                @* TODO: Create SupplyChainManagementController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/supplychainmanagement/settings">Settings</a></li>
+            }
+        </ul>
+    </li>
+}
+@if (Context.Session.HasModuleAccess("Asset Management"))
+{
+    <li class="pc-item pc-hasmenu">
+        <a href="#!" class="pc-link">
+            <span class="pc-micon">
+                <i class="ph-duotone ph-package"></i>
+            </span>
+            <span class="pc-mtext">Asset Management</span>
+            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+        </a>
+        <ul class="pc-submenu">
+            @if (Context.Session.CanView("Asset Management", "Asset List"))
+            {
+                @* TODO: Create AssetManagementController with AssetList action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/assetlist">Asset List</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Asset Group List"))
+            {
+                @* TODO: Create AssetManagementController with AssetGroupList action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/assetgrouplist">Asset Group List</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Report"))
+            {
+                @* TODO: Create AssetManagementController with Report action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/report">Report</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Exodus"))
+            {
+                @* TODO: Create AssetManagementController with Exodus action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/exodus">Exodus</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Exodus Photos"))
+            {
+                @* TODO: Create AssetManagementController with ExodusPhotos action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/exodusphotos">Exodus Photos</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Unreserved Label Management"))
+            {
+                @* TODO: Create AssetManagementController with UnreservedLabelManagement action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/unreservedlabelmanagement">Unreserved Label Management</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Asset Stock Taking List"))
+            {
+                @* TODO: Create AssetManagementController with AssetStockTakingList action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/assetstocktakinglist">Asset Stock Taking List</a></li>
+            }
+            @if (Context.Session.CanView("Asset Management", "Settings"))
+            {
+                @* TODO: Create AssetManagementController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/assetmanagement/settings">Settings</a></li>
+            }
+        </ul>
+    </li>
+}
+@if (Context.Session.HasModuleAccess("Inspector"))
+{
+    <li class="pc-item pc-hasmenu">
+        <a href="#!" class="pc-link">
+            <span class="pc-micon">
+                <i class="ph-duotone ph-clipboard-text"></i>
+            </span>
+            <span class="pc-mtext">Inspector</span>
+            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+        </a>
+        <ul class="pc-submenu">
+            @if (Context.Session.CanView("Inspector", "Inspection Form Management"))
+            {
+                @* TODO: Create InspectorController with InspectionFormManagement action *@
+                <li class="pc-item"><a class="pc-link" href="/inspector/inspectionformmanagement">Inspection Form Management</a></li>
+            }
+            @if (Context.Session.CanView("Inspector", "Inspection Record Management"))
+            {
+                @* TODO: Create InspectorController with InspectionRecordManagement action *@
+                <li class="pc-item"><a class="pc-link" href="/inspector/inspectionrecordmanagement">Inspection Record Management</a></li>
+            }
+            @if (Context.Session.CanView("Inspector", "Exodus"))
+            {
+                @* TODO: Create InspectorController with Exodus action *@
+                <li class="pc-item"><a class="pc-link" href="/inspector/exodus">Exodus</a></li>
+            }
+            @if (Context.Session.CanView("Inspector", "Settings"))
+            {
+                @* TODO: Create InspectorController with Settings action *@
+                <li class="pc-item"><a class="pc-link" href="/inspector/settings">Settings</a></li>
+            }
+        </ul>
+    </li>
+}

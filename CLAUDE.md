@@ -2,6 +2,57 @@
 
 Project guidance for Claude Code when working with this ASP.NET Core 8.0 MVC frontend application.
 
+## Documentation Structure
+
+This repository contains three reference documents:
+
+### 1. CLAUDE.md (This File)
+**Purpose:** Frontend-specific guidance for the ASP.NET Core 8.0 MVC application.
+**When to Use:** Always loaded by default for all frontend development tasks.
+**Contains:**
+- Frontend architecture (MVC, Controllers, Views, ViewModels)
+- Common frontend patterns (API calls, pagination, dropdowns)
+- Session management and authentication flow
+- JavaScript patterns and components
+- UI/UX guidelines
+
+### 2. BACKEND_REFERENCE.md
+**Purpose:** Comprehensive backend API reference for integration work.
+**When to Use:** Only load when you need to:
+- Understand backend API endpoints and their contracts
+- Debug backend integration issues
+- Implement new features that call backend APIs
+- Understand master data structure (Type vs Enum)
+- Reference API request/response formats
+
+**When NOT to Use:**
+- Pure frontend work (Views, JavaScript, CSS)
+- Existing integrations that are working correctly
+- Client-side debugging
+
+**Location:** `BACKEND_REFERENCE.md` in the same directory as this file.
+
+**Important:** The backend repository is located at `C:\Users\kenri\OneDrive\Documents\Work\Colliers\Repo\CFM Backend\CFM Backend` and should NOT be modified. The BACKEND_REFERENCE.md is for reference only.
+
+### 3. PLAYWRIGHT_TESTING_GUIDE.md
+**Purpose:** Comprehensive guide for writing E2E tests using Playwright.
+**When to Use:** Load when you need to:
+- Write new Playwright tests for a page
+- Understand testing patterns (CRUD, validation, modals)
+- Debug failing tests
+- Set up test authentication
+- Create Page Objects for new pages
+- Reference test examples and recipes
+
+**When NOT to Use:**
+- General frontend development without testing
+- Backend API testing (use backend test docs if available)
+
+**Location:** `PLAYWRIGHT_TESTING_GUIDE.md` in the same directory as this file.
+**Test Project:** `c:\Repos\CfmFrontend.Tests`
+
+---
+
 ## Project Overview
 
 **ASP.NET Core 8.0 MVC** frontend acting as BFF (Backend for Frontend) layer. All business logic in backend API.
@@ -417,6 +468,245 @@ dd.enable(); dd.disable(); dd.clear(); dd.setValue('2', 'Label', true);
 ```
 
 **Cascade Pattern:** Use `onChange` to enable/populate dependent dropdowns. Call `clear()`, `loadFromSelect()`, `disable()` on children when parent changes.
+
+### Loading Spinners for AJAX Operations
+**Universal Pattern:** Always show loading indicators when fetching data via AJAX to provide visual feedback to users.
+
+**Implementation Patterns:**
+
+#### 1. Table/List Loading (Full Container)
+For paginated lists or tables where the entire content area should show a spinner.
+
+**HTML:**
+```html
+<div id="dataContainer">
+    <div class="loading-spinner text-center py-5" id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading data...</p>
+    </div>
+    <div id="dataContent" style="display: none;">
+        <!-- Table or list content here -->
+    </div>
+    <div id="emptyState" style="display: none;">
+        <!-- Empty state here -->
+    </div>
+</div>
+```
+
+**JavaScript:**
+```javascript
+async function loadData() {
+    const spinner = document.getElementById('loadingSpinner');
+    const content = document.getElementById('dataContent');
+    const emptyState = document.getElementById('emptyState');
+
+    // Show spinner
+    spinner.style.display = 'block';
+    content.style.display = 'none';
+    emptyState.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/data');
+        const result = await response.json();
+
+        // Hide spinner
+        spinner.style.display = 'none';
+
+        if (result.success && result.data && result.data.length > 0) {
+            renderData(result.data);
+            content.style.display = 'block';
+        } else {
+            emptyState.style.display = 'block';
+        }
+    } catch (error) {
+        spinner.style.display = 'none';
+        showError('Failed to load data');
+    }
+}
+```
+
+#### 2. Form Field Loading (Inline Spinner)
+For dropdowns, checkboxes, or input fields being populated via AJAX.
+
+**HTML:**
+```html
+<div class="mb-3">
+    <label class="form-label">Properties</label>
+    <div class="field-loading-container" id="propertiesContainer">
+        <div class="field-spinner" id="propertiesSpinner">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="ms-2 text-muted">Loading properties...</span>
+        </div>
+        <div id="propertiesGrid" style="display: none;">
+            <!-- Checkboxes or options here -->
+        </div>
+    </div>
+</div>
+```
+
+**JavaScript:**
+```javascript
+async function loadProperties() {
+    const spinner = document.getElementById('propertiesSpinner');
+    const grid = document.getElementById('propertiesGrid');
+
+    spinner.style.display = 'flex';
+    grid.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/properties');
+        const result = await response.json();
+
+        spinner.style.display = 'none';
+
+        if (result.success && result.data) {
+            renderProperties(result.data);
+            grid.style.display = 'block';
+        }
+    } catch (error) {
+        spinner.style.display = 'none';
+        showError('Failed to load properties');
+    }
+}
+```
+
+#### 3. Parallel Loading with Multiple Spinners
+When loading multiple data sources simultaneously.
+
+**JavaScript:**
+```javascript
+async function loadInitialData() {
+    // Show all spinners
+    showSpinner('propertiesSpinner');
+    showSpinner('categoriesSpinner');
+    showSpinner('currenciesSpinner');
+
+    // Load in parallel
+    await Promise.all([
+        loadProperties(),
+        loadCategories(),
+        loadCurrencies()
+    ]);
+}
+
+async function loadProperties() {
+    try {
+        const response = await fetch('/api/properties');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            renderProperties(result.data);
+        }
+    } finally {
+        hideSpinner('propertiesSpinner');
+        showContent('propertiesGrid');
+    }
+}
+
+function showSpinner(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+}
+
+function hideSpinner(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+}
+
+function showContent(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+}
+```
+
+#### 4. Button Loading State
+For submit buttons or action buttons during AJAX operations.
+
+**HTML:**
+```html
+<button type="submit" class="btn btn-primary" id="saveBtn">
+    <span class="btn-text">Save</span>
+    <span class="btn-spinner" style="display: none;">
+        <span class="spinner-border spinner-border-sm" role="status"></span>
+        Saving...
+    </span>
+</button>
+```
+
+**JavaScript:**
+```javascript
+async function handleSubmit(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('saveBtn');
+    const btnText = btn.querySelector('.btn-text');
+    const btnSpinner = btn.querySelector('.btn-spinner');
+
+    // Show loading state
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    btnSpinner.style.display = 'inline-block';
+
+    try {
+        const response = await fetch('/api/save', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Saved successfully');
+        }
+    } finally {
+        // Restore button state
+        btn.disabled = false;
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+    }
+}
+```
+
+**CSS (add to page or global styles):**
+```css
+.loading-spinner {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.field-loading-container {
+    position: relative;
+    min-height: 50px;
+}
+
+.field-spinner {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    color: #6c757d;
+}
+
+[data-pc-theme="dark"] .field-spinner {
+    color: #9ca3af;
+}
+```
+
+**Best Practices:**
+1. Always show spinner before AJAX call starts
+2. Always hide spinner in `finally` block to ensure cleanup
+3. Use `try/finally` or `try/catch/finally` to guarantee spinner removal
+4. Disable interactive elements (buttons, inputs) during loading
+5. Use descriptive loading messages ("Loading properties...", "Saving...")
+6. For fast operations (<200ms), spinners may flash - consider minimum display time
+7. For parallel loading, show individual spinners per section
+8. Use `visually-hidden` class for screen reader support
 
 ### Client Session Monitor
 **File:** `wwwroot/assets/js/helpers/client-session-monitor.js`

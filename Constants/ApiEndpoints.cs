@@ -799,21 +799,22 @@ namespace cfm_frontend.Constants
 
             /// <summary>
             /// Cost Approver Group settings endpoints
+            /// Base path: /api/v1/work-request/cost-approver-groups
             /// </summary>
             public static class CostApproverGroup
             {
-                private const string CostApproverGroupBase = Base + "/cost-approver-group";
+                private const string CostApproverGroupBase = ApiBase + "/work-request/cost-approver-groups";
 
                 /// <summary>
-                /// GET: Get all cost approver groups for client
-                /// Query params: idClient
+                /// GET: Get paginated cost approver groups list
+                /// Query params: cid (client id), page, limit, keyword
                 /// </summary>
-                public const string List = CostApproverGroupBase;
+                public const string List = CostApproverGroupBase + "/list";
 
                 /// <summary>
-                /// GET: Get cost approver group by ID
+                /// GET: Get cost approver group details by ID
                 /// Path params: {id}
-                /// Query params: idClient
+                /// Query params: cid (client id)
                 /// </summary>
                 /// <param name="id">Cost approver group ID</param>
                 /// <returns>Get by ID endpoint URL</returns>
@@ -821,17 +822,20 @@ namespace cfm_frontend.Constants
 
                 /// <summary>
                 /// POST: Create cost approver group
+                /// Body: CostApproverGroupPayloadDto
                 /// </summary>
                 public const string Create = CostApproverGroupBase;
 
                 /// <summary>
                 /// PUT: Update cost approver group
+                /// Body: CostApproverGroupPayloadDto
                 /// </summary>
                 public const string Update = CostApproverGroupBase;
 
                 /// <summary>
                 /// DELETE: Delete cost approver group by ID
                 /// Path params: {id}
+                /// Query params: cid (client id)
                 /// </summary>
                 /// <param name="id">Cost approver group ID</param>
                 /// <returns>Delete endpoint URL</returns>
@@ -1027,6 +1031,12 @@ namespace cfm_frontend.Constants
             /// Query params: cid (client id), prefix (search term)
             /// </summary>
             public const string CompanyContacts = Base + "/company-contacts";
+
+            /// <summary>
+            /// GET: Search company users by name prefix
+            /// Query params: cid (client id), prefix (search term)
+            /// </summary>
+            public const string CompanyUsers = Base + "/company-users";
 
             /// <summary>
             /// Category type constants for Masters API

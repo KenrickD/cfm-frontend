@@ -2,7 +2,31 @@
   "permissions": {
     "allow": [
       "Bash(dir \"C:\\Users\\kenri\\.claude\" -Recurse -Force)",
-      "Bash(powershell -Command \"Get-ChildItem ''C:\\Users\\kenri\\.claude'' -Recurse -Force | Select-Object FullName\")"
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\Users\\kenri\\.claude'' -Recurse -Force | Select-Object FullName\")",
+      "Read(//c/Users/kenri/OneDrive/Documents/Work/Colliers/Repo/CFM Backend/CFM Backend/**)",
+      "Bash(test -f \"c:\\Repos\\CFM Frontend\\BACKEND_REFERENCE.md\")",
+      "Read(//c/Repos/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5099)",
+      "Bash(dotnet build)",
+      "Bash(curl -s -I http://localhost:5099)",
+      "Bash(dotnet run)",
+      "Bash(curl -s http://localhost:5099)",
+      "Bash(dotnet test --filter \"WorkRequestEditTests\" --logger \"console;verbosity=normal\")",
+      "Bash(dotnet test --filter \"WorkRequestEdit_PageLoads_Successfully\" --logger \"console;verbosity=detailed\")",
+      "Bash(curl -s -L -b \"c:\\Repos\\CfmFrontend.Tests\\bin\\Debug\\net8.0\\.auth\\cookies.txt\" http://localhost:5099/Helpdesk/WorkRequestEdit/1)",
+      "Bash(dotnet test --filter \"WorkRequestEdit_PageLoads_Successfully\" --logger \"console;verbosity=normal\")",
+      "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:44339)",
+      "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:44339/api/v1.0/auth/login)",
+      "Bash(dotnet test --filter \"WorkRequestEdit_PageLoads\" --logger \"console;verbosity=normal\")",
+      "Bash(dotnet test --filter \"Diagnostic_CheckWorkRequestEditPage\" --logger \"console;verbosity=detailed\")",
+      "Bash(Select-String -Pattern \"error|Build FAILED|Build succeeded\")",
+      "Bash(cat Controllers/Helpdesk/Settings/CostApproverGroupController.cs)",
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(cat Models/HelpdeskModel/CostApproverGroupModel.cs)",
+      "Bash(cat Services/Helpdesk/ICostApproverGroupServices.cs)",
+      "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver-add.js\")",
+      "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver.js\")"
     ],
     "deny": [],
     "ask": []

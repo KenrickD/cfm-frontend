@@ -223,7 +223,9 @@
                     GetById: '/Helpdesk/GetCostApproverGroupById',
                     Create: '/Helpdesk/CreateCostApproverGroup',
                     Update: '/Helpdesk/UpdateCostApproverGroup',
-                    Delete: '/Helpdesk/DeleteCostApproverGroup'
+                    Delete: '/Helpdesk/DeleteCostApproverGroup',
+                    GetCompanyUsers: '/Helpdesk/GetCompanyUsers',
+                    GetWorkCategoriesForSettings: '/Helpdesk/GetWorkCategoriesForSettings'
                 },
 
                 /**

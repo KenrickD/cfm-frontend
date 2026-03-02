@@ -78,7 +78,6 @@
 
         // System fields
         public int Client_idClient { get; set; }
-        public int IdEmployee { get; set; }
 
         //labor material if using job code
         public List<MaterialJobCodeDto> Material_Jobcode { get; set; } = new List<MaterialJobCodeDto>();

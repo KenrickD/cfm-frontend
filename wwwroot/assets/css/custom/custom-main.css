@@ -26,6 +26,7 @@
 @import url('./components/badges.css');
 @import url('./components/pagination.css');
 @import url('./components/search.css');
+@import url('./components/sidebar.css');
 
 /* Existing Custom Components */
 @import url('../components/searchable-dropdown.css');

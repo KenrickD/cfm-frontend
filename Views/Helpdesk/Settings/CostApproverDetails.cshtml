@@ -1,0 +1,247 @@
+@model cfm_frontend.ViewModels.CostApproverGroupAddViewModel
+@{
+    ViewBag.Title = "Cost Approver Group Details";
+    ViewBag.pTitle = "Cost Approver Group";
+    ViewBag.pTitleUrl = Url.Action("CostApprover", "Helpdesk");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+    <style>
+        .form-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        }
+
+        [data-pc-theme="dark"] .form-section {
+            background: #2d3748;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        [data-pc-theme="dark"] .section-title {
+            color: #e5e7eb;
+            border-bottom-color: #4a5568;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        [data-pc-theme="dark"] .form-label {
+            color: #cbd5e0;
+        }
+
+        .approval-flow-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        [data-pc-theme="dark"] .approval-flow-card {
+            background: #374151;
+            border-color: #4a5568;
+        }
+
+        .approval-flow-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .approval-flow-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #2c3e50;
+        }
+
+        [data-pc-theme="dark"] .approval-flow-name {
+            color: #e5e7eb;
+        }
+
+        .approver-section {
+            background: white;
+            border-radius: 0.25rem;
+            padding: 0.75rem;
+        }
+
+        [data-pc-theme="dark"] .approver-section {
+            background: #2d3748;
+        }
+
+        .approver-table {
+            width: 100%;
+        }
+
+        .approver-table thead {
+            background: #e9ecef;
+        }
+
+        [data-pc-theme="dark"] .approver-table thead {
+            background: #374151;
+        }
+
+        .priority-badge {
+            background: #5a8dee;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-control:disabled,
+        .form-select:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        [data-pc-theme="dark"] .form-control:disabled,
+        [data-pc-theme="dark"] .form-select:disabled {
+            background-color: #374151;
+            color: #9ca3af;
+        }
+
+        .read-only-badge {
+            background: #6c757d;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+        }
+    </style>
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    Cost Approver Group Details
+                    <span class="read-only-badge">Read Only</span>
+                </h4>
+                <div>
+                    <a href="@Url.Action("CostApproverEdit", "Helpdesk", new { id = Model?.IdCostApproverGroup })" class="btn btn-primary">
+                        <i class="ti ti-edit me-1"></i>
+                        Edit
+                    </a>
+                    <a href="@Url.Action("CostApprover", "Helpdesk")" class="btn btn-secondary">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
+                </div>
+            </div>
+
+            <form id="costApproverForm">
+                @Html.AntiForgeryToken()
+
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h5 class="section-title">Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cost Approver Group Name</label>
+                            <input type="text" class="form-control" id="groupName" disabled>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Range Value -->
+                <div class="form-section">
+                    <h5 class="section-title">Range Value</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Currency</label>
+                            <select class="form-select" id="currency" disabled>
+                                <option value="">Select Currency</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Min Value</label>
+                            <input type="number" class="form-control" id="minValue" step="0.01" disabled>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Value</label>
+                            <input type="number" class="form-control" id="maxValue" step="0.01" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Properties -->
+                <div class="form-section">
+                    <h5 class="section-title">Properties</h5>
+                    <div id="propertiesSpinner" style="display: block;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Loading properties...</span>
+                    </div>
+                    <div id="propertiesGrid" class="checkbox-grid" style="display: none;"></div>
+                </div>
+
+                <!-- Work Categories -->
+                <div class="form-section">
+                    <h5 class="section-title">Work Categories</h5>
+                    <div id="categoriesSpinner" style="display: block;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Loading categories...</span>
+                    </div>
+                    <div id="categoriesGrid" class="checkbox-grid" style="display: none;"></div>
+                </div>
+
+                <!-- Approval Flow -->
+                <div class="form-section">
+                    <h5 class="section-title">Approval Flow</h5>
+                    <div id="approvalFlowsContainer">
+                        <p class="text-muted">No approval flows configured.</p>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0),
+            idCostApproverGroup: @(Model?.IdCostApproverGroup ?? 0)
+        };
+    </script>
+    <script src="~/assets/js/pages/settings/cost-approver-details.js"></script>
+}

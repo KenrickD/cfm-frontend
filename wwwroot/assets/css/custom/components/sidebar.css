@@ -1,0 +1,45 @@
+/**
+ * Sidebar Navigation Fixes
+ *
+ * Custom fixes for sidebar menu layout issues
+ */
+
+/* Fix for long menu text pushing chevron arrow to new line */
+.pc-sidebar .pc-navbar .pc-item .pc-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+/* Icon container - fixed width */
+.pc-sidebar .pc-navbar .pc-item .pc-link .pc-micon {
+    flex-shrink: 0 !important;
+    width: 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Menu text - allows wrapping but prevents overflow */
+.pc-sidebar .pc-navbar .pc-item .pc-link .pc-mtext {
+    flex: 1 !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    line-height: 1.3 !important;
+    padding-right: 0.25rem !important;
+}
+
+/* Arrow container - fixed position on right */
+.pc-sidebar .pc-navbar .pc-item .pc-link .pc-arrow {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Ensure proper vertical alignment for multi-line text */
+.pc-sidebar .pc-navbar .pc-hasmenu > .pc-link {
+    min-height: 2.5rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
