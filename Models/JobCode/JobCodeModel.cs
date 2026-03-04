@@ -8,6 +8,7 @@ namespace cfm_frontend.Models.JobCode
         public string? Group { get; set; }
         public string? LaborOrMaterial { get; set; }
         public string? MaterialType { get; set; }
+        public int? MaterialTypeId { get; set; }
         public string? EstimationTime { get; set; }
         public string? MeasurementUnit { get; set; }
         public decimal? UnitPrice { get; set; }

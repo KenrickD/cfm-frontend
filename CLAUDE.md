@@ -1052,6 +1052,100 @@ $.ajax({
 2. Log errors to console + show user-friendly message
 3. Use `response.message` from server when available
 
+### Backend Error Response Parsing
+
+**MANDATORY PATTERN:** All controller actions that call backend APIs **MUST** parse and return backend error messages to the user. This ensures business validation errors from the backend are properly displayed to the user.
+
+#### Backend Error Response Structure
+
+The backend returns errors in this format:
+```json
+{
+  "success": false,
+  "message": "BadRequest",
+  "errors": [
+    "Job Code with this name already exists",
+    "Group is required"
+  ],
+  "timestamp": "2026-03-03T..."
+}
+```
+
+#### Frontend Error Handling Pattern
+
+**ALWAYS use this pattern** when calling backend APIs:
+
+```csharp
+var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.SomeEndpoint}", content);
+
+if (response.IsSuccessStatusCode)
+{
+    return Json(new { success = true, message = "Operation successful." });
+}
+else
+{
+    var errorContent = await response.Content.ReadAsStringAsync();
+    _controllerLogger.LogWarning("Operation failed. Status: {StatusCode}, Response: {Response}",
+        response.StatusCode, errorContent);
+
+    // Parse backend error response
+    try
+    {
+        var errorResponse = JsonSerializer.Deserialize<ApiResponseDto<object>>(
+            errorContent,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        if (errorResponse?.Errors != null && errorResponse.Errors.Any())
+        {
+            // Return all error messages from backend
+            var errorMessages = string.Join(", ", errorResponse.Errors);
+            return Json(new { success = false, message = errorMessages });
+        }
+        else if (!string.IsNullOrEmpty(errorResponse?.Message))
+        {
+            return Json(new { success = false, message = errorResponse.Message });
+        }
+    }
+    catch (Exception ex)
+    {
+        _controllerLogger.LogError(ex, "Error parsing backend error response");
+    }
+
+    return Json(new { success = false, message = "Operation failed." });
+}
+```
+
+#### Key Points:
+
+1. **Parse the error content**: Deserialize the error response to `ApiResponseDto<object>`
+2. **Check Errors array first**: If `errorResponse.Errors` exists and has items, join them with commas
+3. **Fallback to Message**: If no Errors array, use `errorResponse.Message`
+4. **Generic fallback**: If parsing fails, return a generic error message
+5. **Log everything**: Always log the raw error content for debugging
+
+#### Error Types from Backend:
+
+| Exception Type | HTTP Status | Response Structure |
+|----------------|-------------|-------------------|
+| `BusinessException` | 400 Bad Request | `{ success: false, message: "BadRequest", errors: [...] }` |
+| `KeyNotFoundException` | 404 Not Found | `{ success: false, message: "NotFound", errors: [...] }` |
+| General Exception | 500 Internal Server Error | `{ success: false, message: "InternalServerError", errors: [...] }` |
+
+#### Example Error Messages:
+
+**Business Validation:**
+- "Job Code with this name already exists"
+- "Group is required"
+- "Unit price must be greater than zero"
+
+**Not Found:**
+- "Job Code not found"
+- "Client does not have access to this resource"
+
+**Internal Server Error:**
+- "An unexpected error occurred"
+
 ### Global AJAX Error Handler
 **File:** `wwwroot/assets/js/global-ajax-handler.js`
 

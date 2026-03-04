@@ -1,13 +1,16 @@
 using cfm_frontend.Constants;
+using cfm_frontend.DTOs;
 using cfm_frontend.DTOs.JobCode;
 using cfm_frontend.Extensions;
 using cfm_frontend.Models;
 using cfm_frontend.Models.JobCode;
+using cfm_frontend.Models.WorkRequest;
 using cfm_frontend.Services;
 using cfm_frontend.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 
 namespace cfm_frontend.Controllers.Helpdesk
 {
@@ -67,23 +70,36 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var jobCodesTask = GetJobCodesAsync(client, backendUrl, idClient, page, search, group, showDeleted);
-                var groupsTask = GetJobCodeGroupsAsync(client, backendUrl, idClient);
+                var jobCodesTask = GetJobCodesAsync(client, backendUrl, idClient, page, search, group);
+                var groupsTask = GetJobCodeListFilterAsync(client, backendUrl, idClient);
 
                 await Task.WhenAll(jobCodesTask, groupsTask);
 
                 var response = await jobCodesTask;
                 var groups = await groupsTask;
 
-                if (response != null)
+                if (response?.Success == true && response.Data != null)
                 {
-                    viewmodel.JobCodes = response.Data;
+                    // Decode HTML entities in Label field (e.g., "Labor &amp; Material" -> "Labor & Material")
+                    var jobCodes = response.Data.Data?.ToList();
+                    if (jobCodes != null)
+                    {
+                        foreach (var jobCode in jobCodes)
+                        {
+                            if (!string.IsNullOrEmpty(jobCode.Label))
+                            {
+                                jobCode.Label = HttpUtility.HtmlDecode(jobCode.Label);
+                            }
+                        }
+                    }
+                    viewmodel.JobCodes = jobCodes;
+
                     viewmodel.Paging = new PagingInfo
                     {
-                        CurrentPage = response.CurrentPage,
-                        TotalPages = response.TotalPages,
-                        PageSize = response.PageSize,
-                        TotalCount = response.TotalCount
+                        CurrentPage = response.Data.Metadata?.CurrentPage ?? 1,
+                        TotalPages = response.Data.Metadata?.TotalPages ?? 1,
+                        PageSize = response.Data.Metadata?.PageSize ?? 25,
+                        TotalCount = response.Data.Metadata?.TotalCount ?? 0
                     };
                 }
 
@@ -98,41 +114,47 @@ namespace cfm_frontend.Controllers.Helpdesk
             return View(viewmodel);
         }
 
-        private async Task<JobCodeListResponse?> GetJobCodesAsync(
+        private async Task<ApiResponseDto<PagedResponse<JobCodeListResponseDto>>?> GetJobCodesAsync(
             HttpClient client,
             string? backendUrl,
             int idClient,
             int page,
             string? search,
-            string? group,
-            bool? showDeleted)
+            string? group)
         {
             try
             {
-                var queryParams = new List<string>
+                var requestBody = new JobCodeListParamDto
                 {
-                    $"idClient={idClient}",
-                    $"page={page}",
-                    $"isActiveData={(!showDeleted.HasValue || !showDeleted.Value)}"
+                    IdClient = idClient,
+                    Keywords = search,
+                    Page = page,
+                    PageSize = 25
                 };
 
-                if (!string.IsNullOrEmpty(search))
+                // Add group filter if specified
+                if (!string.IsNullOrEmpty(group) && int.TryParse(group, out int groupId))
                 {
-                    queryParams.Add($"keyword={Uri.EscapeDataString(search)}");
+                    requestBody.Filter = new JobCodeListFilterParamDto
+                    {
+                        Groups = new int[] { groupId }
+                    };
                 }
 
-                if (!string.IsNullOrEmpty(group))
+                var jsonPayload = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
                 {
-                    queryParams.Add($"group={Uri.EscapeDataString(group)}");
-                }
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var queryString = string.Join("&", queryParams);
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.List}?{queryString}");
+                // Backend has bug: uses [HttpGet] with [FromBody], which doesn't work
+                // We'll use POST as a workaround (or wait for backend fix)
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.JobCode.List}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    return await JsonSerializer.DeserializeAsync<JobCodeListResponse>(
+                    return await JsonSerializer.DeserializeAsync<ApiResponseDto<PagedResponse<JobCodeListResponseDto>>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
@@ -164,10 +186,26 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             try
             {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var userInfo = JsonSerializer.Deserialize<Models.UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    TempData["ErrorMessage"] = "User session is invalid. Please login again.";
+                    return RedirectToAction("Index", "Login");
+                }
+
+                var idClient = userInfo.PreferredClientId;
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var jobCodeTask = client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.GetById(id)}");
+                var jobCodeTask = client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.GetById(id)}?cid={idClient}");
                 var changeHistoryTask = GetChangeHistoryAsync(client, backendUrl, id, "jobCodeDetail", "JOBCODE");
 
                 await Task.WhenAll(jobCodeTask, changeHistoryTask);
@@ -176,10 +214,38 @@ namespace cfm_frontend.Controllers.Helpdesk
                 if (jobCodeResponse.IsSuccessStatusCode)
                 {
                     var responseStream = await jobCodeResponse.Content.ReadAsStreamAsync();
-                    viewmodel.JobCode = await JsonSerializer.DeserializeAsync<JobCodeModel>(
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<JobCodeDTO>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
+
+                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    {
+                        var dto = apiResponse.Data;
+
+                        // Map JobCodeDTO to JobCodeModel with null safety
+                        viewmodel.JobCode = new JobCodeModel
+                        {
+                            IdJobCode = dto.IdJobCode,
+                            Name = dto.Name,
+                            Description = dto.Description,
+                            Group = dto.Group?.Name ?? "N/A",
+                            LaborOrMaterial = HttpUtility.HtmlDecode(dto.Label?.Name ?? "N/A"),
+                            MaterialType = dto.MaterialType?.Name,
+                            EstimationTime = dto.EstimationTime != null
+                                ? $"{dto.EstimationTime.Days}d {dto.EstimationTime.Hours}h {dto.EstimationTime.Minutes}m"
+                                : "0d 0h 0m",
+                            MeasurementUnit = dto.MeasurementUnit?.Name ?? "N/A",
+                            UnitPrice = dto.UnitPrice != null ? (decimal)dto.UnitPrice.Price : 0,
+                            Currency = dto.UnitPrice?.Currency ?? "N/A",
+                            MinimumStock = (decimal?)dto.MinimumStock
+                        };
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = apiResponse?.Message ?? "Job code not found.";
+                        return RedirectToAction("Index");
+                    }
                 }
                 else
                 {
@@ -233,8 +299,8 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var jobCodeTask = client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.GetById(id)}");
-                var groupsTask = GetJobCodeGroupsAsync(client, backendUrl, idClient);
+                var jobCodeTask = client.GetAsync($"{backendUrl}{ApiEndpoints.JobCode.GetById(id)}?cid={idClient}");
+                var groupsTask = GetJobCodeListFilterAsync(client, backendUrl, idClient);
                 var currenciesTask = GetLookupDataAsync(client, backendUrl, "currency");
                 var measurementUnitsTask = GetLookupDataAsync(client, backendUrl, "measurementUnit");
                 var materialLabelsTask = GetLookupDataAsync(client, backendUrl, "materialLabel");
@@ -245,10 +311,39 @@ namespace cfm_frontend.Controllers.Helpdesk
                 if (jobCodeResponse.IsSuccessStatusCode)
                 {
                     var responseStream = await jobCodeResponse.Content.ReadAsStreamAsync();
-                    viewmodel.JobCode = await JsonSerializer.DeserializeAsync<JobCodeModel>(
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<JobCodeDTO>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
+
+                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    {
+                        var dto = apiResponse.Data;
+
+                        // Map JobCodeDTO to JobCodeModel with null safety
+                        viewmodel.JobCode = new JobCodeModel
+                        {
+                            IdJobCode = dto.IdJobCode,
+                            Name = dto.Name,
+                            Description = dto.Description,
+                            Group = dto.Group?.Name ?? "", // Store name for comparison in dropdown
+                            LaborOrMaterial = HttpUtility.HtmlDecode(dto.Label?.Name ?? ""), // Store name for comparison in radio
+                            MaterialType = dto.MaterialType?.Name,
+                            MaterialTypeId = dto.MaterialType?.Id,
+                            EstimationTime = dto.EstimationTime != null
+                                ? $"{dto.EstimationTime.Days},{dto.EstimationTime.Hours},{dto.EstimationTime.Minutes}"
+                                : "0,0,0", // Store as comma-separated for parsing
+                            MeasurementUnit = dto.MeasurementUnit?.Name ?? "", // Store name for comparison
+                            UnitPrice = dto.UnitPrice != null ? (decimal)dto.UnitPrice.Price : 0,
+                            Currency = dto.UnitPrice?.Currency ?? "", // Store currency code for comparison
+                            MinimumStock = (decimal?)dto.MinimumStock
+                        };
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = apiResponse?.Message ?? "Job code not found.";
+                        return RedirectToAction("Index");
+                    }
                 }
                 else
                 {
@@ -272,7 +367,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         [HttpPost]
-        public async Task<IActionResult> Edit(JobCodeUpdateRequest model)
+        public async Task<IActionResult> Edit([FromBody] JobCodeUpdateRequest model)
         {
             var accessCheck = this.CheckEditAccess("Helpdesk", "Job Code Management");
             if (accessCheck != null)
@@ -318,6 +413,31 @@ namespace cfm_frontend.Controllers.Helpdesk
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _controllerLogger.LogWarning("Failed to update job code. Status: {StatusCode}, Response: {Response}",
                         response.StatusCode, errorContent);
+
+                    // Parse backend error response
+                    try
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<ApiResponseDto<object>>(
+                            errorContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+
+                        if (errorResponse?.Errors != null && errorResponse.Errors.Any())
+                        {
+                            // Return all error messages from backend
+                            var errorMessages = string.Join(", ", errorResponse.Errors);
+                            return Json(new { success = false, message = errorMessages });
+                        }
+                        else if (!string.IsNullOrEmpty(errorResponse?.Message))
+                        {
+                            return Json(new { success = false, message = errorResponse.Message });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _controllerLogger.LogError(ex, "Error parsing backend error response");
+                    }
+
                     return Json(new { success = false, message = "Failed to update job code." });
                 }
             }
@@ -362,7 +482,7 @@ namespace cfm_frontend.Controllers.Helpdesk
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var groupsTask = GetJobCodeGroupsAsync(client, backendUrl, idClient);
+                var groupsTask = GetJobCodeListFilterAsync(client, backendUrl, idClient);
                 var currenciesTask = GetLookupDataAsync(client, backendUrl, "currency");
                 var measurementUnitsTask = GetLookupDataAsync(client, backendUrl, "measurementUnit");
                 var materialLabelsTask = GetLookupDataAsync(client, backendUrl, "materialLabel");
@@ -384,7 +504,7 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add(JobCodeCreateRequest model)
+        public async Task<IActionResult> Add([FromBody] JobCodeCreateRequest model)
         {
             var accessCheck = this.CheckAddAccess("Helpdesk", "Job Code Management");
             if (accessCheck != null)
@@ -430,6 +550,31 @@ namespace cfm_frontend.Controllers.Helpdesk
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _controllerLogger.LogWarning("Failed to create job code. Status: {StatusCode}, Response: {Response}",
                         response.StatusCode, errorContent);
+
+                    // Parse backend error response
+                    try
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<ApiResponseDto<object>>(
+                            errorContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+
+                        if (errorResponse?.Errors != null && errorResponse.Errors.Any())
+                        {
+                            // Return all error messages from backend
+                            var errorMessages = string.Join(", ", errorResponse.Errors);
+                            return Json(new { success = false, message = errorMessages });
+                        }
+                        else if (!string.IsNullOrEmpty(errorResponse?.Message))
+                        {
+                            return Json(new { success = false, message = errorResponse.Message });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _controllerLogger.LogError(ex, "Error parsing backend error response");
+                    }
+
                     return Json(new { success = false, message = "Failed to create job code." });
                 }
             }
@@ -437,6 +582,45 @@ namespace cfm_frontend.Controllers.Helpdesk
             {
                 _controllerLogger.LogError(ex, "Error creating job code");
                 return Json(new { success = false, message = "An error occurred while creating the job code." });
+            }
+        }
+
+        private async Task<List<JobCodeGroupDto>?> GetJobCodeListFilterAsync(
+            HttpClient client,
+            string? backendUrl,
+            int idClient,
+            string? keywords = null)
+        {
+            try
+            {
+                var url = $"{backendUrl}{ApiEndpoints.JobCode.ListFilter}?cid={idClient}";
+                if (!string.IsNullOrEmpty(keywords))
+                {
+                    url += $"&keywords={Uri.EscapeDataString(keywords)}";
+                }
+
+                var response = await client.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseStream = await response.Content.ReadAsStreamAsync();
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<JobCodeListFilterDto>>(
+                        responseStream,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return apiResponse?.Data?.Groups ?? new List<JobCodeGroupDto>();
+                }
+                else
+                {
+                    _controllerLogger.LogWarning("Failed to fetch job code filters. Status: {StatusCode}", response.StatusCode);
+                    return new List<JobCodeGroupDto>();
+                }
+            }
+            catch (Exception ex)
+            {
+                _controllerLogger.LogError(ex, "Error fetching job code filters from API");
+                return new List<JobCodeGroupDto>();
             }
         }
 
@@ -473,29 +657,44 @@ namespace cfm_frontend.Controllers.Helpdesk
         private async Task<List<LookupModel>?> GetLookupDataAsync(
             HttpClient client,
             string? backendUrl,
-            string lookupType)
+            string enumCategory)
         {
             try
             {
-                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Lookup.List}?type={lookupType}");
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.Masters.GetEnums(enumCategory)}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseStream = await response.Content.ReadAsStreamAsync();
-                    return await JsonSerializer.DeserializeAsync<List<LookupModel>>(
+                    var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponseDto<IEnumerable<EnumFormDetailResponse>>>(
                         responseStream,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
+
+                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    {
+                        // Map EnumFormDetailResponse to LookupModel
+                        return apiResponse.Data.Select(e => new LookupModel
+                        {
+                            Id = e.IdEnum,
+                            Value = e.EnumName,
+                            Label = e.EnumName,
+                            OrderIndex = e.DisplayOrder,
+                            IsActiveData = true // Enums don't have IsActiveData, assume all are active
+                        }).ToList();
+                    }
+
+                    return new List<LookupModel>();
                 }
                 else
                 {
-                    _controllerLogger.LogWarning("Failed to fetch lookup data for {Type}. Status: {StatusCode}", lookupType, response.StatusCode);
+                    _controllerLogger.LogWarning("Failed to fetch enum data for {Category}. Status: {StatusCode}", enumCategory, response.StatusCode);
                     return new List<LookupModel>();
                 }
             }
             catch (Exception ex)
             {
-                _controllerLogger.LogError(ex, "Error fetching lookup data for {Type}", lookupType);
+                _controllerLogger.LogError(ex, "Error fetching enum data for {Category}", enumCategory);
                 return new List<LookupModel>();
             }
         }
@@ -543,10 +742,25 @@ namespace cfm_frontend.Controllers.Helpdesk
 
             try
             {
+                var userSessionJson = HttpContext.Session.GetString("UserSession");
+                if (string.IsNullOrEmpty(userSessionJson))
+                {
+                    return Json(new { success = false, message = "Session expired. Please login again." });
+                }
+
+                var userInfo = JsonSerializer.Deserialize<Models.UserInfo>(userSessionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (userInfo == null || userInfo.PreferredClientId == 0)
+                {
+                    return Json(new { success = false, message = "Invalid session. Please login again." });
+                }
+
+                var idClient = userInfo.PreferredClientId;
                 var client = _httpClientFactory.CreateClient("BackendAPI");
                 var backendUrl = _configuration["BackendBaseUrl"];
 
-                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.JobCode.Delete(id)}");
+                var response = await client.DeleteAsync($"{backendUrl}{ApiEndpoints.JobCode.Delete(id)}?cid={idClient}");
 
                 if (response.IsSuccessStatusCode)
                 {

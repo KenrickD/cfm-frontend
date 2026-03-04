@@ -32,6 +32,7 @@
   <ItemGroup>
     <Folder Include="Controllers\ContactLibrary\" />
     <Folder Include="Controllers\PropertyPortfolio\" />
+    <Folder Include="DTOs\Master\" />
   </ItemGroup>
 
 </Project>

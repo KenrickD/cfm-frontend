@@ -26,7 +26,10 @@
       "Bash(cat Models/HelpdeskModel/CostApproverGroupModel.cs)",
       "Bash(cat Services/Helpdesk/ICostApproverGroupServices.cs)",
       "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver-add.js\")",
-      "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver.js\")"
+      "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver.js\")",
+      "Bash(test -f \"C:\\Users\\kenri\\OneDrive\\Documents\\Work\\Colliers\\Repo\\CFM Backend\\CFM Backend\\Controllers\\Helpdesk\\Settings\\JobCodeController.cs\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(test -f \"c:\\Repos\\CFM Frontend\\wwwroot\\assets\\css\\pages\\job-code-form.css\")"
     ],
     "deny": [],
     "ask": []

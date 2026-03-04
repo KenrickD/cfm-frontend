@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editJobCodeForm');
-    const saveButton = document.getElementById('saveButton');
+    const updateButton = document.getElementById('updateButton');
 
     if (form) {
         form.addEventListener('submit', async function(e) {
@@ -12,22 +12,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            saveButton.disabled = true;
-            saveButton.innerHTML = '<i class="ti ti-loader me-2"></i>Saving...';
+            updateButton.disabled = true;
+            updateButton.innerHTML = '<i class="ti ti-loader me-2"></i>Updating...';
+
+            const days = parseInt(document.getElementById('estimationTimeDays').value) || 0;
+            const hours = parseInt(document.getElementById('estimationTimeHours').value) || 0;
+            const minutes = parseInt(document.getElementById('estimationTimeMinutes').value) || 0;
+
+            const materialTypeIdValue = document.getElementById('materialTypeId').value;
+            const materialTypeId = materialTypeIdValue && materialTypeIdValue !== '' ? parseInt(materialTypeIdValue) : null;
 
             const formData = {
-                idJobCode: parseInt(document.getElementById('idJobCode').value),
-                name: document.getElementById('name').value,
-                group: document.getElementById('group').value,
-                description: document.getElementById('description').value || null,
-                laborOrMaterial: document.querySelector('input[name="laborOrMaterial"]:checked').value,
-                estimationTimeDays: parseInt(document.getElementById('estimationTimeDays').value) || 0,
-                estimationTimeHours: parseInt(document.getElementById('estimationTimeHours').value) || 0,
-                estimationTimeMinutes: parseInt(document.getElementById('estimationTimeMinutes').value) || 0,
-                currency: document.getElementById('currency').value,
-                unitPrice: parseFloat(document.getElementById('unitPrice').value),
-                measurementUnit: document.getElementById('measurementUnit').value,
-                minimumStock: parseFloat(document.getElementById('minimumStock').value) || 0
+                IdJobCode: parseInt(document.getElementById('idJobCode').value),
+                Name: document.getElementById('name').value,
+                Group_IdType: parseInt(document.getElementById('group').value),
+                Description: document.getElementById('description').value || null,
+                Label_IdEnum: parseInt(document.querySelector('input[name="laborOrMaterial"]:checked').value),
+                MaterialType_IdType: materialTypeId,
+                Currency_IdEnum: parseInt(document.getElementById('currency').value),
+                UnitPrice: parseFloat(document.getElementById('unitPrice').value),
+                MeasurementUnit_IdEnum: parseInt(document.getElementById('measurementUnit').value),
+                MinimumStock: parseFloat(document.getElementById('minimumStock').value) || null,
+                EstimationTime: {
+                    Days: days,
+                    Hours: hours,
+                    Minutes: minutes,
+                    TimeSpan: (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000)
+                }
             };
 
             try {
@@ -44,18 +55,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                     showNotification('Job code updated successfully', 'success', 'Success');
                     setTimeout(function() {
-                        window.location.href = '/jobcode/detail/' + formData.idJobCode;
+                        window.location.href = '/jobcode/detail/' + formData.IdJobCode;
                     }, 1500);
                 } else {
                     showNotification(result.message || 'Failed to update job code', 'error', 'Error');
-                    saveButton.disabled = false;
-                    saveButton.innerHTML = '<i class="ti ti-device-floppy me-2"></i>Save Changes';
+                    updateButton.disabled = false;
+                    updateButton.innerHTML = '<i class="ti ti-device-floppy me-2"></i>Update Job Code';
                 }
             } catch (error) {
                 console.error('Error updating job code:', error);
                 showNotification('An error occurred while updating the job code', 'error', 'Error');
-                saveButton.disabled = false;
-                saveButton.innerHTML = '<i class="ti ti-device-floppy me-2"></i>Save Changes';
+                updateButton.disabled = false;
+                updateButton.innerHTML = '<i class="ti ti-device-floppy me-2"></i>Update Job Code';
             }
         });
 

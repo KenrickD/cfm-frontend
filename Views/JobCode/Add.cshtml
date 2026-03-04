@@ -6,38 +6,80 @@
 }
 
 @section styles {
-    <link rel="stylesheet" href="~/assets/css/pages/job-code-form.css">
+    <style>
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+
+        .time-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-input-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .time-input-item label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .time-input-item input {
+            text-align: center;
+        }
+    </style>
 }
 
 <div class="row">
-    <div class="col-12">
-        <div class="form-card">
-            <div class="form-header">
-                <div class="d-flex align-items-center justify-content-between">
-                    <h4><i class="ti ti-plus me-2"></i>Add New Job Code</h4>
-                    <i class="ti ti-info-circle info-icon"></i>
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10">Add New Job Code</h5>
+                    <p class="m-b-0 text-muted">Create a new job code with labor and material information</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("Index", "JobCode")" class="btn btn-outline-secondary btn-sm">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
                 </div>
             </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-1">Job Code Information</h5>
+                <p class="text-muted mb-0 small">Fill in the details for the new job code</p>
+            </div>
+            <div class="card-body">
 
             <form id="addJobCodeForm">
                 <div class="row">
                     <!-- Name -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">Name</label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter job code name" required>
+                        <label class="form-label fw-semibold required-field">Name</label>
+                        <input type="text" class="form-control form-control-sm" id="name" name="name" placeholder="Enter job code name" required>
                         <div class="invalid-feedback">Please enter a job code name.</div>
                     </div>
 
                     <!-- Group -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">Group</label>
-                        <select class="form-select" id="group" name="group" required>
+                        <label class="form-label fw-semibold required-field">Group</label>
+                        <select class="form-select form-select-sm" id="group" name="group" required>
                             <option value="">Select Group</option>
                             @if (Model.Groups != null && Model.Groups.Any())
                             {
-                                foreach (var group in Model.Groups.Where(g => g.IsActiveData))
+                                foreach (var group in Model.Groups)
                                 {
-                                    <option value="@group.Name">@group.Name</option>
+                                    <option value="@group.Id">@group.Name</option>
                                 }
                             }
                         </select>
@@ -46,21 +88,21 @@
 
                     <!-- Description -->
                     <div class="col-12 mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter description (optional)"></textarea>
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control form-control-sm" id="description" name="description" rows="3" placeholder="Enter description (optional)"></textarea>
                     </div>
 
                     <!-- Labor/Material -->
                     <div class="col-12 mb-3">
-                        <label class="form-label required-field">Labor/Material?</label>
-                        <div class="radio-group">
+                        <label class="form-label fw-semibold required-field">Labor/Material?</label>
+                        <div class="mt-2">
                             @if (Model.MaterialLabels != null && Model.MaterialLabels.Any())
                             {
                                 var index = 0;
-                                foreach (var label in Model.MaterialLabels.Where(l => l.IsActiveData))
+                                foreach (var label in Model.MaterialLabels)
                                 {
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial@(index)" value="@label.Value" @(index == 0 ? "checked" : "")>
+                                        <input class="form-check-input" type="radio" name="laborOrMaterial" id="laborMaterial@(index)" value="@label.Id" @(index == 0 ? "checked" : "")>
                                         <label class="form-check-label" for="laborMaterial@(index)">
                                             @label.Label
                                         </label>
@@ -107,36 +149,36 @@
 
                     <!-- Unit Price -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">Unit Price</label>
-                        <div class="input-group">
-                            <select class="form-select" id="currency" name="currency" required style="max-width: 120px;">
+                        <label class="form-label fw-semibold required-field">Unit Price</label>
+                        <div class="input-group input-group-sm">
+                            <select class="form-select form-select-sm" id="currency" name="currency" required style="max-width: 120px;">
                                 @if (Model.Currencies != null && Model.Currencies.Any())
                                 {
-                                    foreach (var currency in Model.Currencies.Where(c => c.IsActiveData))
+                                    foreach (var currency in Model.Currencies)
                                     {
-                                        <option value="@currency.Value" selected="@(currency.Value == "IDR" ? "selected" : null)">@currency.Label</option>
+                                        <option value="@currency.Id" selected="@(currency.Value == "IDR" ? "selected" : null)">@currency.Label</option>
                                     }
                                 }
                                 else
                                 {
-                                    <option value="IDR" selected>IDR</option>
+                                    <option value="" selected>IDR</option>
                                 }
                             </select>
-                            <input type="number" class="form-control" id="unitPrice" name="unitPrice" placeholder="0.00" step="0.01" min="0" required>
+                            <input type="number" class="form-control form-control-sm" id="unitPrice" name="unitPrice" placeholder="0.00" step="0.01" min="0" required>
                         </div>
                         <div class="invalid-feedback">Please enter a unit price.</div>
                     </div>
 
                     <!-- Measurement Unit -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">Measurement Unit</label>
-                        <select class="form-select" id="measurementUnit" name="measurementUnit" required>
+                        <label class="form-label fw-semibold required-field">Measurement Unit</label>
+                        <select class="form-select form-select-sm" id="measurementUnit" name="measurementUnit" required>
                             <option value="">Select Unit</option>
                             @if (Model.MeasurementUnits != null && Model.MeasurementUnits.Any())
                             {
-                                foreach (var unit in Model.MeasurementUnits.Where(u => u.IsActiveData))
+                                foreach (var unit in Model.MeasurementUnits)
                                 {
-                                    <option value="@unit.Value">@unit.Label</option>
+                                    <option value="@unit.Id">@unit.Label</option>
                                 }
                             }
                         </select>
@@ -145,22 +187,30 @@
 
                     <!-- Minimum Stock -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Minimum Stock</label>
-                        <input type="number" class="form-control" id="minimumStock" name="minimumStock" placeholder="0.00" step="0.01" min="0" value="0">
-                    </div>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary btn-save" id="saveButton">
-                            <i class="ti ti-device-floppy me-2"></i>Save Job Code
-                        </button>
-                        <a href="@Url.Action("Index", "JobCode")" class="btn btn-secondary ms-2">
-                            <i class="ti ti-x me-2"></i>Cancel
-                        </a>
+                        <label class="form-label fw-semibold">Minimum Stock</label>
+                        <input type="number" class="form-control form-control-sm" id="minimumStock" name="minimumStock" placeholder="0.00" step="0.01" min="0" value="0">
                     </div>
                 </div>
             </form>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <a href="@Url.Action("Index", "JobCode")" class="btn btn-outline-secondary">
+                        <i class="ti ti-x me-1"></i>
+                        Cancel
+                    </a>
+                    <div>
+                        <button type="submit" form="addJobCodeForm" class="btn btn-primary" id="saveButton">
+                            <i class="ti ti-check me-1"></i>
+                            Save Job Code
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

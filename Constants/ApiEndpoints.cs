@@ -852,13 +852,21 @@ namespace cfm_frontend.Constants
         /// </summary>
         public static class JobCode
         {
-            public const string Base = ApiBase + "/jobcode";
+            public const string Base = ApiBase + "/jobcodes";
 
             /// <summary>
-            /// GET: Get all job codes
-            /// Query params: idClient, isActiveData (optional), keyword (optional), group (optional), page (optional)
+            /// GET: Get all job codes (paginated)
+            /// Request body: JobCodeListParamDto (IdClient, Keywords, Page, PageSize, Filter)
+            /// Response: ApiResponseDto with PagedResponse of JobCodeListResponseDto
             /// </summary>
             public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get list filter options (groups)
+            /// Query params: cid (client id), keywords (optional)
+            /// Response: ApiResponseDto with JobCodeListFilterDto
+            /// </summary>
+            public const string ListFilter = Base + "/list-filter";
 
             /// <summary>
             /// GET: Search job codes for Labor/Material modal
@@ -868,8 +876,10 @@ namespace cfm_frontend.Constants
             public const string Search = Base + "/search";
 
             /// <summary>
-            /// GET: Get job code by ID
+            /// GET: Get job code details by ID
             /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: ApiResponseDto with JobCodeDTO
             /// </summary>
             /// <param name="id">Job code ID</param>
             /// <returns>Get by ID endpoint URL</returns>
@@ -877,21 +887,27 @@ namespace cfm_frontend.Constants
 
             /// <summary>
             /// POST: Create new job code
+            /// Request body: JobCodePayloadDto
+            /// Response: ApiResponseDto with new IdJobCode
             /// </summary>
-            public const string Create = Base + "/create";
+            public const string Create = Base;
 
             /// <summary>
             /// PUT: Update existing job code
+            /// Request body: JobCodePayloadDto (includes IdJobCode)
+            /// Response: ApiResponseDto with updated IdJobCode
             /// </summary>
-            public const string Update = Base + "/update";
+            public const string Update = Base;
 
             /// <summary>
             /// DELETE: Delete job code by ID
             /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: ApiResponseDto with success message
             /// </summary>
             /// <param name="id">Job code ID</param>
             /// <returns>Delete endpoint URL</returns>
-            public static string Delete(int id) => $"{Base}/delete/{id}";
+            public static string Delete(int id) => $"{Base}/{id}";
 
             /// <summary>
             /// GET: Get change history for job code

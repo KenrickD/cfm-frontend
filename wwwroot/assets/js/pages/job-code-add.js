@@ -24,19 +24,26 @@
             return;
         }
 
+        const days = parseInt(document.getElementById('estimationTimeDays').value) || 0;
+        const hours = parseInt(document.getElementById('estimationTimeHours').value) || 0;
+        const minutes = parseInt(document.getElementById('estimationTimeMinutes').value) || 0;
+
         const formData = {
-            name: document.getElementById('name').value.trim(),
-            description: document.getElementById('description').value.trim() || null,
-            group: document.getElementById('group').value,
-            laborOrMaterial: document.querySelector('input[name="laborOrMaterial"]:checked').value,
-            materialType: null,
-            estimationTimeDays: parseInt(document.getElementById('estimationTimeDays').value) || 0,
-            estimationTimeHours: parseInt(document.getElementById('estimationTimeHours').value) || 0,
-            estimationTimeMinutes: parseInt(document.getElementById('estimationTimeMinutes').value) || 0,
-            measurementUnit: document.getElementById('measurementUnit').value,
-            unitPrice: parseFloat(document.getElementById('unitPrice').value) || 0,
-            currency: document.getElementById('currency').value,
-            minimumStock: parseFloat(document.getElementById('minimumStock').value) || 0
+            Name: document.getElementById('name').value.trim(),
+            Description: document.getElementById('description').value.trim() || null,
+            Group_IdType: parseInt(document.getElementById('group').value),
+            Label_IdEnum: parseInt(document.querySelector('input[name="laborOrMaterial"]:checked').value),
+            MaterialType_IdType: null,
+            MeasurementUnit_IdEnum: parseInt(document.getElementById('measurementUnit').value),
+            UnitPrice: parseFloat(document.getElementById('unitPrice').value) || 0,
+            Currency_IdEnum: parseInt(document.getElementById('currency').value),
+            MinimumStock: parseFloat(document.getElementById('minimumStock').value) || null,
+            EstimationTime: {
+                Days: days,
+                Hours: hours,
+                Minutes: minutes,
+                TimeSpan: (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000)
+            }
         };
 
         // Disable submit button
