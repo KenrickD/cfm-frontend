@@ -209,17 +209,17 @@
 
                                 @foreach (var transaction in Model.Transactions)
                                 {
-                                    @if (lastDate == null || lastDate.Value.Date != transaction.transactionDate.Date)
+                                    @if (lastDate == null || lastDate.Value.Date != transaction.TransactionDate.Date)
                                     {
                                         <tr class="date-group-row">
                                             <td colspan="7" class="fw-bold">
-                                                @transaction.transactionDate.ToString("dddd, dd MMMM yyyy")
+                                                @transaction.TransactionDate.ToString("dddd, dd MMMM yyyy")
                                             </td>
                                         </tr>
-                                        lastDate = transaction.transactionDate;
+                                        lastDate = transaction.TransactionDate;
                                     }
 
-                                    var statusClass = transaction.transactionStatus switch
+                                    var statusClass = transaction.Status switch
                                     {
                                         "Stock Increase" => "bg-light-success",
                                         "Stock Usage" => "bg-light-warning",
@@ -230,30 +230,34 @@
                                     <tr>
                                         <td>
                                             <span class="text-muted small">
-                                                @transaction.transactionDate.ToString("hh:mm tt")
+                                                @transaction.TransactionDate.ToString("hh:mm tt")
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge @statusClass">@transaction.transactionStatus</span>
+                                            <span class="badge @statusClass">@transaction.Status</span>
                                         </td>
                                         <td>
-                                            <span>@transaction.materialName</span>
+                                            <span>@transaction.Material</span>
                                         </td>
                                         <td>
-                                            <span>@transaction.quantity</span>
+                                            <span>@transaction.Quantity @transaction.MeasurementUnit</span>
                                         </td>
                                         <td>
                                             <div class="text-wrap" style="max-width: 300px">
-                                                @transaction.description
+                                                @transaction.Description
                                             </div>
                                         </td>
                                         <td>
-                                            @if (!string.IsNullOrEmpty(transaction.workRequestCode))
+                                            @if (!string.IsNullOrEmpty(transaction.WorkRequetCode) && transaction.IdWorkRequest.HasValue)
                                             {
-                                                <a href="/helpdesk/work-requests/@transaction.idWorkRequest"
-                                                   class="text-primary">
-                                                    @transaction.workRequestCode
+                                                <a href="@Url.Action("WorkRequestDetail", "Helpdesk", new { id = transaction.IdWorkRequest })"
+                                                   class="text-primary text-decoration-none">
+                                                    @transaction.WorkRequetCode
                                                 </a>
+                                            }
+                                            else if (!string.IsNullOrEmpty(transaction.WorkRequetCode))
+                                            {
+                                                <span class="text-primary">@transaction.WorkRequetCode</span>
                                             }
                                             else
                                             {
@@ -262,12 +266,12 @@
                                         </td>
                                         <td>
                                             <div class="grid gap-0 column-gap-2 d-flex flex-row">
-                                                @if (string.IsNullOrEmpty(transaction.workRequestCode))
+                                                @if (string.IsNullOrEmpty(transaction.WorkRequetCode))
                                                 {
                                                     @if (Context.Session.CanEdit("Helpdesk", "Inventory Management"))
                                                     {
                                                         <button class="btn btn-light btn-sm btn-edit-transaction"
-                                                                data-id="@transaction.idInventoryTransaction"
+                                                                data-id="@transaction.IdInventoryTransactionHistory"
                                                                 data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
                                                                 data-bs-content="Edit this Transaction" data-bs-trigger="hover">
                                                             <i class="ti ti-edit-circle"></i>
@@ -276,7 +280,7 @@
                                                     @if (Context.Session.CanDelete("Helpdesk", "Inventory Management"))
                                                     {
                                                         <button type="button" class="btn btn-light btn-sm btn-delete-transaction"
-                                                                data-id="@transaction.idInventoryTransaction"
+                                                                data-id="@transaction.IdInventoryTransactionHistory"
                                                                 data-bs-toggle="popover" data-bs-placement="top"
                                                                 data-bs-content="Delete this Transaction" data-bs-trigger="hover">
                                                             <i class="ti ti-trash"></i>
@@ -327,69 +331,16 @@
             <div class="modal-body">
                 <form id="filterForm">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="filter-section">
                                 <label class="filter-section-title">Transaction Status</label>
-                                <div class="filter-checkbox-group">
-                                    @if (Model?.FilterOptions?.TransactionStatuses != null && Model.FilterOptions.TransactionStatuses.Any())
-                                    {
-                                        @foreach (var status in Model.FilterOptions.TransactionStatuses)
-                                        {
-                                            <div class="filter-checkbox-item form-check">
-                                                <input class="form-check-input" type="checkbox"
-                                                       value="@status.Value"
-                                                       id="status_@status.Value.Replace(" ", "")"
-                                                       name="transactionStatuses">
-                                                <label class="form-check-label" for="status_@status.Value.Replace(" ", "")">
-                                                    @status.Label
-                                                </label>
-                                            </div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <div class="text-center text-muted py-2">
-                                            <small>No transaction statuses available</small>
+                                <div class="filter-checkbox-group" id="transactionStatusFilters">
+                                    <div class="text-center text-muted py-2">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
                                         </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="filter-section">
-                                <label class="filter-section-title">Work Request</label>
-                                <div class="filter-checkbox-group">
-                                    @if (Model?.FilterOptions?.WorkRequests != null && Model.FilterOptions.WorkRequests.Any())
-                                    {
-                                        @foreach (var wr in Model.FilterOptions.WorkRequests)
-                                        {
-                                            <div class="filter-checkbox-item form-check">
-                                                <input class="form-check-input" type="checkbox"
-                                                       value="@wr.idWorkRequest"
-                                                       id="wr_@wr.idWorkRequest"
-                                                       name="workRequestIds">
-                                                <label class="form-check-label" for="wr_@wr.idWorkRequest">
-                                                    <a href="/helpdesk/work-requests/@wr.idWorkRequest"
-                                                       target="_blank"
-                                                       class="text-primary"
-                                                       onclick="event.stopPropagation();">
-                                                        @wr.workRequestCode
-                                                    </a>
-                                                    @if (!string.IsNullOrEmpty(wr.workTitle))
-                                                    {
-                                                        <span class="text-muted small"> - @wr.workTitle</span>
-                                                    }
-                                                </label>
-                                            </div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <div class="text-center text-muted py-2">
-                                            <small>No work requests with inventory transactions</small>
-                                        </div>
-                                    }
+                                        <small class="ms-2">Loading transaction statuses...</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -563,392 +514,11 @@
     <script src="~/assets/js/components/searchable-dropdown.js"></script>
 
     <script>
-        $(document).ready(function () {
-            $('[data-bs-toggle="popover"]').popover({
-                container: 'body',
-                placement: 'top',
-                trigger: 'hover'
-            });
-
-            $('#clearFiltersBtn').on('click', function() {
-                $('#filterForm')[0].reset();
-                $('#filterForm input[type="checkbox"]').prop('checked', false);
-
-                var searchTerm = $('#mainSearchInput').val();
-                var url = new URL(window.location.origin + '/Inventory/Index');
-                if (searchTerm && searchTerm.trim() !== '') {
-                    url.searchParams.set('search', searchTerm.trim());
-                }
-                window.location.href = url.toString();
-            });
-
-            $('#applyFiltersBtn').on('click', function() {
-                var filters = {
-                    transactionStatuses: $('input[name="transactionStatuses"]:checked')
-                        .map(function() { return this.value; }).get(),
-                    workRequestIds: $('input[name="workRequestIds"]:checked')
-                        .map(function() { return this.value; }).get(),
-                    transactionDateFrom: $('#transactionDateFrom').val(),
-                    transactionDateTo: $('#transactionDateTo').val()
-                };
-
-                var url = new URL(window.location.origin + '/Inventory/Index');
-
-                if (filters.transactionDateFrom)
-                    url.searchParams.set('transactionDateFrom', filters.transactionDateFrom);
-                if (filters.transactionDateTo)
-                    url.searchParams.set('transactionDateTo', filters.transactionDateTo);
-
-                filters.transactionStatuses.forEach(s =>
-                    url.searchParams.append('transactionStatuses', s));
-                filters.workRequestIds.forEach(id =>
-                    url.searchParams.append('workRequestIds', id));
-
-                var searchTerm = $('#mainSearchInput').val();
-                if (searchTerm && searchTerm.trim() !== '') {
-                    url.searchParams.set('search', searchTerm.trim());
-                }
-
-                url.searchParams.set('page', '1');
-
-                window.location.href = url.toString();
-            });
-
-            $('#searchButton').on('click', function() {
-                var searchTerm = $('#mainSearchInput').val();
-                var currentUrl = new URL(window.location.href);
-
-                if (searchTerm && searchTerm.trim() !== '') {
-                    currentUrl.searchParams.set('search', searchTerm.trim());
-                } else {
-                    currentUrl.searchParams.delete('search');
-                }
-
-                currentUrl.searchParams.delete('page');
-                window.location.href = currentUrl.toString();
-            });
-
-            $('#mainSearchInput').on('keypress', function(e) {
-                if (e.which === 13) {
-                    $('#searchButton').click();
-                }
-            });
-
-            $('#clearSearchButton').on('click', function() {
-                $('#mainSearchInput').val('');
-                var currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.delete('search');
-                currentUrl.searchParams.delete('page');
-                window.location.href = currentUrl.toString();
-            });
-
-            function getQueryParam(name) {
-                const urlParams = new URLSearchParams(window.location.search);
-                return urlParams.getAll(name);
-            }
-
-            const transactionStatuses = getQueryParam('transactionStatuses');
-            transactionStatuses.forEach(s =>
-                $(`input[name="transactionStatuses"][value="${s}"]`).prop('checked', true));
-
-            const workRequestIds = getQueryParam('workRequestIds');
-            workRequestIds.forEach(id =>
-                $(`input[name="workRequestIds"][value="${id}"]`).prop('checked', true));
-
-            const transactionDateFrom = getQueryParam('transactionDateFrom')[0];
-            if (transactionDateFrom) $('#transactionDateFrom').val(transactionDateFrom);
-
-            const transactionDateTo = getQueryParam('transactionDateTo')[0];
-            if (transactionDateTo) $('#transactionDateTo').val(transactionDateTo);
-
-            // Transaction Modal State Management
-            let currentTransactionId = 0;
-            let currentEditMode = 'create';
-            let selectedMaterial = null;
-            let materialSearchTimeout = null;
-
-            // Load stock movement types from filter options
-            function loadStockMovementTypes() {
-                const statuses = @Html.Raw(Model?.FilterOptions?.TransactionStatuses != null ? Json.Serialize(Model.FilterOptions.TransactionStatuses) : "[]");
-                const $select = $('#stockMovementType');
-                $select.empty().append('<option value="">Select Stock Movement Type</option>');
-
-                if (statuses && statuses.length > 0) {
-                    statuses.forEach(status => {
-                        $select.append($('<option></option>')
-                            .val(status.value)
-                            .text(status.label));
-                    });
-                }
-            }
-
-            // Open Add Modal
-            $('a[href="@Url.Action("Add", "Inventory")"]').on('click', function(e) {
-                e.preventDefault();
-                openTransactionModal('create');
-            });
-
-            // Open Edit Modal
-            $(document).on('click', '.btn-edit-transaction', function() {
-                const transactionId = $(this).data('id');
-                openTransactionModal('edit', transactionId);
-            });
-
-            function openTransactionModal(mode, transactionId = 0) {
-                currentEditMode = mode;
-                currentTransactionId = transactionId;
-                selectedMaterial = null;
-
-                $('#transactionForm')[0].reset();
-                $('#transactionId').val(transactionId);
-                $('#transactionModalLabel').text(mode === 'create' ? 'Add Inventory Transaction' : 'Edit Inventory Transaction');
-
-                // Reset material selection
-                $('#materialSearchContainer').show();
-                $('#materialSelected').hide();
-                $('#materialSearch').val('');
-                $('#materialDropdown').removeClass('show').empty();
-
-                // Set today's date as default
-                const today = new Date().toISOString().split('T')[0];
-                $('#transactionDate').val(today);
-
-                // Reset quantity unit
-                $('#quantityUnit').text('PCS');
-
-                if (mode === 'edit' && transactionId > 0) {
-                    loadTransactionData(transactionId);
-                }
-
-                $('#transactionModal').modal('show');
-            }
-
-            function loadTransactionData(id) {
-                $.ajax({
-                    url: '/Inventory/GetById',
-                    method: 'GET',
-                    data: { id: id },
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            const data = response.data;
-
-                            $('#stockMovementType').val(data.transactionStatus);
-                            $('#transactionDate').val(data.transactionDate.split('T')[0]);
-                            $('#quantity').val(Math.abs(data.quantity));
-                            $('#description').val(data.description);
-
-                            // Set material (show as selected card)
-                            selectedMaterial = {
-                                idMaterial: data.idMaterial || 0,
-                                materialName: data.materialName,
-                                materialCode: '',
-                                remainingStock: 0,
-                                unit: 'PCS'
-                            };
-                            showSelectedMaterial();
-                        } else {
-                            showNotification(response.message || 'Failed to load transaction data', 'error', 'Error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading transaction:', error);
-                        showNotification('Error loading transaction data', 'error', 'Error');
-                    }
-                });
-            }
-
-            // Material Search (Typeahead)
-            $('#materialSearch').on('keyup', function() {
-                clearTimeout(materialSearchTimeout);
-                const term = $(this).val().trim();
-
-                if (term.length < 2) {
-                    $('#materialDropdown').removeClass('show').empty();
-                    return;
-                }
-
-                materialSearchTimeout = setTimeout(function() {
-                    searchMaterials(term);
-                }, 300);
-            });
-
-            function searchMaterials(term) {
-                $.ajax({
-                    url: '/Inventory/SearchMaterials',
-                    method: 'GET',
-                    data: { term: term },
-                    success: function(response) {
-                        const $dropdown = $('#materialDropdown');
-                        $dropdown.empty();
-
-                        if (response.success && response.data && response.data.length > 0) {
-                            $.each(response.data, function(index, material) {
-                                const $item = $('<div></div>')
-                                    .addClass('typeahead-item')
-                                    .html(`
-                                        <div>
-                                            <strong>${material.materialCode || ''} ${material.materialName}</strong><br>
-                                            <small class="text-muted">Remaining Stock: ${material.remainingStock} ${material.unit}</small>
-                                        </div>
-                                    `)
-                                    .on('click', function() {
-                                        selectMaterial(material);
-                                    });
-                                $dropdown.append($item);
-                            });
-                            $dropdown.addClass('show');
-                        } else {
-                            $dropdown.append(
-                                $('<div></div>')
-                                    .addClass('typeahead-item text-muted')
-                                    .text('No materials found')
-                            );
-                            $dropdown.addClass('show');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error searching materials:', error);
-                        showNotification('Error searching materials', 'error', 'Error');
-                    }
-                });
-            }
-
-            function selectMaterial(material) {
-                selectedMaterial = material;
-                showSelectedMaterial();
-            }
-
-            function showSelectedMaterial() {
-                $('#materialSearchContainer').hide();
-                $('#materialDropdown').removeClass('show').empty();
-
-                $('#selectedMaterialName').text(selectedMaterial.materialName);
-                $('#selectedMaterialCode').text(selectedMaterial.materialCode || '');
-                $('#selectedMaterialStock').text(`${selectedMaterial.remainingStock} ${selectedMaterial.unit}`);
-                $('#selectedMaterialId').val(selectedMaterial.idMaterial);
-                $('#selectedMaterialUnit').val(selectedMaterial.unit);
-                $('#quantityUnit').text(selectedMaterial.unit);
-
-                $('#materialSelected').show();
-            }
-
-            // Remove Material Selection
-            $('#removeMaterialBtn').on('click', function() {
-                selectedMaterial = null;
-                $('#materialSelected').hide();
-                $('#materialSearchContainer').show();
-                $('#materialSearch').val('').focus();
-                $('#selectedMaterialId').val('');
-                $('#selectedMaterialUnit').val('');
-                $('#quantityUnit').text('PCS');
-            });
-
-            // Save Transaction
-            $('#saveTransactionBtn').on('click', function() {
-                if (!validateTransactionForm()) {
-                    return;
-                }
-
-                const formData = {
-                    stockMovementType: $('#stockMovementType').val(),
-                    transactionDate: $('#transactionDate').val(),
-                    idMaterial: parseInt($('#selectedMaterialId').val()),
-                    quantity: parseFloat($('#quantity').val()),
-                    description: $('#description').val()
-                };
-
-                const url = currentEditMode === 'create'
-                    ? '/Inventory/Create'
-                    : `/Inventory/Update?id=${currentTransactionId}`;
-
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    data: formData,
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            showNotification(response.message || 'Transaction saved successfully!', 'success', 'Success');
-                            $('#transactionModal').modal('hide');
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1500);
-                        } else {
-                            showNotification(response.message || 'Failed to save transaction', 'error', 'Error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error saving transaction:', error);
-                        showNotification('Error saving transaction', 'error', 'Error');
-                    }
-                });
-            });
-
-            function validateTransactionForm() {
-                const stockMovementType = $('#stockMovementType').val();
-                if (!stockMovementType) {
-                    showNotification('Please select a stock movement type', 'error', 'Validation Error');
-                    return false;
-                }
-
-                const transactionDate = $('#transactionDate').val();
-                if (!transactionDate) {
-                    showNotification('Please select a transaction date', 'error', 'Validation Error');
-                    return false;
-                }
-
-                if (!selectedMaterial || !$('#selectedMaterialId').val()) {
-                    showNotification('Please select a material', 'error', 'Validation Error');
-                    return false;
-                }
-
-                const quantity = parseFloat($('#quantity').val());
-                if (!quantity || quantity <= 0) {
-                    showNotification('Please enter a valid quantity', 'error', 'Validation Error');
-                    return false;
-                }
-
-                return true;
-            }
-
-            // Delete Transaction
-            let deleteTransactionId = 0;
-
-            $(document).on('click', '.btn-delete-transaction', function() {
-                deleteTransactionId = $(this).data('id');
-                $('#deleteModal').modal('show');
-            });
-
-            $('#confirmDeleteBtn').on('click', function() {
-                $.ajax({
-                    url: '/Inventory/Delete',
-                    method: 'POST',
-                    data: { id: deleteTransactionId },
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            showNotification(response.message || 'Transaction deleted successfully!', 'success', 'Success');
-                            $('#deleteModal').modal('hide');
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1500);
-                        } else {
-                            showNotification(response.message || 'Failed to delete transaction', 'error', 'Error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error deleting transaction:', error);
-                        showNotification('Error deleting transaction', 'error', 'Error');
-                    }
-                });
-            });
-
-            // Initialize
-            loadStockMovementTypes();
-        });
+        // Page Context for multi-tab safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
     </script>
+
+    <script src="~/assets/js/pages/inventory/inventory.js"></script>
 }

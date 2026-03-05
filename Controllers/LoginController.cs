@@ -108,7 +108,8 @@ namespace cfm_frontend.Controllers
                                 TimeZoneName = userInfoResponse.TimeZoneName,
                                 PreferredTimezoneIdTimezone = userInfoResponse.Preferred_TimeZone_idTimeZone,
                                 IdCompany = userInfoResponse.Preferred_Company_idCompany,
-                                LoginTime = DateTime.UtcNow
+                                LoginTime = DateTime.UtcNow,
+                                IdEmployee = userInfoResponse.idEmployee
                             };
 
                             HttpContext.Session.SetString("UserSession", JsonSerializer.Serialize(userInfo));

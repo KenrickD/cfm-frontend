@@ -747,8 +747,23 @@ namespace cfm_frontend.Controllers.Helpdesk
                     return RedirectToAction("Index", "Login");
                 }
 
-                var idClient = userInfo.PreferredClientId;
+                // Check if user has employee profile
+                if (userInfo.IdEmployee == 0)
+                {
+                    ViewBag.ErrorMessage = "You do not have an employee profile associated with your account. Please contact your system administrator.";
+                    ViewBag.HasEmployeeProfile = false;
+                    ViewBag.IdClient = userInfo.PreferredClientId;
+                    viewmodel.Locations = new List<LocationModel>();
+                    return View("~/Views/Helpdesk/WorkRequest/SendNewWorkRequest.cshtml", viewmodel);
+                }
 
+                var idClient = userInfo.PreferredClientId;
+                var idCompany = userInfo.IdCompany;
+                // Set ViewBag properties for page context
+                ViewBag.HasEmployeeProfile = true;
+                ViewBag.IdClient = idClient;
+                ViewBag.IdEmployee = userInfo.IdEmployee;
+                ViewBag.IdCompany = idCompany;
                 // Load initial data for dropdowns
                 viewmodel.Locations = await GetLocationsAsync(client, backendUrl, idClient);
             }
@@ -762,18 +777,17 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
-        /// POST: Submit New Work Request
+        /// POST: Submit New Work Request (Lite version)
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        //[Authorize]
         public async Task<IActionResult> SendNewWorkRequest(
             int IdLocation,
             int IdFloor,
             int IdRoom,
-            string ForWhom,
             int IdWorkCategory,
             string RequestDetail,
+            int? IdRequestor,
             List<IFormFile> RelatedPhotos)
         {
             // Check if user has permission to add Work Requests
@@ -798,59 +812,99 @@ namespace cfm_frontend.Controllers.Helpdesk
                     return Json(new { success = false, message = "Session expired. Please login again." });
                 }
 
-                // Temporary send, no idea what is the dto yet
-                // Prepare work request data
-                var workRequest = new WorkRequestCreateRequest
+                // Validate user has employee profile
+                if (userInfo.IdEmployee == 0)
+                {
+                    return Json(new { success = false, message = "You do not have an employee profile. Please contact your administrator." });
+                }
+
+                // Determine requestor: use IdRequestor if provided ("on behalf of other"), otherwise use current user
+                int requestorEmployeeId = IdRequestor ?? userInfo.IdEmployee;
+
+                // Prepare work request data using lite endpoint
+                var workRequest = new SendWorkRequestPayloadDto
                 {
                     Client_idClient = userInfo.PreferredClientId,
                     Property_idProperty = IdLocation,
-                    PropertyFloor_idPropertyFloor = IdFloor,
-                    RoomZone_idRoomZone = IdRoom,
+                    PropertyFloor_idPropertyFloor = IdFloor > 0 ? IdFloor : null,
+                    RoomZone_idRoomZone = IdRoom > 0 ? IdRoom : null,
                     workCategory_Type_idType = IdWorkCategory,
                     requestDetail = RequestDetail,
-                    workTitle = $"Work Request - {RequestDetail.Substring(0, Math.Min(50, RequestDetail.Length))}...",
-                    requestMethod_Enum_idEnum = 1,
-                    status_Enum_idEnum = 1,
-                    PriorityLevel_idPriorityLevel = 1,
-                    requestDate = DateTime.UtcNow,
-                    requestor_Employee_idEmployee = userInfo.IdWebUser
+                    requestor_Employee_idEmployee = requestorEmployeeId,
+                    TimeZone_idTimeZone = userInfo.PreferredTimezoneIdTimezone,
+                    RelatedDocuments = new List<RelatedDocumentDto>()
                 };
 
-                // For now, we're using the logged-in user as the requestor
+                // Handle file uploads (RelatedPhotos) - Convert to base64 for backend
+                if (RelatedPhotos != null && RelatedPhotos.Any())
+                {
+                    foreach (var file in RelatedPhotos)
+                    {
+                        if (file.Length > 0)
+                        {
+                            try
+                            {
+                                using (var memoryStream = new MemoryStream())
+                                {
+                                    await file.CopyToAsync(memoryStream);
+                                    var fileBytes = memoryStream.ToArray();
+                                    var base64String = Convert.ToBase64String(fileBytes);
 
-                // TODO: Handle file uploads (RelatedPhotos)
-                // This would typically involve uploading files to a storage service
-                // and storing the file paths/URLs in the work request
+                                    var relatedDoc = new RelatedDocumentDto
+                                    {
+                                        documentName = Path.GetFileNameWithoutExtension(file.FileName),
+                                        fileName = file.FileName,
+                                        //fileSize = file.Length,
+                                        //extension = Path.GetExtension(file.FileName),
+                                        base64 = base64String
+                                        //documentType = "Photo"
+                                    };
 
-                // Serialize and send to backend
+                                    workRequest.RelatedDocuments.Add(relatedDoc);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to process uploaded file: {FileName}", file.FileName);
+                            }
+                        }
+                    }
+                }
+
+                // Serialize and send to backend using lite endpoint
                 var jsonPayload = JsonSerializer.Serialize(workRequest, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.Create}", content);
+                var response = await client.PostAsync($"{backendUrl}{ApiEndpoints.WorkRequest.SendWorkRequest}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseStream = await response.Content.ReadAsStreamAsync();
-                    var result = await JsonSerializer.DeserializeAsync<WorkRequestCreateResponse>(
-                        responseStream,
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponseDto<Dictionary<string, string>>>(
+                        responseContent,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    if (result != null && result.success)
+                    if (apiResponse != null && apiResponse.Success && apiResponse.Data != null)
                     {
+                        var workRequestCode = apiResponse.Data.ContainsKey("workRequestCode")
+                            ? apiResponse.Data["workRequestCode"]
+                            : "Unknown";
+
                         return Json(new
                         {
                             success = true,
-                            message = $"Work Request {result.workRequestCode} sent successfully!",
-                            redirectUrl = "/Helpdesk/Index"
+                            message = $"Work Request {workRequestCode} sent successfully!",
+                            workRequestCode = workRequestCode,
+                            redirectUrl = "/Helpdesk/SendNewWorkRequest"
                         });
                     }
                     else
                     {
-                        return Json(new { success = false, message = result?.message ?? "Failed to send work request" });
+                        return Json(new { success = false, message = apiResponse?.Message ?? "Failed to send work request" });
                     }
                 }
                 else
@@ -858,6 +912,29 @@ namespace cfm_frontend.Controllers.Helpdesk
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogWarning("Failed to send work request. Status: {StatusCode}, Content: {Content}",
                         response.StatusCode, errorContent);
+
+                    // Try to parse backend error response
+                    try
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<ApiResponseDto<object>>(
+                            errorContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+
+                        if (errorResponse != null)
+                        {
+                            string errorMessage = errorResponse.Errors != null && errorResponse.Errors.Any()
+                                ? string.Join(", ", errorResponse.Errors)
+                                : errorResponse.Message ?? "Failed to send work request";
+
+                            return Json(new { success = false, message = errorMessage });
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback if error parsing fails
+                    }
+
                     return Json(new { success = false, message = "Failed to send work request. Please try again." });
                 }
             }
@@ -865,6 +942,57 @@ namespace cfm_frontend.Controllers.Helpdesk
             {
                 _logger.LogError(ex, "Error sending work request");
                 return Json(new { success = false, message = "An error occurred while sending the work request." });
+            }
+        }
+
+        /// <summary>
+        /// GET: Get work request list for employee (for Send Work Request page)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetSendWorkRequestList(int idEmployee, int idClient)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendAPI");
+                var backendUrl = _configuration["BackendBaseUrl"];
+
+                // Call backend API
+                var response = await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.GetSendWorkRequestList(idEmployee)}?idClient={idClient}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponseDto<PagedResponse<SendWorkRequestListItemDto>>>(
+                        responseContent,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (apiResponse != null && apiResponse.Success && apiResponse.Data != null)
+                    {
+                        return Json(new
+                        {
+                            success = true,
+                            data = apiResponse.Data.Data,
+                            metadata = apiResponse.Data.Metadata
+                        });
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = apiResponse?.Message ?? "Failed to load work request list" });
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Failed to load work request list. Status: {StatusCode}, Content: {Content}",
+                        response.StatusCode, errorContent);
+                    return Json(new { success = false, message = "Failed to load work request list" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading work request list");
+                return Json(new { success = false, message = "An error occurred while loading the work request list." });
             }
         }
 

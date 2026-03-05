@@ -93,6 +93,7 @@ namespace cfm_frontend.Services
                     TimeZoneName = userInfoResponse.TimeZoneName,
                     PreferredTimezoneIdTimezone = userInfoResponse.Preferred_TimeZone_idTimeZone,
                     IdCompany = userInfoResponse.Preferred_Company_idCompany,
+                    IdEmployee = userInfoResponse.idEmployee,
                     LoginTime = DateTime.UtcNow
                 };
 

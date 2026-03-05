@@ -15,5 +15,6 @@
         public string TimeZoneName { get; set; } = string.Empty;
         public int PreferredTimezoneIdTimezone { get; set; } = int.MaxValue;
         public DateTime LoginTime { get; set; }
+        public int IdEmployee { get; set; } = 0;
     }
 }

@@ -66,7 +66,8 @@
                 GetServiceProvidersByClient: '/Helpdesk/GetServiceProvidersByClient',
                 GetPriorityLevels: '/Helpdesk/GetPriorityLevels',
                 GetPriorityLevelById: '/Helpdesk/GetPriorityLevelById',
-                GetPersonsInChargeByFilters: '/Helpdesk/GetPersonsInChargeByFilters'
+                GetPersonsInChargeByFilters: '/Helpdesk/GetPersonsInChargeByFilters',
+                GetSendWorkRequestList: '/Helpdesk/GetSendWorkRequestList'
             },
 
             /**

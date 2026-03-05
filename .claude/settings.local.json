@@ -29,7 +29,17 @@
       "Bash(node -c \"wwwroot/assets/js/pages/settings/cost-approver.js\")",
       "Bash(test -f \"C:\\Users\\kenri\\OneDrive\\Documents\\Work\\Colliers\\Repo\\CFM Backend\\CFM Backend\\Controllers\\Helpdesk\\Settings\\JobCodeController.cs\")",
       "Bash(Select-Object -First 5)",
-      "Bash(test -f \"c:\\Repos\\CFM Frontend\\wwwroot\\assets\\css\\pages\\job-code-form.css\")"
+      "Bash(test -f \"c:\\Repos\\CFM Frontend\\wwwroot\\assets\\css\\pages\\job-code-form.css\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(taskkill /F /IM cfm-frontend.exe)",
+      "Bash(taskkill /F /IM dotnet.exe /FI \"WINDOWTITLE eq *cfm-frontend*\")",
+      "Bash(test -f \"C:\\Users\\kenri\\OneDrive\\Documents\\Work\\Colliers\\Repo\\CFM Backend\\CFM Backend\\Controllers\\Helpdesk\\WorkRequestController.cs\")",
+      "Bash(Select-String -Pattern \"error|Build FAILED|Build succeeded\" -Context 2,5)",
+      "Bash(cat wwwroot/assets/js/pages/workrequest/send-work-request.js)",
+      "Bash(Get-Content \".\\appsettings.json\")",
+      "Bash(Select-String -Pattern \"BackendBaseUrl\")",
+      "Bash(cat appsettings.json)",
+      "Read(//c/Users/kenri/OneDrive/Documents/Work/Colliers/Repo/CFM Backend/**)"
     ],
     "deny": [],
     "ask": []

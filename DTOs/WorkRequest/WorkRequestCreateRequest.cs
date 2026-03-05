@@ -140,12 +140,12 @@
     public class RelatedDocumentDto
     {
         public int idDocument { get; set; }
-        public string documentName { get; set; }
+        public string? documentName { get; set; }
         public string fileName { get; set; }
-        public long fileSize { get; set; }
-        public string extension { get; set; }
-        public string documentUrl { get; set; }
-        public string base64 { get; set; }
-        public string documentType { get; set; }
+        public int? fileSize { get; set; }
+        public string? extension { get; set; }
+        public string? documentUrl { get; set; }
+        public string? base64 { get; set; }
+        public string? documentType { get; set; }
     }
 }
