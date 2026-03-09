@@ -67,7 +67,8 @@
                 GetPriorityLevels: '/Helpdesk/GetPriorityLevels',
                 GetPriorityLevelById: '/Helpdesk/GetPriorityLevelById',
                 GetPersonsInChargeByFilters: '/Helpdesk/GetPersonsInChargeByFilters',
-                GetSendWorkRequestList: '/Helpdesk/GetSendWorkRequestList'
+                GetSendWorkRequestList: '/Helpdesk/GetSendWorkRequestList',
+                GetCategoryRelations: '/Helpdesk/GetCategoryRelations'
             },
 
             /**

@@ -39,7 +39,10 @@
       "Bash(Get-Content \".\\appsettings.json\")",
       "Bash(Select-String -Pattern \"BackendBaseUrl\")",
       "Bash(cat appsettings.json)",
-      "Read(//c/Users/kenri/OneDrive/Documents/Work/Colliers/Repo/CFM Backend/**)"
+      "Read(//c/Users/kenri/OneDrive/Documents/Work/Colliers/Repo/CFM Backend/**)",
+      "Bash(dotnet build --no-restore)",
+      "Bash(Select-Object -First 10)",
+      "Bash(Select-Object -First 50)"
     ],
     "deny": [],
     "ask": []

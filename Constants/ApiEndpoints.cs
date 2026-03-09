@@ -157,6 +157,15 @@ namespace cfm_frontend.Constants
             /// Query params: idClient
             /// </summary>
             public static string GetSendWorkRequestList(int idEmployee) => $"{Base}/lite/{idEmployee}";
+
+            /// <summary>
+            /// GET: Get work request category relations for auto-binding
+            /// Endpoint: GET /api/v1/work-request/category-relations
+            /// Query params: idClient
+            /// Returns: List of category relations mapping work category + property to PIC + priority level
+            /// Used for: Auto-selecting PIC and Priority Level on Work Request Add/Edit forms
+            /// </summary>
+            public const string CategoryRelations = Base + "/category-relations";
         }
 
         #endregion

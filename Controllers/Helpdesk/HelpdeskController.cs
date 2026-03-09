@@ -997,6 +997,29 @@ namespace cfm_frontend.Controllers.Helpdesk
         }
 
         /// <summary>
+        /// GET: Get work request category relations for auto-binding PIC and Priority Level
+        /// Used on Work Request Add/Edit forms to auto-select based on Work Category + Location
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCategoryRelations(int cid)
+        {
+            var accessCheck = this.CheckViewAccess("Helpdesk", "Work Request Management");
+            if (accessCheck != null) return accessCheck;
+
+            var (success, data, message) = await SafeExecuteApiAsync<IEnumerable<WorkRequestCategoryRelationDto>>(
+                async () =>
+                {
+                    var client = _httpClientFactory.CreateClient("BackendAPI");
+                    var backendUrl = _configuration["BackendBaseUrl"];
+                    return await client.GetAsync($"{backendUrl}{ApiEndpoints.WorkRequest.CategoryRelations}?idClient={cid}");
+                },
+                "Failed to load category relations"
+            );
+
+            return Json(new { success, data, message });
+        }
+
+        /// <summary>
         /// GET: Work Request Detail page
         /// </summary>
         [Authorize]

@@ -654,6 +654,7 @@
                                     data-search-placeholder="Search category..."
                                     required>
                                 <option value="">Select Work Category</option>
+                                <option value="-1">Not Specified</option>
                                 @if (Model?.WorkCategories != null && Model.WorkCategories.Any())
                                 {
                                     foreach (var category in Model.WorkCategories)
@@ -676,6 +677,7 @@
                                     data-placeholder="Select Other Category"
                                     data-search-placeholder="Search category...">
                                 <option value="">Select Other Category</option>
+                                <option value="-1">Not Specified</option>
                                 @if (Model?.OtherCategories != null && Model.OtherCategories.Any())
                                 {
                                     foreach (var category in Model.OtherCategories)
@@ -698,6 +700,7 @@
                                     data-placeholder="Select Other Category 2"
                                     data-search-placeholder="Search category...">
                                 <option value="">Select Other Category 2</option>
+                                <option value="-1">Not Specified</option>
                                 @if (Model?.OtherCategories2 != null && Model.OtherCategories2.Any())
                                 {
                                     foreach (var category in Model.OtherCategories2)

@@ -25,6 +25,7 @@
             priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
             feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypesByEnums,
             getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
+            categoryRelations: MvcEndpoints.Helpdesk.WorkRequest.GetCategoryRelations,
 
             // Radio buttons
             requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethodsByEnums,
@@ -53,7 +54,8 @@
         targetOverrides: {},
         workers: [],
         importantChecklistData: [],
-        priorityLevelsCache: {} // Cache full priority level data by ID
+        priorityLevelsCache: {}, // Cache full priority level data by ID
+        categoryRelations: [] // Category relations for auto-binding PIC and Priority Level
     };
 
     // ========================================
@@ -199,6 +201,9 @@
             cachePriorityLevelsFromDOM();
         }
 
+        // Load category relations for auto-binding (always load, regardless of server data)
+        loadCategoryRelations();
+
         // Initialize interactive features (these always run)
         initializeLocationSearch();
         initializeLocationCascade();
@@ -222,6 +227,16 @@
         setTimeout(function () {
             autoSelectFirstLocation();
         }, 150);
+
+        // Auto-select first options for category dropdowns, service provider, currency, and request method
+        setTimeout(function () {
+            autoSelectFirstWorkCategory();
+            autoSelectFirstOtherCategory();
+            autoSelectFirstOtherCategory2();
+            autoSelectFirstServiceProvider();
+            autoSelectFirstCurrency();
+            autoSelectFirstRequestMethod();
+        }, 200);
 
         // Initialize client session monitoring for multi-tab session safety
         if (typeof ClientSessionMonitor !== 'undefined') {
@@ -342,6 +357,123 @@
             $locationSelect.trigger('change');
 
             console.log('Auto-selected first location:', firstValue, $firstValidOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first work category (Not Specified) on page load
+     */
+    function autoSelectFirstWorkCategory() {
+        const $workCategorySelect = $('#workCategorySelect');
+        const $firstOption = $workCategorySelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $workCategorySelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('workCategorySelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            console.log('Auto-selected first work category:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first other category (Not Specified) on page load
+     */
+    function autoSelectFirstOtherCategory() {
+        const $otherCategorySelect = $('#otherCategorySelect');
+        const $firstOption = $otherCategorySelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $otherCategorySelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('otherCategorySelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            console.log('Auto-selected first other category:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first other category 2 (Not Specified) on page load
+     */
+    function autoSelectFirstOtherCategory2() {
+        const $otherCategory2Select = $('#otherCategory2Select');
+        const $firstOption = $otherCategory2Select.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $otherCategory2Select.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('otherCategory2Select');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            console.log('Auto-selected first other category 2:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first service provider (Not Specified) on page load
+     */
+    function autoSelectFirstServiceProvider() {
+        const $serviceProviderSelect = $('#serviceProviderSelect');
+        const $firstOption = $serviceProviderSelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $serviceProviderSelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('serviceProviderSelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            console.log('Auto-selected first service provider:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first currency on page load
+     */
+    function autoSelectFirstCurrency() {
+        const $currencySelect = $('#costEstimationCurrencySelect');
+        const $firstOption = $currencySelect.find('option[value!=""]').first();
+
+        if ($firstOption.length > 0) {
+            const firstValue = $firstOption.val();
+            $currencySelect.val(firstValue);
+
+            // If using searchable dropdown, update it as well
+            const selectElement = document.getElementById('costEstimationCurrencySelect');
+            if (selectElement && selectElement._searchableDropdown) {
+                selectElement._searchableDropdown.setValue(firstValue, $firstOption.text(), true);
+            }
+
+            console.log('Auto-selected first currency:', firstValue, $firstOption.text());
+        }
+    }
+
+    /**
+     * Auto-select first request method radio button on page load
+     */
+    function autoSelectFirstRequestMethod() {
+        const $firstRadio = $('input[name="RequestMethod"]').first();
+
+        if ($firstRadio.length > 0) {
+            $firstRadio.prop('checked', true);
+            console.log('Auto-selected first request method:', $firstRadio.val(), $firstRadio.next('label').text());
         }
     }
 
@@ -1317,6 +1449,10 @@
             if (idWorkCategory || idLocation) {
                 loadPersonsInCharge(idWorkCategory, idLocation);
             }
+
+            // Apply category auto-binding for Priority Level
+            // PIC auto-binding happens in loadPersonsInCharge complete callback
+            applyCategoryAutoBinding();
         });
     }
 
@@ -1348,18 +1484,10 @@
                         );
                     });
 
-                    // Auto-select first valid PIC
-                    const $firstValidPIC = $select.find('option[value!=""]').first();
-                    if ($firstValidPIC.length > 0) {
-                        const firstValue = $firstValidPIC.val();
-                        $select.val(firstValue);
-
-                        // Update searchable dropdown if available
-                        const selectElement = document.getElementById('personInChargeSelect');
-                        if (selectElement && selectElement._searchableDropdown) {
-                            selectElement._searchableDropdown.loadFromSelect();
-                            selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
-                        }
+                    // Reload searchable dropdown options
+                    const selectElement = document.getElementById('personInChargeSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
                     }
                 }
             },
@@ -1369,8 +1497,121 @@
             complete: function () {
                 // Hide loading state
                 hideDropdownLoading('personInChargeSelect');
+
+                // Try category auto-binding first, fall back to first selection if no match
+                const workCategoryId = parseInt($('#workCategorySelect').val());
+                const locationId = parseInt($('#locationSelect').val());
+
+                // Check if we can apply category auto-binding
+                const canAutoBindCategory = workCategoryId && workCategoryId !== -1 &&
+                                          locationId && locationId !== -1;
+
+                if (canAutoBindCategory) {
+                    const match = state.categoryRelations.find(rel =>
+                        rel.workCategory_Type_idType === workCategoryId &&
+                        rel.property_idProperty && rel.property_idProperty.includes(locationId)
+                    );
+
+                    if (match && match.pic_Employe_idEmployee) {
+                        // Apply category auto-binding for PIC
+                        const picDropdown = document.getElementById('personInChargeSelect');
+                        if (picDropdown && picDropdown._searchableDropdown) {
+                            const picOption = $('#personInChargeSelect option[value="' + match.pic_Employe_idEmployee + '"]');
+                            if (picOption.length > 0) {
+                                picDropdown._searchableDropdown.setValue(match.pic_Employe_idEmployee, picOption.text(), true);
+                                console.log('Auto-selected PIC from category relation:', match.pic_Employe_idEmployee);
+                                return; // Exit early, don't auto-select first
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: Auto-select first valid PIC if no category match
+                const $firstValidPIC = $select.find('option[value!=""]').first();
+                if ($firstValidPIC.length > 0) {
+                    const firstValue = $firstValidPIC.val();
+                    $select.val(firstValue);
+
+                    const selectElement = document.getElementById('personInChargeSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
+                    }
+                    console.log('Auto-selected first PIC (no category match):', firstValue);
+                }
             }
         });
+    }
+
+    /**
+     * Load work request category relations for auto-binding
+     * Fetches mapping of work category + location to PIC and priority level
+     */
+    function loadCategoryRelations() {
+        if (!clientContext.idClient) {
+            console.warn('Cannot load category relations: no client ID');
+            return;
+        }
+
+        $.ajax({
+            url: CONFIG.apiEndpoints.categoryRelations,
+            method: 'GET',
+            data: { cid: clientContext.idClient },
+            success: function (response) {
+                if (response.success && response.data) {
+                    state.categoryRelations = response.data;
+                    console.log('Category relations loaded:', state.categoryRelations.length, 'relations');
+                } else {
+                    console.warn('Failed to load category relations:', response.message);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading category relations:', error);
+            }
+        });
+    }
+
+    /**
+     * Apply category auto-binding for Priority Level only
+     * PIC auto-binding is handled in loadPersonsInCharge complete callback
+     * Auto-selects Priority Level when matching relation is found
+     */
+    function applyCategoryAutoBinding() {
+        const workCategoryId = parseInt($('#workCategorySelect').val());
+        const locationId = parseInt($('#locationSelect').val());
+
+        // Skip if work category is empty, "Not Specified", or location not selected
+        if (!workCategoryId || workCategoryId === -1 || !locationId || locationId === -1) {
+            console.log('Category auto-binding skipped: workCategory=' + workCategoryId + ', location=' + locationId);
+            return;
+        }
+
+        // Find matching relation
+        const match = state.categoryRelations.find(rel =>
+            rel.workCategory_Type_idType === workCategoryId &&
+            rel.property_idProperty && rel.property_idProperty.includes(locationId)
+        );
+
+        if (match) {
+            console.log('Category relation match found for Priority Level:', match);
+
+            // Auto-select Priority Level (triggers target date calculation)
+            if (match.priorityLevel_idPriorityLevel) {
+                const priorityDropdown = document.getElementById('priorityLevelSelect');
+                if (priorityDropdown && priorityDropdown._searchableDropdown) {
+                    const priorityOption = $('#priorityLevelSelect option[value="' + match.priorityLevel_idPriorityLevel + '"]');
+                    if (priorityOption.length > 0) {
+                        priorityDropdown._searchableDropdown.setValue(match.priorityLevel_idPriorityLevel, priorityOption.text(), true);
+                        // Trigger change event to recalculate target dates
+                        $('#priorityLevelSelect').trigger('change');
+                        console.log('Auto-selected Priority Level:', match.priorityLevel_idPriorityLevel);
+                    } else {
+                        console.log('Priority Level option not found in dropdown:', match.priorityLevel_idPriorityLevel);
+                    }
+                }
+            }
+        } else {
+            console.log('No category relation match found for workCategory=' + workCategoryId + ', location=' + locationId);
+        }
     }
 
     /**
@@ -2729,7 +2970,7 @@
             { selector: '#requestDetail', name: 'Request Detail' },
             { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
             { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
-            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#workCategorySelect', name: 'Work Category', allowNotSpecified: true },
             { selector: '#personInChargeSelect', name: 'Person in Charge' },
             { selector: '#priorityLevelSelect', name: 'Priority Level' },
             { selector: '#requestDate', name: 'Request Date' },
@@ -2778,7 +3019,7 @@
             { selector: '#requestDetail', name: 'Request Detail' },
             { selector: 'input[name="RequestMethod"]:checked', name: 'Request Method', isRadio: true },
             { selector: 'input[name="Status"]:checked', name: 'Status', isRadio: true },
-            { selector: '#workCategorySelect', name: 'Work Category' },
+            { selector: '#workCategorySelect', name: 'Work Category', allowNotSpecified: true },
             { selector: '#personInChargeSelect', name: 'Person in Charge' },
             { selector: '#priorityLevelSelect', name: 'Priority Level' },
             { selector: '#requestDate', name: 'Request Date' },

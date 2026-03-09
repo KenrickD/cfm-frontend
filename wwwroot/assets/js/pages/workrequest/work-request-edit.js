@@ -26,6 +26,7 @@
             priorityLevels: MvcEndpoints.Helpdesk.WorkRequest.GetPriorityLevels,
             feedbackTypes: MvcEndpoints.Helpdesk.WorkRequest.GetFeedbackTypesByEnums,
             getCurrencies: MvcEndpoints.Helpdesk.Extended.GetCurrencies,
+            categoryRelations: MvcEndpoints.Helpdesk.WorkRequest.GetCategoryRelations,
 
             // Radio buttons
             requestMethods: MvcEndpoints.Helpdesk.WorkRequest.GetWorkRequestMethodsByEnums,
@@ -56,7 +57,8 @@
         deletedWorkers: [], // Track deleted workers for soft-delete (isActiveData: false)
         importantChecklistData: [],
         priorityLevelsCache: {}, // Cache full priority level data by ID
-        isLoadingEditData: false // Flag to prevent auto-calculation during edit mode data load
+        isLoadingEditData: false, // Flag to prevent auto-calculation during edit mode data load
+        categoryRelations: [] // Category relations for auto-binding PIC and Priority Level
     };
 
     // ========================================
@@ -201,6 +203,9 @@
             console.log('Server-side data detected, caching priority level details');
             cachePriorityLevelsFromDOM();
         }
+
+        // Load category relations for auto-binding (always load, regardless of server data)
+        loadCategoryRelations();
 
         // Initialize interactive features (these always run)
         initializeLocationSearch();
@@ -1355,6 +1360,12 @@
             if (idWorkCategory || idLocation) {
                 loadPersonsInCharge(idWorkCategory, idLocation);
             }
+
+            // Apply category auto-binding for Priority Level (only if not loading edit data)
+            // PIC auto-binding happens in loadPersonsInCharge complete callback
+            if (!state.isLoadingEditData) {
+                applyCategoryAutoBinding();
+            }
         });
     }
 
@@ -1386,18 +1397,10 @@
                         );
                     });
 
-                    // Auto-select first valid PIC
-                    const $firstValidPIC = $select.find('option[value!=""]').first();
-                    if ($firstValidPIC.length > 0) {
-                        const firstValue = $firstValidPIC.val();
-                        $select.val(firstValue);
-
-                        // Update searchable dropdown if available
-                        const selectElement = document.getElementById('personInChargeSelect');
-                        if (selectElement && selectElement._searchableDropdown) {
-                            selectElement._searchableDropdown.loadFromSelect();
-                            selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
-                        }
+                    // Reload searchable dropdown options
+                    const selectElement = document.getElementById('personInChargeSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.loadFromSelect();
                     }
                 }
             },
@@ -1407,8 +1410,140 @@
             complete: function () {
                 // Hide loading state
                 hideDropdownLoading('personInChargeSelect');
+
+                // Skip auto-selection during edit mode data loading
+                if (state.isLoadingEditData) {
+                    return;
+                }
+
+                // Try category auto-binding first, fall back to first selection if no match
+                const workCategoryId = parseInt($('#workCategorySelect').val());
+                const locationId = parseInt($('#locationSelect').val());
+
+                // Check if we can apply category auto-binding
+                const canAutoBindCategory = workCategoryId && workCategoryId !== -1 &&
+                                          locationId && locationId !== -1;
+
+                if (canAutoBindCategory) {
+                    const match = state.categoryRelations.find(rel =>
+                        rel.workCategory_Type_idType === workCategoryId &&
+                        rel.property_idProperty && rel.property_idProperty.includes(locationId)
+                    );
+
+                    if (match && match.pic_Employe_idEmployee) {
+                        // Apply category auto-binding for PIC
+                        const picDropdown = document.getElementById('personInChargeSelect');
+                        if (picDropdown && picDropdown._searchableDropdown) {
+                            const picOption = $('#personInChargeSelect option[value="' + match.pic_Employe_idEmployee + '"]');
+                            if (picOption.length > 0) {
+                                picDropdown._searchableDropdown.setValue(match.pic_Employe_idEmployee, picOption.text(), true);
+                                console.log('Auto-selected PIC from category relation:', match.pic_Employe_idEmployee);
+                                return; // Exit early, don't auto-select first
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: Auto-select first valid PIC if no category match
+                const $firstValidPIC = $select.find('option[value!=""]').first();
+                if ($firstValidPIC.length > 0) {
+                    const firstValue = $firstValidPIC.val();
+                    $select.val(firstValue);
+
+                    const selectElement = document.getElementById('personInChargeSelect');
+                    if (selectElement && selectElement._searchableDropdown) {
+                        selectElement._searchableDropdown.setValue(firstValue, $firstValidPIC.text(), true);
+                    }
+                    console.log('Auto-selected first PIC (no category match):', firstValue);
+                }
             }
         });
+    }
+
+    /**
+     * Load work request category relations for auto-binding
+     * Fetches mapping of work category + location to PIC and priority level
+     */
+    function loadCategoryRelations() {
+        if (!clientContext.idClient) {
+            console.warn('Cannot load category relations: no client ID');
+            return;
+        }
+
+        $.ajax({
+            url: CONFIG.apiEndpoints.categoryRelations,
+            method: 'GET',
+            data: { cid: clientContext.idClient },
+            success: function (response) {
+                if (response.success && response.data) {
+                    state.categoryRelations = response.data;
+                    console.log('Category relations loaded:', state.categoryRelations.length, 'relations');
+                } else {
+                    console.warn('Failed to load category relations:', response.message);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading category relations:', error);
+            }
+        });
+    }
+
+    /**
+     * Apply category auto-binding for Priority Level only
+     * PIC auto-binding is handled in loadPersonsInCharge complete callback
+     * Auto-selects Priority Level when matching relation is found
+     */
+    function applyCategoryAutoBinding() {
+        const workCategoryId = parseInt($('#workCategorySelect').val());
+        const locationId = parseInt($('#locationSelect').val());
+
+        // Skip if work category is empty, "Not Specified", or location not selected
+        if (!workCategoryId || workCategoryId === -1 || !locationId || locationId === -1) {
+            console.log('Category auto-binding skipped: workCategory=' + workCategoryId + ', location=' + locationId);
+            return;
+        }
+
+        // Find matching relation
+        const match = state.categoryRelations.find(rel =>
+            rel.workCategory_Type_idType === workCategoryId &&
+            rel.property_idProperty && rel.property_idProperty.includes(locationId)
+        );
+
+        if (match) {
+            console.log('Category relation match found:', match);
+
+            // Auto-select PIC
+            if (match.pic_Employe_idEmployee) {
+                const picDropdown = document.getElementById('personInChargeSelect');
+                if (picDropdown && picDropdown._searchableDropdown) {
+                    const picOption = $('#personInChargeSelect option[value="' + match.pic_Employe_idEmployee + '"]');
+                    if (picOption.length > 0) {
+                        picDropdown._searchableDropdown.setValue(match.pic_Employe_idEmployee, picOption.text(), true);
+                        console.log('Auto-selected PIC:', match.pic_Employe_idEmployee);
+                    } else {
+                        console.log('PIC option not found in dropdown:', match.pic_Employe_idEmployee);
+                    }
+                }
+            }
+
+            // Auto-select Priority Level (triggers target date calculation)
+            if (match.priorityLevel_idPriorityLevel) {
+                const priorityDropdown = document.getElementById('priorityLevelSelect');
+                if (priorityDropdown && priorityDropdown._searchableDropdown) {
+                    const priorityOption = $('#priorityLevelSelect option[value="' + match.priorityLevel_idPriorityLevel + '"]');
+                    if (priorityOption.length > 0) {
+                        priorityDropdown._searchableDropdown.setValue(match.priorityLevel_idPriorityLevel, priorityOption.text(), true);
+                        // Trigger change event to recalculate target dates
+                        $('#priorityLevelSelect').trigger('change');
+                        console.log('Auto-selected Priority Level:', match.priorityLevel_idPriorityLevel);
+                    } else {
+                        console.log('Priority Level option not found in dropdown:', match.priorityLevel_idPriorityLevel);
+                    }
+                }
+            }
+        } else {
+            console.log('No category relation match found for workCategory=' + workCategoryId + ', location=' + locationId);
+        }
     }
 
     /**
