@@ -241,6 +241,100 @@
                     Save: '/Helpdesk/SaveEmailDistribution'
                 }
             }
+        },
+
+        /**
+         * Work Category Relation Controller
+         * Maps Work Categories to Priority Levels, PICs, and accessible Properties
+         */
+        WorkCategoryRelation: {
+            /**
+             * View Navigation
+             */
+            Index: '/WorkCategoryRelation/Index',
+            Add: '/WorkCategoryRelation/Add',
+            Edit: '/WorkCategoryRelation/Edit',
+            Detail: '/WorkCategoryRelation/Detail',
+
+            /**
+             * CRUD Operations
+             */
+            List: '/WorkCategoryRelation/GetList',
+            GetById: '/WorkCategoryRelation/GetById',
+            Create: '/WorkCategoryRelation/Create',
+            Update: '/WorkCategoryRelation/Update',
+            Delete: '/WorkCategoryRelation/Delete',
+
+            /**
+             * Dropdown Data Loading
+             */
+            GetWorkCategories: '/WorkCategoryRelation/GetWorkCategories',
+            GetPriorityLevels: '/WorkCategoryRelation/GetPriorityLevels',
+            GetPICs: '/WorkCategoryRelation/GetPICs',
+            GetAllProperties: '/WorkCategoryRelation/GetAllProperties',
+            GetPropertiesByPIC: '/WorkCategoryRelation/GetPropertiesByPIC',
+
+            /**
+             * PIC Target Management (Detail Page)
+             */
+            GetPICsByTargetType: '/WorkCategoryRelation/GetPICsByTargetType',
+            AddPICToTarget: '/WorkCategoryRelation/AddPICToTarget',
+            RemovePICFromTarget: '/WorkCategoryRelation/RemovePICFromTarget',
+            MovePICUp: '/WorkCategoryRelation/MovePICUp',
+            MovePICDown: '/WorkCategoryRelation/MovePICDown'
+        },
+
+        /**
+         * Company Contact Controller
+         * Contact library management for company contacts
+         */
+        CompanyContact: {
+            /**
+             * View Navigation
+             */
+            Index: '/CompanyContact/Index',
+            Add: '/CompanyContact/Add',
+            Edit: '/CompanyContact/Edit',
+            Detail: '/CompanyContact/Detail',
+
+            /**
+             * CRUD Operations
+             */
+            List: '/CompanyContact/GetList',
+            GetById: '/CompanyContact/GetById',
+            Create: '/CompanyContact/Create',
+            Update: '/CompanyContact/Update',
+            Delete: '/CompanyContact/Delete',
+
+            /**
+             * Filter Options
+             */
+            GetFilterOptions: '/CompanyContact/GetFilterOptions',
+
+            /**
+             * Dropdown Data
+             */
+            GetDepartments: '/CompanyContact/GetDepartments',
+            GetPhoneTypes: '/CompanyContact/GetPhoneTypes',
+            GetTitlePrefixes: '/CompanyContact/GetTitlePrefixes',
+
+            /**
+             * Phone Management
+             */
+            Phone: {
+                Add: '/CompanyContact/AddPhone',
+                Update: '/CompanyContact/UpdatePhone',
+                Delete: '/CompanyContact/DeletePhone'
+            },
+
+            /**
+             * Email Management
+             */
+            Email: {
+                Add: '/CompanyContact/AddEmail',
+                Update: '/CompanyContact/UpdateEmail',
+                Delete: '/CompanyContact/DeleteEmail'
+            }
         }
     };
 

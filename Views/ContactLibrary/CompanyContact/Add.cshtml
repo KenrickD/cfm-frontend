@@ -1,0 +1,262 @@
+@model cfm_frontend.ViewModels.CompanyContactAddViewModel
+
+@{
+    ViewBag.Title = "Add New Contact";
+    ViewBag.pTitle = "Contact Library";
+    ViewBag.pTitleUrl = "/CompanyContact/Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+    <style>
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .form-section-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #495057;
+        }
+
+        .name-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .title-prefix-select {
+            flex: 0 0 100px;
+        }
+
+        .name-text-input {
+            flex: 1;
+        }
+
+        .phone-email-section {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            min-height: 100px;
+        }
+
+        .phone-email-list {
+            margin-top: 0.5rem;
+        }
+
+        .phone-email-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .phone-email-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .main-badge {
+            background-color: #0d6efd;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .empty-placeholder {
+            text-align: center;
+            padding: 1.5rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        [data-pc-theme="dark"] .phone-email-section {
+            background-color: #374151;
+            border-color: #4b5563;
+        }
+
+        [data-pc-theme="dark"] .phone-email-item {
+            background-color: #1f2937;
+            border-color: #4b5563;
+        }
+
+        [data-pc-theme="dark"] .form-section-title {
+            color: #d1d5db;
+        }
+    </style>
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <h5 class="m-b-10">Add New Contact</h5>
+            <p class="m-b-0 text-muted">Create a new company contact record</p>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form id="contactForm">
+                    <!-- Basic Information Section -->
+                    <div class="form-section">
+                        <h6 class="form-section-title">Basic Information</h6>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="contactName" class="form-label">
+                                    Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="name-input-group">
+                                    <select class="form-select title-prefix-select"
+                                            id="titlePrefix">
+                                        <option value="">-</option>
+                                        @if (Model?.TitlePrefixes != null)
+                                        {
+                                            foreach (var title in Model.TitlePrefixes)
+                                            {
+                                                <option value="@title.Value">@title.Text</option>
+                                            }
+                                        }
+                                    </select>
+                                    <input type="text"
+                                           class="form-control name-text-input"
+                                           id="contactName"
+                                           placeholder="Type the name here, e.g. &quot;Wynda Tiara&quot;"
+                                           required>
+                                </div>
+                                <div class="invalid-feedback" id="contactNameError"></div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">
+                                    Department <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select"
+                                        id="department"
+                                        data-searchable="true"
+                                        required>
+                                    <option value="">-</option>
+                                    @if (Model?.Departments != null)
+                                    {
+                                        foreach (var dept in Model.Departments)
+                                        {
+                                            <option value="@dept.Value">@dept.Text</option>
+                                        }
+                                    }
+                                </select>
+                                <div class="invalid-feedback" id="departmentError"></div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="roleTitle" class="form-label">Role/Title</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="roleTitle"
+                                       placeholder="Organizational title, e.g. &quot;Marketing Manager&quot;">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control"
+                                          id="notes"
+                                          rows="4"
+                                          placeholder="Remarks about this person..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phone Section -->
+                    <div class="form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="form-section-title mb-0">Phone</h6>
+                            <button type="button" class="btn btn-primary btn-sm" id="addPhoneBtn">
+                                <i class="ti ti-plus me-1"></i>
+                                Add New Phone
+                            </button>
+                        </div>
+                        <div class="phone-email-section">
+                            <div id="phoneList" class="phone-email-list">
+                                <div class="empty-placeholder">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Section -->
+                    <div class="form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="form-section-title mb-0">Email</h6>
+                            <button type="button" class="btn btn-primary btn-sm" id="addEmailBtn">
+                                <i class="ti ti-plus me-1"></i>
+                                Add New Email
+                            </button>
+                        </div>
+                        <div class="phone-email-section">
+                            <div id="emailList" class="phone-email-list">
+                                <div class="empty-placeholder">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">
+                            <i class="ti ti-device-floppy me-1"></i>
+                            Save Contact
+                        </button>
+                        <a href="/CompanyContact/Index" class="btn btn-secondary">
+                            <i class="ti ti-x me-1"></i>
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phone Modal -->
+@await Html.PartialAsync("_CompanyContactPhoneModal", Model)
+
+<!-- Email Modal -->
+@await Html.PartialAsync("_CompanyContactEmailModal")
+
+@section scripts {
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+    <script>
+        // Client context for multi-tab session safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+
+        // Phone types for modal
+        window.PhoneTypes = [
+            @if (Model?.PhoneTypes != null)
+            {
+                @Html.Raw(string.Join(",", Model.PhoneTypes.Select(pt => $"{{ value: '{pt.Value}', text: '{pt.Text}' }}")))
+            }
+        ];
+    </script>
+    <script src="~/assets/js/pages/contactlibrary/company-contact-form.js"></script>
+}

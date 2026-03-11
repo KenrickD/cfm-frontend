@@ -1198,6 +1198,92 @@ namespace cfm_frontend.Constants
 
         #endregion
 
+        #region Work Category Relation
+
+        /// <summary>
+        /// Work Category Relation management endpoints
+        /// Base path: /api/v1/work-category-relation
+        /// Maps Work Categories to Priority Levels, PICs, and accessible Properties
+        /// </summary>
+        public static class WorkCategoryRelation
+        {
+            private const string Base = ApiBase + "/work-category-relation";
+
+            /// <summary>
+            /// GET: Get paginated work category relations list
+            /// Query params: cid (client id), keyword (search), page (pagination), limit (page size)
+            /// Response: Paginated list of WorkCategoryRelationListDto
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get work category relation by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: WorkCategoryRelationDetailDto
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new work category relation
+            /// Body: WorkCategoryRelationPayloadDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update work category relation
+            /// Body: WorkCategoryRelationPayloadDto
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete work category relation by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// GET: Get PICs assigned to specific target type for a relation
+            /// Path params: {id}
+            /// Query params: cid (client id), targetType (helpdeskResponse, initialFollowUp, etc.)
+            /// Response: List of PICTargetDto
+            /// </summary>
+            public static string GetPICsByTargetType(int id, string targetType) => $"{Base}/{id}/pic-targets?targetType={targetType}";
+
+            /// <summary>
+            /// POST: Add PIC to target section
+            /// Path params: {id}
+            /// Body: { idPIC, targetType, displayOrder }
+            /// </summary>
+            public static string AddPICToTarget(int id) => $"{Base}/{id}/pic-targets";
+
+            /// <summary>
+            /// DELETE: Remove PIC from target section
+            /// Path params: {id}, {idPIC}
+            /// Query params: targetType
+            /// </summary>
+            public static string RemovePICFromTarget(int id, int idPIC, string targetType) => $"{Base}/{id}/pic-targets/{idPIC}?targetType={targetType}";
+
+            /// <summary>
+            /// PUT: Move PIC up in target section order
+            /// Path params: {id}, {idPIC}
+            /// Query params: targetType
+            /// </summary>
+            public static string MovePICUp(int id, int idPIC, string targetType) => $"{Base}/{id}/pic-targets/{idPIC}/move-up?targetType={targetType}";
+
+            /// <summary>
+            /// PUT: Move PIC down in target section order
+            /// Path params: {id}, {idPIC}
+            /// Query params: targetType
+            /// </summary>
+            public static string MovePICDown(int id, int idPIC, string targetType) => $"{Base}/{id}/pic-targets/{idPIC}/move-down?targetType={targetType}";
+        }
+
+        #endregion
+
         #region Asset
 
         /// <summary>
@@ -1212,6 +1298,113 @@ namespace cfm_frontend.Constants
             public static string GetAssetByGroup(int idProperty) => $"{Base}/asset-group/{idProperty}";
         }
 
+        #endregion
+
+        #region Company Contact
+
+        /// <summary>
+        /// Company Contact management endpoints
+        /// Base path: /api/v1/company-contact
+        /// </summary>
+        public static class CompanyContact
+        {
+            private const string Base = ApiBase + "/company-contact";
+
+            /// <summary>
+            /// GET: Get paginated company contacts list
+            /// Query params: cid (client id), keyword (search), departments (comma-separated IDs), showDeleted (bool), page, limit
+            /// Response: Paginated list of CompanyContactListDto
+            /// </summary>
+            public const string List = Base + "/list";
+
+            /// <summary>
+            /// GET: Get company contact by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: CompanyContactDto
+            /// </summary>
+            public static string GetById(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// POST: Create new company contact
+            /// Body: CompanyContactDto
+            /// Response: int (new ID)
+            /// </summary>
+            public const string Create = Base;
+
+            /// <summary>
+            /// PUT: Update company contact
+            /// Body: CompanyContactDto
+            /// Response: int (updated ID)
+            /// </summary>
+            public const string Update = Base;
+
+            /// <summary>
+            /// DELETE: Delete company contact by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// </summary>
+            public static string Delete(int id) => $"{Base}/{id}";
+
+            /// <summary>
+            /// GET: Get filter options (departments list)
+            /// Query params: cid (client id)
+            /// Response: CompanyContactFilterDto
+            /// </summary>
+            public const string FilterOptions = Base + "/filter-options";
+
+            /// <summary>
+            /// Phone management endpoints
+            /// </summary>
+            public static class Phone
+            {
+                /// <summary>
+                /// POST: Add phone to contact
+                /// Path params: {idContact}
+                /// Body: PhoneDto
+                /// </summary>
+                public static string Add(int idContact) => $"{Base}/{idContact}/phones";
+
+                /// <summary>
+                /// PUT: Update phone
+                /// Path params: {idContact}, {idPhone}
+                /// Body: PhoneDto
+                /// </summary>
+                public static string Update(int idContact, int idPhone) => $"{Base}/{idContact}/phones/{idPhone}";
+
+                /// <summary>
+                /// DELETE: Delete phone
+                /// Path params: {idContact}, {idPhone}
+                /// </summary>
+                public static string Delete(int idContact, int idPhone) => $"{Base}/{idContact}/phones/{idPhone}";
+            }
+
+            /// <summary>
+            /// Email management endpoints
+            /// </summary>
+            public static class Email
+            {
+                /// <summary>
+                /// POST: Add email to contact
+                /// Path params: {idContact}
+                /// Body: EmailDto
+                /// </summary>
+                public static string Add(int idContact) => $"{Base}/{idContact}/emails";
+
+                /// <summary>
+                /// PUT: Update email
+                /// Path params: {idContact}, {idEmail}
+                /// Body: EmailDto
+                /// </summary>
+                public static string Update(int idContact, int idEmail) => $"{Base}/{idContact}/emails/{idEmail}";
+
+                /// <summary>
+                /// DELETE: Delete email
+                /// Path params: {idContact}, {idEmail}
+                /// </summary>
+                public static string Delete(int idContact, int idEmail) => $"{Base}/{idContact}/emails/{idEmail}";
+            }
+        }
 
         #endregion
     }

@@ -1,0 +1,47 @@
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="emailIndex" value="">
+                <input type="hidden" id="emailId" value="0">
+
+                <div class="mb-3">
+                    <label for="emailAddress" class="form-label">
+                        Email Address <span class="text-danger">*</span>
+                    </label>
+                    <input type="email"
+                           class="form-control"
+                           id="emailAddress"
+                           placeholder="e.g. wynda.tiara@barton-goldschmidt.com"
+                           required>
+                    <div class="invalid-feedback" id="emailAddressError"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Main Email?</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="isMainEmail">
+                        <label class="form-check-label" for="isMainEmail">
+                            Yes
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="saveEmailBtn">
+                    <i class="ti ti-device-floppy me-1"></i>
+                    Save
+                </button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,238 @@
+@model cfm_frontend.ViewModels.CompanyContactDetailViewModel
+
+@{
+    ViewBag.Title = "Contact Detail";
+    ViewBag.pTitle = "Contact Library";
+    ViewBag.pTitleUrl = "/CompanyContact/Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .detail-section {
+            margin-bottom: 2rem;
+        }
+
+        .detail-section-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+        }
+
+        .detail-field {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            color: #212529;
+            font-size: 1rem;
+        }
+
+        .contact-info-section {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            padding: 1rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-type {
+            font-weight: 600;
+            margin-right: 0.5rem;
+            min-width: 80px;
+        }
+
+        .main-badge {
+            background-color: #0d6efd;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .empty-value {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        [data-pc-theme="dark"] .detail-section-title {
+            color: #d1d5db;
+            border-bottom-color: #4b5563;
+        }
+
+        [data-pc-theme="dark"] .detail-label {
+            color: #9ca3af;
+        }
+
+        [data-pc-theme="dark"] .detail-value {
+            color: #e5e7eb;
+        }
+
+        [data-pc-theme="dark"] .contact-info-section {
+            background-color: #374151;
+            border-color: #4b5563;
+        }
+
+        [data-pc-theme="dark"] .contact-item {
+            background-color: #1f2937;
+            border-color: #4b5563;
+        }
+
+        [data-pc-theme="dark"] .empty-value {
+            color: #9ca3af;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <h5 class="m-b-10">Contact Detail</h5>
+            <p class="m-b-0 text-muted">View complete contact information</p>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <!-- Basic Information Section -->
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Name</h6>
+                    <div class="detail-value">
+                        @if (!string.IsNullOrEmpty(Model?.Contact?.Title))
+                        {
+                            <span>@Model.Contact.Title</span>
+                        }
+                        <span>@(Model?.Contact?.ContactName ?? "-")</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Department</h6>
+                    <div class="detail-value">
+                        @(Model?.Contact?.DepartmentName ?? "-")
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Role/Title</h6>
+                    <div class="detail-value">
+                        @if (!string.IsNullOrEmpty(Model?.Contact?.RoleTitle))
+                        {
+                            @Model.Contact.RoleTitle
+                        }
+                        else
+                        {
+                            <span class="empty-value">-</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Notes</h6>
+                    <div class="detail-value">
+                        @if (!string.IsNullOrEmpty(Model?.Contact?.Notes))
+                        {
+                            @Model.Contact.Notes
+                        }
+                        else
+                        {
+                            <span class="empty-value">-</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Phone Section -->
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Phone</h6>
+                    <div class="contact-info-section">
+                        @if (Model?.Contact?.Phones != null && Model.Contact.Phones.Any())
+                        {
+                            @foreach (var phone in Model.Contact.Phones)
+                            {
+                                <div class="contact-item">
+                                    <span class="contact-type">@phone.PhoneTypeName</span>
+                                    <span>@phone.PhoneNumber</span>
+                                    @if (phone.IsMainPhone)
+                                    {
+                                        <span class="main-badge">
+                                            <i class="ti ti-checkbox me-1"></i>
+                                            Main Phone
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-value text-center py-3">No phone numbers on record</div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Email Section -->
+                <div class="detail-section">
+                    <h6 class="detail-section-title">Email</h6>
+                    <div class="contact-info-section">
+                        @if (Model?.Contact?.Emails != null && Model.Contact.Emails.Any())
+                        {
+                            @foreach (var email in Model.Contact.Emails)
+                            {
+                                <div class="contact-item">
+                                    <span>@email.EmailAddress</span>
+                                    @if (email.IsMainEmail)
+                                    {
+                                        <span class="main-badge">
+                                            <i class="ti ti-checkbox me-1"></i>
+                                            Main Email
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-value text-center py-3">No email addresses on record</div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4">
+                    <a href="/CompanyContact/Edit/@Model?.Contact?.IdContact?cid=@Model?.IdClient"
+                       class="btn btn-primary">
+                        <i class="ti ti-pencil me-1"></i>
+                        Edit This Contact
+                    </a>
+                    <a href="/CompanyContact/Index" class="btn btn-secondary">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

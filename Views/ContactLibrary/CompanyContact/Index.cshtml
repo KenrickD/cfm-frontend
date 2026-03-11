@@ -1,0 +1,362 @@
+@using cfm_frontend.Extensions
+@model cfm_frontend.ViewModels.CompanyContactViewModel
+
+@{
+    ViewBag.Title = "Company Contact List";
+    ViewBag.pTitle = "Contact Library";
+    ViewBag.cTitle = "List of Company Contact";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link href="~/assets/css/plugins/animate.min.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="~/assets/css/uikit.css">
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css">
+
+    <style>
+        .modal-footer.no-divider {
+            border-top: none;
+        }
+
+        .modal-header.no-divider {
+            border-bottom: none;
+        }
+
+        /* Filter Modal Styles */
+        .filter-modal .modal-dialog {
+            max-width: 700px;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-section-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #04a9f5;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-checkbox-group {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--bs-border-color, #e9ecef);
+            border-radius: 6px;
+            padding: 15px;
+            background-color: var(--bs-secondary-bg, #f8f9fa);
+        }
+
+        /* Dark mode support */
+        [data-pc-theme="dark"] .filter-checkbox-group {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-checkbox-item {
+            margin-bottom: 10px;
+        }
+
+        .filter-checkbox-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-checkbox-item .form-check-input {
+            margin-top: 0.15em;
+        }
+
+        .filter-checkbox-item .form-check-label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .btn-clear-filter {
+            background-color: var(--bs-secondary-bg, #f8f9fa);
+            border-color: var(--bs-border-color, #dee2e6);
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .btn-clear-filter:hover {
+            background-color: var(--bs-tertiary-bg, #e2e6ea);
+            border-color: var(--bs-border-color, #dae0e5);
+            color: var(--bs-body-color, #545b62);
+        }
+
+        /* Dark mode support */
+        [data-pc-theme="dark"] .btn-clear-filter {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        [data-pc-theme="dark"] .btn-clear-filter:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>@ViewBag.cTitle</h5>
+                <p>This table shows all company contacts with their names, departments, roles, and contact information.</p>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="grid gap-0 column-gap-2 d-flex flex-row" style="width: 100%">
+                        <div class="input-group w-100">
+                            <input placeholder="Search by entering keywords for Name or Role/Title..."
+                                   type="text" class="form-control" id="mainSearchInput" value="@Model?.SearchKeyword">
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                    data-bs-content="Search" data-bs-trigger="hover" id="searchButton">
+                                <i class="ti ti-search"></i>
+                            </button>
+                            <!-- Filter Button - Opens Modal -->
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-toggle="modal" data-bs-target="#filterModal"
+                                    data-bs-container="body" data-bs-original-title="Advanced Filters">
+                                <i class="ti ti-filter"></i>
+                            </button>
+                            <button type="button" class="btn btn-light d-flex flex-row align-items-center"
+                                    data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                    data-bs-content="Clear Search" data-bs-trigger="hover" id="clearSearchButton">
+                                <i class="ti ti-list-search"></i>
+                            </button>
+                            @if (Context.Session.CanAdd("Contact Library", "Company Contact List"))
+                            {
+                                <a href="@Url.Action("Add", "CompanyContact")" class="btn btn-light d-flex flex-row align-items-center"
+                                   data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top"
+                                   data-bs-content="Add New Contact" data-bs-trigger="hover">
+                                    <i class="ti ti-plus"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            showNotification('@TempData["ErrorMessage"]', 'error', 'Error');
+                        });
+                    </script>
+                }
+
+                <div class="table-responsive">
+                    <table id="simpletable" class="table nowrap table-hover m-x-0">
+                        <thead>
+                            <tr>
+                                <th class="text-capitalize">Name</th>
+                                <th class="text-capitalize">Department</th>
+                                <th class="text-capitalize">Role/Title</th>
+                                <th class="text-capitalize">Phone</th>
+                                <th class="text-capitalize">Email</th>
+                                <th class="text-center">Has a User Account?</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model?.Contacts != null && Model.Contacts.Any())
+                            {
+                                @foreach (var contact in Model.Contacts)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="@Url.Action("Detail", "CompanyContact", new { id = contact.IdContact, cid = Model.IdClient })">
+                                                @contact.ContactName
+                                            </a>
+                                        </td>
+                                        <td>
+                                            @(contact.DepartmentName ?? "-")
+                                        </td>
+                                        <td>
+                                            @(contact.RoleTitle ?? "-")
+                                        </td>
+                                        <td>
+                                            @(contact.PhoneDisplay ?? "-")
+                                        </td>
+                                        <td>
+                                            @(contact.EmailDisplay ?? "-")
+                                        </td>
+                                        <td class="text-center">
+                                            @if (contact.HasUserAccount)
+                                            {
+                                                <i class="ti ti-check text-success" style="font-size: 18px;"></i>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="grid gap-0 column-gap-2 d-flex flex-row">
+                                                @if (Context.Session.CanEdit("Contact Library", "Company Contact List"))
+                                                {
+                                                    <a class="btn btn-light btn-sm"
+                                                       href="@Url.Action("Edit", "CompanyContact", new { id = contact.IdContact, cid = Model.IdClient })"
+                                                       role="button" data-bs-container="body"
+                                                       data-bs-toggle="popover" data-bs-placement="top"
+                                                       data-bs-content="Edit this Contact" data-bs-trigger="hover">
+                                                        <i class="ti ti-edit-circle"></i>
+                                                    </a>
+                                                }
+                                                @if (Context.Session.CanDelete("Contact Library", "Company Contact List"))
+                                                {
+                                                    <button data-pc-animate="blur" type="button" class="btn btn-light btn-sm"
+                                                            onclick="deleteContact(@contact.IdContact, '@Html.Raw(contact.ContactName?.Replace("'", "\\'") ?? "")')">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="ti ti-address-book-off" style="font-size: 48px; opacity: 0.5;"></i>
+                                            <p class="mt-2">No contacts found</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @* Pagination Component *@
+                @await Html.PartialAsync("_Pagination", Model.Paging)
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade filter-modal" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">
+                    <i class="ti ti-filter me-2"></i>Advanced Filters
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- Department Filter -->
+                            <div class="filter-section">
+                                <label class="filter-section-title">Department</label>
+                                <div class="filter-checkbox-group">
+                                    @if (Model?.FilterOptions?.Departments != null && Model.FilterOptions.Departments.Any())
+                                    {
+                                        @foreach (var dept in Model.FilterOptions.Departments)
+                                        {
+                                            <div class="filter-checkbox-item form-check">
+                                                <input class="form-check-input" type="checkbox" value="@dept.IdDepartment"
+                                                       id="dept_@dept.IdDepartment" name="departments">
+                                                <label class="form-check-label" for="dept_@dept.IdDepartment">
+                                                    @dept.DepartmentName (@dept.ContactCount)
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-muted py-2">
+                                            <small>No departments available</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Show Deleted Data -->
+                            <div class="filter-section">
+                                <label class="filter-section-title">Show Deleted Data</label>
+                                <div class="filter-checkbox-group">
+                                    <div class="filter-checkbox-item form-check">
+                                        <input class="form-check-input" type="checkbox" value="yes" id="showDeleted" name="showDeleted">
+                                        <label class="form-check-label" for="showDeleted">Yes</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-clear-filter" id="clearFiltersBtn">
+                    <i class="ti ti-x me-1"></i>Clear All Filters
+                </button>
+                <button type="button" class="btn btn-primary" id="applyFiltersBtn">
+                    <i class="ti ti-check me-1"></i>Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade modal-animate" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header no-divider">
+                <div class="d-flex flex-row align-items-center text-danger">
+                    <i class="ti ti-alert-octagon me-2 fs-5"></i>
+                    <span class="text-lg fw-semibold">Warning</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5>You are about to delete contact <span id="deleteContactName"></span></h5>
+                <p>Are you sure you want to delete this contact? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer no-divider bg-gray-100">
+                <div class="container-fluid">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <button type="button" class="btn btn-outline-secondary rounded-3 w-100 d-flex justify-content-center align-items-center" data-bs-dismiss="modal">
+                            <i class="ti ti-x me-2"></i>
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger rounded-3 w-100 d-flex justify-content-center align-items-center" id="confirmDeleteBtn">
+                            <i class="ti ti-trash me-2"></i>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+
+    <script>
+        // Pass current state to JavaScript
+        window.currentPage = @(Model?.Paging?.CurrentPage ?? 1);
+        window.searchKeyword = '@Html.Raw(Model?.SearchKeyword ?? "")';
+        window.showDeleted = @(Model?.ShowDeleted.ToString().ToLower() ?? "false");
+
+        // Client context for multi-tab session safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0)
+        };
+    </script>
+    <script src="~/assets/js/pages/contactlibrary/company-contact-index.js"></script>
+}

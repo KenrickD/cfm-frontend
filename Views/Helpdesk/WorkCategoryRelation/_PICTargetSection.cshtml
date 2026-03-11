@@ -1,0 +1,97 @@
+@model dynamic
+
+@{
+    var sectionTitle = Model.SectionTitle;
+    var sectionId = Model.SectionId;
+    var targets = Model.Targets as List<cfm_frontend.DTOs.WorkCategoryRelation.PICTargetDto> ?? new List<cfm_frontend.DTOs.WorkCategoryRelation.PICTargetDto>();
+    var idWorkCategoryRelation = Model.IdWorkCategoryRelation;
+}
+
+<div class="pic-target-section">
+    <div class="pic-target-header">
+        <div class="section-title">
+            <span>@sectionTitle</span>
+            <span class="pic-count">@targets.Count PIC(s)</span>
+        </div>
+        <button type="button"
+                class="btn btn-sm btn-light"
+                onclick="showAddPICModal('@sectionId')">
+            <i class="ti ti-plus me-1"></i>
+            Add New PIC
+        </button>
+    </div>
+    <div class="pic-target-body">
+        @if (targets.Any())
+        {
+            <table class="pic-target-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>PIC Name</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="@sectionId-tbody">
+                    @for (var i = 0; i < targets.Count; i++)
+                    {
+                        var pic = targets[i];
+                        var isFirst = i == 0;
+                        var isLast = i == targets.Count - 1;
+
+                        <tr data-pic-id="@pic.IdPIC" data-target-type="@sectionId">
+                            <td class="pic-number">@(i + 1).</td>
+                            <td>@pic.PICName</td>
+                            <td class="pic-actions">
+                                <div class="pic-order-controls">
+                                    @if (!isFirst)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                onclick="movePICUp(@pic.IdPIC, '@sectionId')"
+                                                title="Move Up">
+                                            <i class="ti ti-chevron-up"></i>
+                                        </button>
+                                    }
+                                    @if (!isLast)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                onclick="movePICDown(@pic.IdPIC, '@sectionId')"
+                                                title="Move Down">
+                                            <i class="ti ti-chevron-down"></i>
+                                        </button>
+                                    }
+                                </div>
+                                <button type="button"
+                                        class="btn btn-sm btn-info"
+                                        onclick="viewPIC(@pic.IdPIC)"
+                                        title="View">
+                                    <i class="ti ti-eye"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-primary"
+                                        onclick="editPIC(@pic.IdPIC)"
+                                        title="Edit">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-danger"
+                                        onclick="deletePIC(@pic.IdPIC, '@pic.PICName', '@sectionId')"
+                                        title="Delete">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="pic-target-empty" id="@sectionId-empty">
+                <i class="ti ti-user-off"></i>
+                <p>No PIC</p>
+            </div>
+        }
+    </div>
+</div>

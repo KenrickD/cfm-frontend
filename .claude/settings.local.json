@@ -42,7 +42,16 @@
       "Read(//c/Users/kenri/OneDrive/Documents/Work/Colliers/Repo/CFM Backend/**)",
       "Bash(dotnet build --no-restore)",
       "Bash(Select-Object -First 10)",
-      "Bash(Select-Object -First 50)"
+      "Bash(Select-Object -First 50)",
+      "Bash(test -f \"c:\\Repos\\CFM Frontend\\wwwroot\\manifest.json\")",
+      "Bash(test -f \"c:\\Repos\\CFM Frontend\\wwwroot\\service-worker.js\")",
+      "Bash(Select-String -Pattern \"icon|logo\")",
+      "Bash(Select-Object -First 100)",
+      "Bash(powershell -Command \"Stop-Process -Name ''cfm-frontend'' -Force -ErrorAction SilentlyContinue\")",
+      "Bash(Select-String -Pattern \"error|Build FAILED|Build succeeded\" -Context 0,3)",
+      "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:7035/CompanyContact/Index)",
+      "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:7035/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5099/)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,164 @@
+@model cfm_frontend.ViewModels.WorkCategoryRelationDetailViewModel
+
+@{
+    ViewBag.Title = "Work Category Relation Detail";
+    ViewBag.pTitle = "Work Category Relation List";
+    ViewBag.pTitleUrl = "/WorkCategoryRelation";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/components/searchable-dropdown.css" />
+    <link rel="stylesheet" href="~/assets/css/pages/work-category-relation.css" />
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Detail Header -->
+        <div class="detail-header">
+            <h5 class="detail-header-title">Work Category Relation Detail</h5>
+            <div class="detail-info-grid">
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Work Category Name</span>
+                    <span class="detail-info-value">@Model.WorkCategoryName</span>
+                </div>
+                <div class="detail-info-item">
+                    <span class="detail-info-label">PIC</span>
+                    <span class="detail-info-value">@Model.AssignedPIC</span>
+                </div>
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Priority Level</span>
+                    <span class="detail-info-value">@Model.PriorityLevelName</span>
+                </div>
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Location</span>
+                    <div class="detail-info-value locations">
+                        @foreach (var location in Model.Locations)
+                        {
+                            <span class="location-badge">@location</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Helpdesk Response Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "Helpdesk Response Target",
+            SectionId = "helpdeskResponse",
+            Targets = Model.HelpdeskResponseTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- Initial Follow Up Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "Initial Follow Up Target",
+            SectionId = "initialFollowUp",
+            Targets = Model.InitialFollowUpTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- Quotation Submission Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "Quotation Submission Target",
+            SectionId = "quotationSubmission",
+            Targets = Model.QuotationSubmissionTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- Cost Approval Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "Cost Approval Target",
+            SectionId = "costApproval",
+            Targets = Model.CostApprovalTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- Work Completion Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "Work Completion Target",
+            SectionId = "workCompletion",
+            Targets = Model.WorkCompletionTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- After Work Follow Up Target -->
+        @await Html.PartialAsync("_PICTargetSection", new {
+            SectionTitle = "After Work Follow Up Target",
+            SectionId = "afterWorkFollowUp",
+            Targets = Model.AfterWorkFollowUpTargets,
+            IdWorkCategoryRelation = Model.IdWorkCategoryRelation
+        })
+
+        <!-- Back Button -->
+        <div class="mt-3">
+            <a href="@Url.Action("Index", "WorkCategoryRelation")" class="btn btn-secondary">
+                <i class="ti ti-arrow-left me-1"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Add PIC Modal -->
+<div class="modal fade" id="addPICModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New PIC</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalTargetType" />
+                <div class="add-pic-form-group">
+                    <label for="modalPICSelect">Select PIC <span class="text-danger">*</span></label>
+                    <select id="modalPICSelect" class="form-select" data-searchable="true">
+                        <option value="">- Select PIC -</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmAddPICBtn">Add PIC</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete PIC Confirmation Modal -->
+<div class="modal fade" id="deletePICModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove this PIC from the target section?</p>
+                <p class="text-muted small mb-0">
+                    <strong id="deletePICName"></strong>
+                </p>
+                <input type="hidden" id="deletePICId" />
+                <input type="hidden" id="deleteTargetType" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeletePICBtn">Remove</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // Client context for multi-tab session safety
+        window.PageContext = {
+            idClient: @(Model?.IdClient ?? 0),
+            idWorkCategoryRelation: @(Model?.IdWorkCategoryRelation ?? 0)
+        };
+    </script>
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+    <script src="~/assets/js/pages/workcategoryrelation/detail.js"></script>
+}
