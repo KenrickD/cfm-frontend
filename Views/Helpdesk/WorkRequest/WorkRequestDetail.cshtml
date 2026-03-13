@@ -402,16 +402,13 @@
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">Other Category</label>
                         <input type="text" class="form-control form-control-sm"
-                               value="@(wr?.OtherCategory?.TypeName ?? "-")" readonly>
+                               value="@(wr?.OtherCategory?.TypeName ?? "Not Specified")" readonly>
                     </div>
-                    @if (wr?.OtherCategory2 != null)
-                    {
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Other Category 2</label>
-                            <input type="text" class="form-control form-control-sm"
-                                   value="@wr.OtherCategory2.TypeName" readonly>
-                        </div>
-                    }
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Other Category 2</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="@(wr?.OtherCategory2?.TypeName ?? "Not Specified")" readonly>
+                    </div>
                     <div class="col-md-12 mb-3">
                         <label class="form-label fw-semibold">Based on PM Finding</label>
                         <div class="form-check">

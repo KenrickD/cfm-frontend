@@ -3519,16 +3519,19 @@
      * Set dropdown value and update searchable dropdown component
      */
     function setDropdownValue(selectId, value) {
-        if (!value) return;
-
         const $select = $(`#${selectId}`);
-        $select.val(value);
+
+        // If value is null/undefined/empty, select "Not Specified" option (value="null")
+        // This handles cases where backend returns null for optional fields
+        const dropdownValue = (!value || value === 0) ? 'null' : value;
+
+        $select.val(dropdownValue);
 
         // Update searchable dropdown if available
         const selectElement = document.getElementById(selectId);
         if (selectElement && selectElement._searchableDropdown) {
             const $selectedOption = $select.find('option:selected');
-            selectElement._searchableDropdown.setValue(value, $selectedOption.text(), true);
+            selectElement._searchableDropdown.setValue(dropdownValue, $selectedOption.text(), true);
         }
     }
 

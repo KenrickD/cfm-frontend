@@ -340,7 +340,7 @@
      */
     function autoSelectFirstLocation() {
         const $locationSelect = $('#locationSelect');
-        const $firstValidOption = $locationSelect.find('option[value!=""][value!="-1"]').first();
+        const $firstValidOption = $locationSelect.find('option[value!=""][value!="null"]').first();
 
         if ($firstValidOption.length > 0) {
             const firstValue = $firstValidOption.val();

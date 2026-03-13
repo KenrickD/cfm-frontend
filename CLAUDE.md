@@ -34,6 +34,150 @@ This repository contains three reference documents:
 
 **Critical Rule:** Never break existing functionality without confirmation.
 
+## Plan Mode Workflow
+
+When you are prompted with tasks in **plan mode**, follow this mandatory workflow to ensure complete understanding before implementation:
+
+### 1. Discovery Phase: Ask Clarifying Questions
+
+**MANDATORY:** Extensively use the AskUserQuestion tool to gather all necessary information. Do NOT make assumptions or proceed with incomplete information.
+
+**Question Categories to Cover:**
+
+- **Feature Requirements**
+  - What is the exact behavior expected?
+  - What are the success criteria?
+  - Are there any similar existing features to reference?
+
+- **UI/UX Details**
+  - What should the page layout look like?
+  - What form fields are needed (labels, types, validation)?
+  - What table columns should be displayed?
+  - Where should buttons be placed and what should they say?
+  - What user feedback is needed (notifications, confirmations)?
+
+- **Data & Integration**
+  - What backend API endpoints will be used?
+  - What data needs to be sent/received?
+  - What are the required and optional fields?
+  - How should data be validated (client-side and server-side)?
+
+- **Business Logic**
+  - What are the business rules?
+  - What edge cases need to be handled?
+  - What permissions/privileges are required?
+  - Is multi-tab session safety needed?
+  - Is client-specific context required?
+
+- **Error Handling**
+  - What errors could occur?
+  - How should errors be displayed to users?
+  - What should happen when operations fail?
+
+- **Technical Considerations**
+  - Should this follow an existing pattern (CRUD page, form with cascading dropdowns, etc.)?
+  - Are there specific files that need to be created or modified?
+  - What existing components should be reused?
+  - Are there any performance concerns?
+
+### 2. Confidence Threshold
+
+**Continue asking questions until you are 98% confident** that you:
+- Completely understand what needs to be built
+- Know all the technical requirements
+- Have clarity on UI/UX expectations
+- Understand data flow and integration points
+- Can implement the solution expertly without guesswork
+
+**If uncertain about ANY aspect, ask more questions.**
+
+### 3. Present Your Plan
+
+Once you have achieved 98% confidence, present a comprehensive implementation plan that:
+
+**MUST Include:**
+- All files that will be created or modified
+- Key decisions made (patterns to follow, components to use, etc.)
+- Architecture approach (which controllers, ViewModels, DTOs, etc.)
+- Integration details (API endpoints, data flow)
+- UI/UX approach (layout, components, user interactions)
+- Error handling strategy
+- Any important considerations or trade-offs
+
+**MUST NOT Include:**
+- Actual code implementation
+- Code snippets or examples (unless specifically requested for clarification)
+
+**Format:** Clear, organized, decision-focused plan that demonstrates thorough understanding
+
+### 4. Await Approval
+
+Wait for user feedback and approval of your plan before proceeding with implementation.
+
+**Example Workflow:**
+
+```
+User: "Add a new page for managing maintenance schedules"
+
+Claude: [Asks 8-12 clarifying questions about]:
+- What fields should be in the maintenance schedule form?
+- Should it support CRUD operations or just viewing?
+- What filters are needed?
+- Should it have pagination?
+- What are the validation rules?
+- Which backend endpoints exist for this?
+- What privileges control access?
+- etc.
+
+User: [Answers questions]
+
+Claude: [Asks follow-up questions if needed]
+
+User: [Provides additional details]
+
+Claude: [Once 98% confident, presents plan]:
+"Based on our discussion, here's my implementation plan:
+
+1. Files to Create:
+   - ViewModels/MaintenanceScheduleViewModel.cs
+   - Views/PreventiveMaintenance/MaintenanceSchedules.cshtml
+   - wwwroot/assets/js/pages/preventivemaintenance/maintenance-schedules.js
+
+2. Files to Modify:
+   - Controllers/PreventiveMaintenanceController.cs (add Index action)
+   - Constants/ApiEndpoints.cs (add maintenance endpoints)
+   - wwwroot/assets/js/mvc-endpoints.js (add JS endpoints)
+
+3. Architecture Decisions:
+   - Follow Settings CRUD page pattern (inline editing)
+   - Include multi-tab session safety (client-specific data)
+   - Use searchable dropdown for equipment selection
+   - Implement pagination (20 items per page)
+
+4. Integration:
+   - Backend endpoints: GET /api/MaintenanceSchedule, POST, PUT, DELETE
+   - All operations require 'Maintenance' module access
+
+5. UI/UX:
+   - Table with columns: Equipment, Schedule Type, Frequency, Last Done, Next Due, Status
+   - Inline edit mode with Save/Cancel buttons
+   - Add New button (top right)
+   - Search bar and status filter
+
+Is this aligned with your expectations?"
+
+User: "Yes, proceed"
+
+Claude: [Begins implementation]
+```
+
+**Benefits of This Approach:**
+- Reduces rework from misunderstandings
+- Ensures alignment with expectations
+- Demonstrates expertise through thoughtful questions
+- Results in higher quality implementations
+- Saves time in the long run
+
 ## Development Commands
 
 ```bash

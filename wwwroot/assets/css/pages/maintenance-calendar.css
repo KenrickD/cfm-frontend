@@ -1,0 +1,874 @@
+/**
+ * Maintenance Calendar Styles - Modern Design (Jira-Inspired)
+ * Calendar visualization for preventive maintenance management
+ * Version: 2.0 - Modernized UI/UX
+ */
+
+/* ============================================
+   STATS CARDS SECTION
+   ============================================ */
+
+.stats-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--bs-card-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-label {
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--bs-heading-color);
+    line-height: 1;
+}
+
+.stat-card-change {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-card-change.positive {
+    color: #22c55e;
+}
+
+.stat-card-change.negative {
+    color: #ef4444;
+}
+
+.stat-card.overdue {
+    border-left: 4px solid #ef4444;
+}
+
+.stat-card.overdue .stat-card-value {
+    color: #ef4444;
+}
+
+/* ============================================
+   CALENDAR WRAPPER & LAYOUT
+   ============================================ */
+
+.maintenance-calendar-wrapper {
+    width: 100%;
+    overflow: hidden;
+}
+
+/* ============================================
+   TABLE-BASED GANTT LAYOUT
+   ============================================ */
+
+/* Table Wrapper with Scroll */
+.gantt-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 400px);
+    min-height: 400px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+/* Table Element */
+.gantt-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: fit-content;
+    background: var(--bs-card-bg);
+}
+
+/* All Header Cells (Sticky Top) */
+.gantt-table thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+    z-index: 20;
+    border-bottom: 2px solid var(--bs-border-color);
+    padding: 0.875rem 0.5rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+/* First Column Cells (Sticky Left) - Both Header and Body */
+.gantt-table th:first-child,
+.gantt-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--bs-card-bg);
+    z-index: 15;
+    border-right: 2px solid var(--bs-border-color);
+    min-width: 600px;
+    max-width: 600px;
+}
+
+/* First column - ensure consistent background */
+.gantt-table tbody tr td:first-child {
+    background: var(--bs-card-bg) !important;
+}
+
+/* Corner Cell (Sticky Both Top AND Left) */
+.gantt-table thead th:first-child {
+    z-index: 25; /* Highest - sticky in both directions */
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Month Header Cells */
+.gantt-table th.month-cell {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 0.8125rem;
+    color: #495057;
+}
+
+/* Week Header Cells */
+.gantt-table th.week-header {
+    min-width: 60px;
+    width: 60px;
+    text-align: center;
+    font-size: 0.6875rem;
+    color: #868e96;
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.gantt-table th.week-header:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+}
+
+/* Week Cells (for Schedule Tiles) */
+.gantt-table td.week-cell {
+    min-width: 60px;
+    width: 60px;
+    border-right: 1px solid var(--bs-border-color);
+    padding: 0.25rem;
+    position: relative;
+    text-align: center;
+    vertical-align: middle;
+    z-index: 1; /* Lower than sticky column (z-index: 15) */
+}
+
+/* Activity Rows */
+.gantt-table tbody tr {
+    height: 60px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+/* Hover Effect */
+.gantt-table tbody tr:hover {
+    background-color: #f0f7ff;
+}
+
+.gantt-table tbody tr:hover td {
+    background-color: #f0f7ff;
+}
+
+.gantt-table tbody tr:hover td:first-child {
+    background-color: #f0f7ff;
+    box-shadow: -3px 0 0 #3b82f6;
+}
+
+/* Activity Info Cell Content */
+.gantt-table td:first-child {
+    padding: 0;
+}
+
+/* Split Pane Layout - DEPRECATED (Keeping for Backward Compatibility) */
+.calendar-split-pane {
+    display: flex;
+    width: 100%;
+    min-height: 600px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Activity List Column (Left - Fixed) */
+.activity-list-column {
+    flex-shrink: 0;
+    width: 600px;
+    border-right: 2px solid var(--bs-border-color);
+    background: var(--bs-card-bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Activity List Header - Modern Gradient */
+.activity-list-header {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid var(--bs-border-color);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.875rem 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.activity-col-no {
+    width: 50px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.activity-col-name {
+    flex: 2;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-col-location {
+    flex: 2;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-col-frequency {
+    width: 100px;
+    flex-shrink: 0;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-col-provider {
+    flex: 1.5;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-col-actions {
+    width: 90px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* Activity List Body */
+.activity-list-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Activity Row - Modern Zebra Striping with Elevation on Hover */
+.activity-row {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    height: 60px;
+    background: var(--bs-card-bg);
+}
+
+/* Zebra Striping */
+.activity-row:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* Modern Hover Effect with Elevation */
+.activity-row:hover {
+    background-color: #f0f7ff;
+    transform: translateX(2px);
+    box-shadow: -3px 0 0 #3b82f6, 0 2px 8px rgba(59, 130, 246, 0.1);
+    z-index: 1;
+}
+
+.activity-row:last-child {
+    border-bottom: none;
+}
+
+.activity-col-actions .btn {
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.125rem;
+}
+
+/* Calendar Grid Column (Right - Scrollable) */
+.calendar-grid-column {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--bs-body-bg);
+}
+
+/* Calendar Grid Header - Modern Gradient Timeline */
+.calendar-grid-header {
+    position: sticky;
+    top: 0;
+    z-index: 9;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid var(--bs-border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-header-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 60px;
+}
+
+/* Month Row - Bold with Subtle Background */
+.calendar-month-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.calendar-month-cell {
+    padding: 0.625rem 0.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    color: #495057;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Week Row - Lighter, More Subtle */
+.calendar-week-row {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.calendar-week-cell {
+    padding: 0.5rem;
+    text-align: center;
+    font-weight: 500;
+    font-size: 0.6875rem;
+    color: #868e96;
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.calendar-week-cell:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+}
+
+/* Current Week Highlight */
+.calendar-week-cell.current-week {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 #3b82f6;
+}
+
+/* Calendar Grid Body */
+.calendar-grid-body {
+    min-width: fit-content;
+}
+
+/* Schedule Row */
+.schedule-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 60px;
+    height: 60px;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Schedule Cell */
+.schedule-cell {
+    position: relative;
+    border-right: 1px solid var(--bs-border-color);
+    padding: 0.25rem;
+}
+
+/* Schedule Tile - Modern Gantt-Style Design */
+.schedule-tile {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 36px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.6875rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: white;
+    text-align: center;
+    padding: 0 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: auto; /* Ensure tiles don't create higher stacking context */
+}
+
+/* Gantt Bar for Multi-Day Schedules */
+.schedule-tile.multi-day {
+    min-width: 100px;
+    justify-content: flex-start;
+    padding-left: 0.75rem;
+    border-radius: 18px;
+}
+
+.schedule-tile.multi-day::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+}
+
+/* Modern Hover Effect */
+.schedule-tile:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.15) saturate(1.1);
+    z-index: 2; /* Higher than parent week-cell (1) but lower than sticky column (15) */
+}
+
+/* Status Color Coding - Modern Palette */
+.schedule-tile.status-new {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.schedule-tile.status-in-progress {
+    background: linear-gradient(135deg, #eab308 0%, #d97706 100%);
+    animation: pulse-progress 2s ease-in-out infinite;
+}
+
+.schedule-tile.status-completed {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.schedule-tile.status-overdue {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    animation: pulse-overdue 1.5s ease-in-out infinite;
+}
+
+/* Pulse Animation for In-Progress */
+@keyframes pulse-progress {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* Pulse Animation for Overdue */
+@keyframes pulse-overdue {
+    0%, 100% { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
+    50% { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(239, 68, 68, 0.15); }
+}
+
+/* Status Icon in Tile */
+.schedule-tile-icon {
+    margin-right: 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* Schedule Tooltip - Modern Card Style */
+.schedule-tooltip {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    color: #212529;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-width: 320px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid white;
+    top: -10px;
+    left: 20px;
+    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.05));
+}
+
+.tooltip-content {
+    font-size: 0.875rem;
+}
+
+.tooltip-code {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: #3b82f6;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+    display: block;
+}
+
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    align-items: center;
+    gap: 1rem;
+}
+
+.tooltip-row:not(:last-child) {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.tooltip-row strong {
+    font-size: 0.75rem;
+    color: #868e96;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.tooltip-row span {
+    color: #212529;
+    font-weight: 500;
+}
+
+.tooltip-loading {
+    text-align: center;
+    padding: 1.5rem;
+    color: #868e96;
+}
+
+.tooltip-data .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tooltip-data .badge.status-new {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.tooltip-data .badge.status-in-progress {
+    background-color: #eab308;
+    color: white;
+}
+
+.tooltip-data .badge.status-completed {
+    background-color: #22c55e;
+    color: white;
+}
+
+.tooltip-data .badge.status-overdue {
+    background-color: #ef4444;
+    color: white;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--bs-secondary-color);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state h5 {
+    margin-bottom: 0.5rem;
+    color: var(--bs-heading-color);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .activity-list-column {
+        width: 500px;
+    }
+
+    .activity-col-location,
+    .activity-col-provider {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .calendar-split-pane {
+        flex-direction: column;
+    }
+
+    .activity-list-column {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid var(--bs-border-color);
+        max-height: 300px;
+    }
+
+    .activity-list-body {
+        max-height: 200px;
+    }
+
+    .calendar-grid-column {
+        overflow-x: scroll;
+    }
+}
+
+/* ============================================
+   DARK MODE SUPPORT - REFINED PALETTE
+   ============================================ */
+
+[data-pc-theme="dark"] .stat-card {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+[data-pc-theme="dark"] .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-pc-theme="dark"] .stat-card-value {
+    color: #f3f4f6;
+}
+
+[data-pc-theme="dark"] .calendar-split-pane {
+    border-color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-pc-theme="dark"] .activity-list-header,
+[data-pc-theme="dark"] .calendar-grid-header {
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border-bottom-color: #374151;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-pc-theme="dark"] .calendar-month-cell {
+    color: #e5e7eb;
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+    border-right-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-pc-theme="dark"] .calendar-week-cell {
+    color: #9ca3af;
+    background: rgba(255, 255, 255, 0.02);
+    border-right-color: rgba(255, 255, 255, 0.03);
+}
+
+[data-pc-theme="dark"] .calendar-week-cell:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+[data-pc-theme="dark"] .calendar-week-cell.current-week {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+[data-pc-theme="dark"] .activity-row {
+    background: #1f2937;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-pc-theme="dark"] .activity-row:nth-child(even) {
+    background: #1a1f2e;
+}
+
+[data-pc-theme="dark"] .activity-row:hover {
+    background-color: #1e3a5f;
+    box-shadow: -3px 0 0 #60a5fa, 0 2px 8px rgba(96, 165, 250, 0.15);
+}
+
+[data-pc-theme="dark"] .schedule-tooltip {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f3f4f6;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-pc-theme="dark"] .tooltip-arrow {
+    border-bottom-color: #1f2937;
+}
+
+[data-pc-theme="dark"] .tooltip-code {
+    color: #60a5fa;
+    border-bottom-color: #374151;
+}
+
+[data-pc-theme="dark"] .tooltip-row:not(:last-child) {
+    border-bottom-color: #374151;
+}
+
+[data-pc-theme="dark"] .tooltip-row strong {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .tooltip-row span {
+    color: #e5e7eb;
+}
+
+[data-pc-theme="dark"] .empty-state {
+    color: #9ca3af;
+}
+
+[data-pc-theme="dark"] .empty-state h5 {
+    color: #e5e7eb;
+}
+
+/* Gantt Layout Dark Mode */
+[data-pc-theme="dark"] .gantt-calendar-container {
+    border-color: #374151;
+}
+
+[data-pc-theme="dark"] .gantt-header-row,
+[data-pc-theme="dark"] .activity-info-header {
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border-bottom-color: #374151;
+}
+
+[data-pc-theme="dark"] .gantt-table tbody tr {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-pc-theme="dark"] .gantt-table tbody tr:hover {
+    background-color: #1e3a5f;
+    box-shadow: -3px 0 0 #60a5fa, 0 2px 8px rgba(96, 165, 250, 0.15);
+}
+
+[data-pc-theme="dark"] .gantt-table tbody tr td:first-child {
+    background: #1f2937 !important;
+    border-right-color: #374151;
+}
+
+[data-pc-theme="dark"] .gantt-table tbody tr:hover td:first-child {
+    background-color: #1e3a5f !important;
+}
+
+[data-pc-theme="dark"] .week-cell {
+    border-right-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Scrollbar Styling */
+.calendar-grid-column::-webkit-scrollbar,
+.activity-list-body::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.calendar-grid-column::-webkit-scrollbar-track,
+.activity-list-body::-webkit-scrollbar-track {
+    background: var(--bs-tertiary-bg);
+}
+
+.calendar-grid-column::-webkit-scrollbar-thumb,
+.activity-list-body::-webkit-scrollbar-thumb {
+    background: var(--bs-border-color);
+    border-radius: 4px;
+}
+
+.calendar-grid-column::-webkit-scrollbar-thumb:hover,
+.activity-list-body::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-secondary-color);
+}
+
+/* Loading Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.schedule-tile {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Text Truncation Helper with Tooltip */
+.text-truncate-with-tooltip {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+    position: relative;
+}
+
+.text-truncate-with-tooltip:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    white-space: normal;
+    max-width: 300px;
+    z-index: 1000;
+    margin-bottom: 0.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Print Styles */
+@media print {
+    .page-header-title,
+    .card .card-body .row,
+    #freezeCalendarBtn,
+    .activity-col-actions {
+        display: none;
+    }
+
+    .calendar-split-pane {
+        border: none;
+    }
+
+    .activity-list-column {
+        width: 300px;
+    }
+
+    .calendar-grid-column {
+        overflow: visible;
+    }
+}

@@ -1,0 +1,296 @@
+@using cfm_frontend.Extensions
+@model cfm_frontend.ViewModels.MaintenanceScheduleDetailViewModel
+
+@{
+    ViewBag.Title = "Schedule Detail";
+    ViewBag.pTitle = "Maintenance Management";
+    ViewBag.pTitleUrl = "/PreventiveMaintenance/Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <style>
+        .detail-section {
+            background: var(--bs-card-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            width: 200px;
+            flex-shrink: 0;
+            color: var(--bs-heading-color);
+        }
+
+        .detail-value {
+            flex: 1;
+            color: var(--bs-body-color);
+        }
+
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .status-new {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .status-in-progress {
+            background-color: #eab308;
+            color: white;
+        }
+
+        .status-completed {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .status-overdue {
+            background-color: #ef4444;
+            color: white;
+        }
+    </style>
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10">@Model.ScheduleCode</h5>
+                    <p class="m-b-0 text-muted">Maintenance Schedule Details</p>
+                </div>
+                <div>
+                    <a href="/PreventiveMaintenance/Index" class="btn btn-outline-secondary btn-sm me-2">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        Back to Calendar
+                    </a>
+                    @if (Context.Session.CanEdit("Preventive Maintenance", "Maintenance Management"))
+                    {
+                        <button type="button" class="btn btn-primary btn-sm me-2" id="editScheduleBtn">
+                            <i class="ti ti-edit me-1"></i>
+                            Edit
+                        </button>
+                    }
+                    @if (Context.Session.CanDelete("Preventive Maintenance", "Maintenance Management"))
+                    {
+                        <button type="button" class="btn btn-danger btn-sm" id="deleteScheduleBtn">
+                            <i class="ti ti-trash me-1"></i>
+                            Delete
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Information -->
+        <div class="detail-section">
+            <h6 class="mb-3">Schedule Information</h6>
+            <div class="detail-row">
+                <div class="detail-label">Schedule Code:</div>
+                <div class="detail-value"><strong>@Model.ScheduleCode</strong></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Activity Name:</div>
+                <div class="detail-value">@Model.ActivityName</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Location:</div>
+                <div class="detail-value">@Model.Location</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Frequency:</div>
+                <div class="detail-value">@Model.Frequency</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Service Provider:</div>
+                <div class="detail-value">@Model.ServiceProvider</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                    @{
+                        var statusClass = Model.Status.ToLower() switch
+                        {
+                            "new" => "status-new",
+                            "in progress" => "status-in-progress",
+                            "completed" => "status-completed",
+                            "overdue" => "status-overdue",
+                            _ => "status-new"
+                        };
+                    }
+                    <span class="badge @statusClass">@Model.Status</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Dates -->
+        <div class="detail-section">
+            <h6 class="mb-3">Schedule Dates</h6>
+            <div class="detail-row">
+                <div class="detail-label">Planned Start Date:</div>
+                <div class="detail-value">@Model.PlannedStartDate.ToString("dd MMM yyyy hh:mm tt")</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Planned End Date:</div>
+                <div class="detail-value">@Model.PlannedEndDate.ToString("dd MMM yyyy hh:mm tt")</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Actual Start Date:</div>
+                <div class="detail-value">
+                    @if (Model.ActualStartDate.HasValue)
+                    {
+                        @Model.ActualStartDate.Value.ToString("dd MMM yyyy hh:mm tt")
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Actual End Date:</div>
+                <div class="detail-value">
+                    @if (Model.ActualEndDate.HasValue)
+                    {
+                        @Model.ActualEndDate.Value.ToString("dd MMM yyyy hh:mm tt")
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div class="detail-section">
+                <h6 class="mb-3">Notes</h6>
+                <div class="detail-value">@Model.Notes</div>
+            </div>
+        }
+
+        <!-- Attachments -->
+        @if (Model.Attachments != null && Model.Attachments.Any())
+        {
+            <div class="detail-section">
+                <h6 class="mb-3">Attachments</h6>
+                <div class="list-group">
+                    @foreach (var attachment in Model.Attachments)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="ti ti-file me-2"></i>
+                                <a href="@attachment.FileUrl" target="_blank">@attachment.FileName</a>
+                                <small class="text-muted ms-2">
+                                    Uploaded by @attachment.UploadedBy on @attachment.UploadedDate.ToString("dd MMM yyyy")
+                                </small>
+                            </div>
+                            <a href="@attachment.FileUrl" download class="btn btn-sm btn-outline-primary">
+                                <i class="ti ti-download"></i>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this maintenance schedule?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function() {
+            // Page Context for Multi-Tab Session Safety
+            const clientContext = {
+                idClient: @Model.IdClient
+            };
+
+            // Edit Schedule
+            $('#editScheduleBtn').on('click', function() {
+                // TODO: Navigate to edit page or open edit modal
+                showNotification('Edit functionality will be implemented when backend is ready', 'info', 'Coming Soon');
+            });
+
+            // Delete Schedule
+            $('#deleteScheduleBtn').on('click', function() {
+                $('#deleteConfirmModal').modal('show');
+            });
+
+            // Confirm Delete
+            $('#confirmDeleteBtn').on('click', function() {
+                // TODO: Backend API Integration - Delete Schedule
+                // Endpoint: DELETE /api/v1/preventive-maintenance/schedules/{id}
+                // Query params: cid (client id)
+                /*
+                $.ajax({
+                    url: '/PreventiveMaintenance/DeleteSchedule',
+                    method: 'DELETE',
+                    data: {
+                        id: @Model.ScheduleId,
+                        idClient: clientContext.idClient
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showNotification('Schedule deleted successfully', 'success', 'Success');
+                            setTimeout(function() {
+                                window.location.href = '/PreventiveMaintenance/Index';
+                            }, 1000);
+                        } else {
+                            showNotification(response.message || 'Failed to delete schedule', 'error', 'Error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Delete schedule error:', error);
+                        showNotification('An error occurred while deleting the schedule', 'error', 'Error');
+                    },
+                    complete: function() {
+                        $('#deleteConfirmModal').modal('hide');
+                    }
+                });
+                */
+                showNotification('Delete functionality will be implemented when backend is ready', 'info', 'Coming Soon');
+                $('#deleteConfirmModal').modal('hide');
+            });
+        });
+    </script>
+}

@@ -1407,5 +1407,83 @@ namespace cfm_frontend.Constants
         }
 
         #endregion
+
+        #region Preventive Maintenance
+
+        /// <summary>
+        /// Preventive Maintenance management endpoints
+        /// Base path: /api/v1/preventive-maintenance
+        /// TODO: Backend API implementation required
+        /// </summary>
+        public static class PreventiveMaintenance
+        {
+            private const string Base = ApiBase + "/preventive-maintenance";
+
+            /// <summary>
+            /// GET: Get maintenance activities list with pagination
+            /// Query params: idClient, propertyGroupId, buildingId, fromDate, toDate, page, limit
+            /// Response: ApiResponseDto with PagedResponse of MaintenanceActivityDto
+            /// TODO: Backend API implementation required
+            /// </summary>
+            public const string Activities = Base + "/activities";
+
+            /// <summary>
+            /// GET: Get maintenance schedules for calendar visualization
+            /// Query params: idClient, fromDate, toDate, propertyGroupId, buildingId
+            /// Response: ApiResponseDto with List of MaintenanceScheduleDto
+            /// TODO: Backend API implementation required
+            /// </summary>
+            public const string Schedules = Base + "/schedules";
+
+            /// <summary>
+            /// GET: Get schedule detail by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: ApiResponseDto with MaintenanceScheduleDetailDto
+            /// TODO: Backend API implementation required
+            /// </summary>
+            /// <param name="id">Schedule ID</param>
+            /// <returns>Get schedule detail endpoint URL</returns>
+            public static string GetScheduleById(int id) => $"{Base}/schedules/{id}";
+
+            /// <summary>
+            /// GET: Get schedule tooltip data for hover preview
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// Response: ApiResponseDto with ScheduleTooltipDto
+            /// TODO: Backend API implementation required
+            /// </summary>
+            /// <param name="id">Schedule ID</param>
+            /// <returns>Get schedule tooltip endpoint URL</returns>
+            public static string GetScheduleTooltip(int id) => $"{Base}/schedules/{id}/tooltip";
+
+            /// <summary>
+            /// POST: Create new maintenance activity
+            /// Body: MaintenanceActivityPayloadDto
+            /// Response: int (new activity ID)
+            /// TODO: Backend API implementation required
+            /// </summary>
+            public const string CreateActivity = Base + "/activities";
+
+            /// <summary>
+            /// PUT: Update maintenance activity
+            /// Body: MaintenanceActivityPayloadDto
+            /// Response: int (updated activity ID)
+            /// TODO: Backend API implementation required
+            /// </summary>
+            public const string UpdateActivity = Base + "/activities";
+
+            /// <summary>
+            /// DELETE: Delete maintenance activity by ID
+            /// Path params: {id}
+            /// Query params: cid (client id)
+            /// TODO: Backend API implementation required
+            /// </summary>
+            /// <param name="id">Activity ID</param>
+            /// <returns>Delete activity endpoint URL</returns>
+            public static string DeleteActivity(int id) => $"{Base}/activities/{id}";
+        }
+
+        #endregion
     }
 }

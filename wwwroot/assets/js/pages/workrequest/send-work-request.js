@@ -152,7 +152,10 @@
             method: 'GET',
             success: function (response) {
                 if (response.success && response.data) {
-                    $select.empty().append('<option value="">Select Work Category</option>');
+                    $select.empty()
+                        .append('<option value="">Select Work Category</option>')
+                        .append('<option value="null">Not Specified</option>');
+
                     $.each(response.data, function (index, category) {
                         $select.append(
                             $('<option></option>')
@@ -161,11 +164,16 @@
                         );
                     });
 
+                    // Auto-select "Not Specified" on page load
+                    $select.val('null');
+                    state.selectedWorkCategory = 'null';
+
                     // Enable and refresh searchable dropdown
                     $select.prop('disabled', false);
                     if (selectElement && selectElement._searchableDropdown) {
                         selectElement._searchableDropdown.loadFromSelect();
                         selectElement._searchableDropdown.enable();
+                        selectElement._searchableDropdown.setValue('null', 'Not Specified', true);
                     }
                 }
             },
@@ -756,8 +764,13 @@
                 $('#workRequestListLoading').hide();
 
                 if (response.success && response.data && response.data.length > 0) {
+                    // Sort by request date descending (most recent first)
+                    const sortedData = response.data.sort(function(a, b) {
+                        return new Date(b.requestDate) - new Date(a.requestDate);
+                    });
+
                     // Store full dataset and metadata
-                    state.workRequestList = response.data;
+                    state.workRequestList = sortedData;
                     state.workRequestMetadata = response.metadata || null;
                     state.currentPage = 1;
 

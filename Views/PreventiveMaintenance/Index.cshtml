@@ -1,0 +1,197 @@
+@model cfm_frontend.ViewModels.MaintenanceManagementViewModel
+
+@{
+    ViewBag.Title = "Maintenance Management";
+    ViewBag.pTitle = "Preventive Maintenance";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/assets/css/pages/maintenance-calendar.css" />
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- Page Header -->
+        <div class="page-header-title mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="m-b-10">Maintenance Management</h5>
+                    <p class="m-b-0 text-muted">View and manage preventive maintenance schedules across all properties</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" id="addNewActivityBtn">
+                        <i class="ti ti-plus me-1"></i>
+                        Add New Activity
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <!-- Property Group Filter -->
+                    <div class="col-md-3">
+                        <label for="propertyGroupFilter" class="form-label">Property Group</label>
+                        <select class="form-select" id="propertyGroupFilter">
+                            <option value="">All 6 property groups</option>
+                            <!-- TODO: Populate from backend -->
+                        </select>
+                    </div>
+
+                    <!-- Building Filter -->
+                    <div class="col-md-3">
+                        <label for="buildingFilter" class="form-label">Building</label>
+                        <select class="form-select" id="buildingFilter">
+                            <option value="">All 5 buildings in your privilege</option>
+                            <!-- TODO: Populate from backend -->
+                        </select>
+                    </div>
+
+                    <!-- From Date -->
+                    <div class="col-md-2">
+                        <label for="fromDatePicker" class="form-label">From</label>
+                        <input type="date" class="form-control" id="fromDatePicker" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <!-- View Mode -->
+                    <div class="col-md-2">
+                        <label for="viewModeSelect" class="form-label">Displayed in</label>
+                        <select class="form-select" id="viewModeSelect">
+                            <option value="52-Week View" selected>52-Week View</option>
+                            <option value="Monthly View">Monthly View</option>
+                        </select>
+                    </div>
+
+                    <!-- Apply Button -->
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary w-100" id="applyFiltersBtn">
+                            <i class="ti ti-filter me-1"></i>
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Stats Cards Section -->
+        <div class="stats-cards-container">
+            <div class="stat-card">
+                <div class="stat-card-label">Total Activities</div>
+                <div class="stat-card-value" id="statTotalActivities">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">Schedules This Week</div>
+                <div class="stat-card-value" id="statSchedulesThisWeek">0</div>
+            </div>
+            <div class="stat-card overdue">
+                <div class="stat-card-label">Overdue</div>
+                <div class="stat-card-value" id="statOverdue">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">Completion Rate</div>
+                <div class="stat-card-value">
+                    <span id="statCompletionRate">0</span><span style="font-size: 1.25rem; font-weight: 500;">%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Container -->
+        <div class="card">
+            <div class="card-body p-0">
+                <!-- Loading Spinner -->
+                <div id="calendarLoadingSpinner" class="text-center py-5" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-2">Loading calendar data...</p>
+                </div>
+
+                <!-- Calendar Wrapper - Table-Based Gantt Layout -->
+                <div id="calendarWrapper" class="maintenance-calendar-wrapper">
+                    <div class="gantt-table-wrapper">
+                        <table class="gantt-table">
+                            <thead id="ganttTableHead">
+                                <!-- Header rows populated by JavaScript -->
+                            </thead>
+                            <tbody id="ganttTableBody">
+                                <!-- Activity rows populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="ti ti-calendar-off"></i>
+                    <h5>No Maintenance Activities Found</h5>
+                    <p class="text-muted">There are no maintenance activities matching your current filters.</p>
+                    <button type="button" class="btn btn-primary mt-2" id="addActivityFromEmpty">
+                        <i class="ti ti-plus me-1"></i>
+                        Add New Activity
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Freeze Calendar Button -->
+        <div class="mt-3">
+            <button type="button" class="btn btn-outline-secondary" id="freezeCalendarBtn">
+                <i class="ti ti-lock me-1"></i>
+                Freeze Calendar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Tooltip (Hidden by default) -->
+<div id="scheduleTooltip" class="schedule-tooltip" style="display: none;">
+    <div class="tooltip-arrow"></div>
+    <div class="tooltip-content">
+        <div class="tooltip-loading" id="tooltipLoading">
+            <div class="spinner-border spinner-border-sm text-light" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div class="tooltip-data" id="tooltipData" style="display: none;">
+            <div class="tooltip-code mb-2" id="tooltipCode"></div>
+            <div class="tooltip-row">
+                <strong>Planned Date:</strong>
+                <span id="tooltipPlannedDate"></span>
+            </div>
+            <div class="tooltip-row">
+                <strong>Actual Date:</strong>
+                <span id="tooltipActualDate"></span>
+            </div>
+            <div class="tooltip-row">
+                <strong>Status:</strong>
+                <span id="tooltipStatus" class="badge"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <!-- Searchable Dropdown Component -->
+    <script src="~/assets/js/components/searchable-dropdown.js"></script>
+
+    <!-- Client Session Monitor -->
+    <script src="~/assets/js/helpers/client-session-monitor.js"></script>
+
+    <!-- Page Context for Multi-Tab Session Safety -->
+    <script>
+        window.PageContext = {
+            idClient: @Model.IdClient,
+            fromDate: '@Model.FromDate.ToString("yyyy-MM-dd")',
+            viewMode: '@Model.ViewMode'
+        };
+    </script>
+
+    <!-- Maintenance Management Page Script -->
+    <script src="~/assets/js/pages/preventivemaintenance/maintenance-management.js"></script>
+}

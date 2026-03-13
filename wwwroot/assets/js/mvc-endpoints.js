@@ -335,6 +335,25 @@
                 Update: '/CompanyContact/UpdateEmail',
                 Delete: '/CompanyContact/DeleteEmail'
             }
+        },
+
+        /**
+         * Preventive Maintenance Controller
+         * Maintenance activity and schedule management with calendar visualization
+         */
+        PreventiveMaintenance: {
+            /**
+             * Page Actions
+             */
+            Index: '/PreventiveMaintenance/Index',
+            ScheduleDetail: '/PreventiveMaintenance/ScheduleDetail',
+
+            /**
+             * API Endpoints
+             */
+            GetActivities: '/PreventiveMaintenance/GetMaintenanceActivities',
+            GetSchedules: '/PreventiveMaintenance/GetMaintenanceSchedules',
+            GetScheduleTooltip: '/PreventiveMaintenance/GetScheduleTooltip'
         }
     };
 

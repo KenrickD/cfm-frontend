@@ -785,7 +785,7 @@ namespace cfm_frontend.Controllers.Helpdesk
             int IdLocation,
             int IdFloor,
             int IdRoom,
-            int IdWorkCategory,
+            int? IdWorkCategory,
             string RequestDetail,
             int? IdRequestor,
             List<IFormFile> RelatedPhotos)
